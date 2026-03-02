@@ -31,12 +31,12 @@ COPY package*.json ./
 RUN npm install --production
 
 # Copy built frontend and server files
-COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/dist ./public
 COPY --from=builder /app/server ./server
 COPY --from=builder /app/prisma ./prisma
 
-# Verify dist folder was copied
-RUN echo "Verifying dist copy..." && ls -la dist/ && ls -la dist/assets/
+# Verify frontend was copied to public
+RUN echo "Verifying public copy..." && ls -la public/ && ls -la public/assets/
 
 # Generate Prisma Client
 RUN npx prisma generate

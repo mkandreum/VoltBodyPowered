@@ -17,7 +17,7 @@ const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3000;
 
 // Verify static files exist
-const staticPath = path.join(__dirname, '../dist');
+const staticPath = path.join(__dirname, '../public');
 console.log(`Static files path: ${staticPath}`);
 console.log(`Static path exists: ${fs.existsSync(staticPath)}`);
 if (fs.existsSync(staticPath)) {
@@ -28,7 +28,7 @@ if (fs.existsSync(staticPath)) {
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, '../dist')));
+app.use(express.static(path.join(__dirname, '../public')));
 
 // API Routes
 app.use('/api/auth', authRoutes);
@@ -41,9 +41,14 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Serve React app for all other routes
+// Serve React app for all other routes (SPA fallback)
 app.get('*', (req, res) => {
-  const indexPath = path.join(__dirname, '../dist/index.html');
+  // Don't serve index.html for API calls or missing assets
+  if (req.path.startsWith('/api') || req.path.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|pdf)$/)) {
+    return res.status(404).json({ error: 'Resource not found' });
+  }
+  
+  const indexPath = path.join(__dirname, '../public/index.html');
   console.log(`Serving SPA fallback for ${req.path} -> ${indexPath}`);
   res.sendFile(indexPath);
 });
