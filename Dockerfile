@@ -6,7 +6,7 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
+# Install dependencies (includes dev dependencies for building)
 RUN npm install
 
 # Copy source code
@@ -14,6 +14,9 @@ COPY . .
 
 # Build frontend
 RUN npm run build
+
+# Verify dist folder was created
+RUN echo "Checking dist folder..." && ls -la dist/ && ls -la dist/assets/
 
 # Production stage
 FROM node:20-alpine
@@ -32,6 +35,9 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/server ./server
 COPY --from=builder /app/prisma ./prisma
 
+# Verify dist folder was copied
+RUN echo "Verifying dist copy..." && ls -la dist/ && ls -la dist/assets/
+
 # Generate Prisma Client
 RUN npx prisma generate
 
@@ -41,5 +47,5 @@ RUN mkdir -p uploads
 # Expose port
 EXPOSE 3000
 
-# Start command: run migrations and start server
-CMD ["sh", "-c", "npx prisma db push --accept-data-loss && node server/index.js"]
+# Start command: run migrations and start server, with logging
+CMD ["sh", "-c", "echo 'Starting server...' && npx prisma db push --accept-data-loss && echo 'Migrations complete' && node server/index.js"]

@@ -7,6 +7,7 @@ import profileRoutes from './routes/profile.js';
 import workoutRoutes from './routes/workout.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -14,6 +15,15 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3000;
+
+// Verify static files exist
+const staticPath = path.join(__dirname, '../dist');
+console.log(`Static files path: ${staticPath}`);
+console.log(`Static path exists: ${fs.existsSync(staticPath)}`);
+if (fs.existsSync(staticPath)) {
+  const files = fs.readdirSync(staticPath);
+  console.log(`Files in static directory: ${files.join(', ')}`);
+}
 
 // Middleware
 app.use(cors());
@@ -33,7 +43,9 @@ app.get('/api/health', (req, res) => {
 
 // Serve React app for all other routes
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dist/index.html'));
+  const indexPath = path.join(__dirname, '../dist/index.html');
+  console.log(`Serving SPA fallback for ${req.path} -> ${indexPath}`);
+  res.sendFile(indexPath);
 });
 
 // Error handling
