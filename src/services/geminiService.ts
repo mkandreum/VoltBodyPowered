@@ -83,7 +83,7 @@ export async function generatePlan(profile: any): Promise<{ routine: WorkoutDay[
 
   try {
     const response = await getAI().models.generateContent({
-      model: 'gemini-2.0-flash',
+      model: 'gemini-3-flash-preview',
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
@@ -197,7 +197,7 @@ export async function generateAlternativeMeal(oldMeal: Meal, profile: any): Prom
 
   try {
     const response = await getAI().models.generateContent({
-      model: 'gemini-2.0-flash',
+      model: 'gemini-3-flash-preview',
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
