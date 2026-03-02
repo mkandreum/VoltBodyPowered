@@ -13,11 +13,11 @@ export default function BottomNav() {
   };
 
   const navItems = [
-    { id: 'workout', icon: Dumbbell, label: 'Rutina' },
-    { id: 'diet', icon: Utensils, label: 'Dieta' },
-    { id: 'logo', icon: Zap, label: 'VoltBody' },
-    { id: 'calendar', icon: Calendar, label: 'Calendario' },
-    { id: 'profile', icon: User, label: 'Perfil' },
+    { id: 'workout', icon: Dumbbell, label: '💪 Rutina' },
+    { id: 'diet', icon: Utensils, label: '🍽️ Dieta' },
+    { id: 'logo', icon: Zap, label: '⚡ VoltBody' },
+    { id: 'calendar', icon: Calendar, label: '📅 Calendario' },
+    { id: 'profile', icon: User, label: '👤 Perfil' },
   ] as const;
 
   return (
@@ -36,16 +36,18 @@ export default function BottomNav() {
                 else setTab(item.id as any);
               }}
               className={clsx(
-                'pulse-surface relative flex flex-col items-center justify-center w-14 h-14 rounded-full transition-all duration-300',
+                'relative flex flex-col items-center justify-center w-14 h-14 rounded-full transition-all duration-300',
+                isCenter ? 'overflow-visible' : 'pulse-surface',
                 isActive ? 'app-accent' : 'text-gray-400 hover:text-white',
                 isCenter ? 'bg-[color:var(--app-accent)]/10 border border-[color:var(--app-accent)]/30 w-16 h-16 -mt-6 shadow-[0_0_15px_var(--app-accent-dim)]' : ''
               )}
             >
               {isActive && !isCenter && (
                 <motion.div
-                  layoutId="nav-indicator"
                   className="absolute inset-0 bg-[color:var(--app-accent)]/20 rounded-full"
-                  transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
                 />
               )}
               <item.icon
@@ -57,8 +59,13 @@ export default function BottomNav() {
                 )}
               />
               {isCenter && (
-                <span className="absolute -bottom-2 text-[9px] font-bold tracking-widest app-accent uppercase glow-text whitespace-nowrap">
-                  VoltBody
+                <span className="absolute -bottom-4 text-[9px] font-bold tracking-widest app-accent uppercase glow-text whitespace-nowrap">
+                  ⚡ VoltBody
+                </span>
+              )}
+              {!isCenter && isActive && (
+                <span className="absolute -bottom-1 text-[8px] font-semibold app-accent whitespace-nowrap">
+                  {item.label}
                 </span>
               )}
             </button>

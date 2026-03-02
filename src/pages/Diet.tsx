@@ -76,7 +76,7 @@ export default function Diet() {
       <header className="mb-8 mt-4">
         <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
           <Utensils className="app-accent" size={32} />
-          Tu Dieta
+          🍽️ Tu Dieta
         </h1>
         <p className="text-gray-400 font-mono text-sm">Objetivo diario: {diet.dailyCalories} kcal</p>
       </header>
@@ -84,8 +84,8 @@ export default function Diet() {
       <AppCard accent interactive className="mb-8 p-6 glass-panel">
         <div className="flex items-start justify-between gap-4 mb-4">
           <div>
-            <p className="text-xs uppercase tracking-[0.18em] text-gray-400 mb-2">Resumen Nutricional</p>
-            <h2 className="text-3xl font-black text-white leading-none tracking-tight">Hoy comes para rendir</h2>
+            <p className="text-xs uppercase tracking-[0.18em] text-gray-400 mb-2">📊 Resumen Nutricional</p>
+            <h2 className="text-3xl font-black text-white leading-none tracking-tight">🍏 Hoy comes para rendir</h2>
             <p className="text-sm text-gray-300 mt-2">
               {diet.meals.length} comidas planificadas con foco en energía estable y recuperación.
             </p>
@@ -100,7 +100,7 @@ export default function Diet() {
         </div>
 
         <div className="rounded-xl border border-[var(--app-border)] bg-black/30 p-3 text-xs text-gray-300">
-          Tip: si entrenas intenso hoy, prioriza proteína + carbohidrato en la comida post-entreno.
+          💡 Tip: si entrenas intenso hoy, prioriza proteína + carbohidrato en la comida post-entreno.
         </div>
       </AppCard>
 
@@ -169,7 +169,7 @@ export default function Diet() {
 
       {profile?.foodPreferences && (
         <AppCard className="mt-8">
-          <SectionHeader title="Preferencias para tu dieta" />
+          <SectionHeader title="🥘 Preferencias para tu dieta" />
           <div className="space-y-2 text-sm text-gray-300">
             <p><span className="text-gray-500">Verduras:</span> {profile.foodPreferences.vegetables.join(', ') || 'No definidas'}</p>
             <p><span className="text-gray-500">Carbohidratos:</span> {profile.foodPreferences.carbs.join(', ') || 'No definidos'}</p>
@@ -179,7 +179,7 @@ export default function Diet() {
       )}
 
       <AppCard className="mt-6" accent>
-        <SectionHeader title="Plato Especial Ajustable" />
+        <SectionHeader title="🍲 Plato Especial Ajustable" />
         <p className="text-sm text-gray-400 mb-4">Base: arroz + lentejas + tomate + queso feta</p>
 
         <label className="block text-sm text-gray-400 mb-2">Calorías objetivo</label>

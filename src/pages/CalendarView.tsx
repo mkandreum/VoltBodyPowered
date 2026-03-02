@@ -27,9 +27,9 @@ export default function CalendarView() {
       <header className="mb-8 mt-4">
         <h1 className="brutal-title text-white mb-2 flex items-center gap-3">
           <CalendarIcon className="app-accent" size={32} />
-          Calendario
+          📅 Calendario
         </h1>
-        <p className="text-gray-400 font-mono text-sm">Planificación y Registro</p>
+        <p className="text-gray-400 font-mono text-sm">📋 Planificación y Registro</p>
       </header>
 
       <div className="glass-panel border border-[var(--app-border)] rounded-3xl p-6 mb-8">
@@ -99,7 +99,7 @@ export default function CalendarView() {
           {plannedRoutine && (
             <div className="glass-panel border border-[var(--app-border)] rounded-3xl p-5">
               <h3 className="text-sm text-gray-400 font-mono mb-4 flex items-center gap-2">
-                <Dumbbell size={16} /> Rutina Planificada
+                <Dumbbell size={16} /> 🏋️ Rutina Planificada
               </h3>
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-full bg-black border border-[color:var(--app-accent)]/30 flex items-center justify-center">
@@ -116,7 +116,7 @@ export default function CalendarView() {
           {/* Logs */}
           <div className="app-surface border border-[var(--app-border)] rounded-3xl p-5">
             <h3 className="text-sm text-gray-400 font-mono mb-4 flex items-center gap-2">
-              <CheckCircle2 size={16} /> Registro de Entrenamiento
+              <CheckCircle2 size={16} /> ✅ Registro de Entrenamiento
             </h3>
             {dayLogs.length > 0 ? (
               <div className="space-y-3">
@@ -148,7 +148,7 @@ export default function CalendarView() {
           {diet && (
             <div className="glass-panel border border-[var(--app-border)] rounded-3xl p-5">
               <h3 className="text-sm text-gray-400 font-mono mb-4 flex items-center gap-2">
-                <Flame size={16} /> Objetivo Nutricional
+                <Flame size={16} /> 🔥 Objetivo Nutricional
               </h3>
               <div className="flex justify-between items-center">
                 <span className="text-2xl font-bold text-white">{diet.dailyCalories} <span className="text-sm text-gray-500 font-normal">kcal</span></span>

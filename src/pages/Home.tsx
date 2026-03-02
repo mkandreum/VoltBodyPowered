@@ -107,24 +107,24 @@ export default function Home() {
   const aiCoachCopy = useMemo(() => {
     if (sleepScore < 70) {
       return {
-        title: 'Recuperación primero',
+        title: '😴 Recuperación primero',
         subtitle: 'Dormiste poco. Baja volumen y prioriza técnica limpia hoy.',
-        cta: 'Modo recovery',
+        cta: '🛌 Modo recovery',
       };
     }
 
     if (routineCompletion < 45 && todayRoutine) {
       return {
-        title: 'Hoy toca. Sin excusas.',
+        title: '🔥 Hoy toca. Sin excusas.',
         subtitle: `Completa al menos ${Math.max(1, Math.ceil(todayRoutine.exercises.length * 0.6))} ejercicios para cerrar el día en verde.`,
-        cta: 'Empezar ahora',
+        cta: '🚀 Empezar ahora',
       };
     }
 
     return {
-      title: 'Ritmo perfecto',
+      title: '🎯 Ritmo perfecto',
       subtitle: 'Mantén intensidad y cuida la ejecución. +1% mejor hoy.',
-      cta: 'Seguir plan',
+      cta: '📋 Seguir plan',
     };
   }, [sleepScore, routineCompletion, todayRoutine]);
 
@@ -132,30 +132,30 @@ export default function Home() {
     const cards = [
       {
         id: 'consistency',
-        title: 'Consistencia semanal',
+        title: '📊 Consistencia semanal',
         value: `${weeklyConsistency}%`,
-        subtitle: currentStreak > 0 ? `${currentStreak} días en racha` : 'Inicia tu racha hoy',
+        subtitle: currentStreak > 0 ? `🔥 ${currentStreak} días en racha` : '🚀 Inicia tu racha hoy',
         icon: Activity,
       },
       {
         id: 'calories',
-        title: 'Objetivo calórico',
+        title: '🔥 Objetivo calórico',
         value: `${caloriesTarget}`,
-        subtitle: mealCount > 0 ? `${mealCount} comidas planificadas` : 'Sin plan nutricional',
+        subtitle: mealCount > 0 ? `🍽️ ${mealCount} comidas planificadas` : '⚠️ Sin plan nutricional',
         icon: Flame,
       },
       {
         id: 'recovery',
-        title: 'Recuperación',
+        title: '😴 Recuperación',
         value: `${sleepScore}%`,
-        subtitle: 'Estado de descanso',
+        subtitle: '🌙 Estado de descanso',
         icon: Moon,
       },
       {
         id: 'nutrition',
-        title: 'Adherencia nutricional',
+        title: '🥗 Adherencia nutricional',
         value: `${nutritionAdherence}%`,
-        subtitle: 'Cumplimiento del día',
+        subtitle: '✅ Cumplimiento del día',
         icon: Utensils,
       },
     ];
@@ -174,22 +174,22 @@ export default function Home() {
   const timelineItems = [
     {
       time: profile?.mealTimes?.breakfast || '08:00',
-      title: 'Desayuno de arranque',
+      title: '🥣 Desayuno de arranque',
       done: false,
     },
     {
       time: profile?.mealTimes?.lunch || '14:00',
-      title: 'Comida principal',
+      title: '🍗 Comida principal',
       done: false,
     },
     {
       time: 'Entreno',
-      title: todayRoutine?.focus || 'Sesión rápida',
+      title: `💪 ${todayRoutine?.focus || 'Sesión rápida'}`,
       done: routineCompletion >= 100,
     },
     {
       time: 'Progreso',
-      title: 'Subir foto del día',
+      title: '📸 Subir foto del día',
       done: false,
     },
   ];
@@ -198,9 +198,9 @@ export default function Home() {
     <div className="min-h-screen app-shell p-6 pb-32">
       <header className="flex justify-between items-center mb-6 mt-4">
         <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-gray-500">VoltBody OS</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-gray-500">⚡ VoltBody OS</p>
           <h1 className="brutal-title text-white leading-none mt-1">
-            {profile?.name ? `Hola, ${profile.name}` : 'Modo Bestia'}
+            {profile?.name ? `👋 Hola, ${profile.name}` : '🦁 Modo Bestia'}
           </h1>
           <p className="text-gray-400 capitalize text-sm mt-1">{today} · {routineCompletion}% sesión</p>
         </div>
@@ -232,7 +232,7 @@ export default function Home() {
         <AppCard accent interactive className="p-6 glass-panel">
           <div className="flex items-start justify-between gap-4 mb-5">
             <div>
-              <p className="text-xs uppercase tracking-[0.18em] text-gray-400 mb-2">Hoy conquistas</p>
+              <p className="text-xs uppercase tracking-[0.18em] text-gray-400 mb-2">🏆 Hoy conquistas</p>
               <h2 className="text-3xl font-black text-white leading-none tracking-tight">
                 {todayRoutine?.focus || 'Recuperación activa'}
               </h2>
@@ -336,7 +336,7 @@ export default function Home() {
       </AppCard>
 
       <AppCard className="mb-8 p-5 glass-panel">
-        <SectionHeader title="Timeline del día" icon={Clock3} />
+        <SectionHeader title="📅 Timeline del día" icon={Clock3} />
         <div className="space-y-3">
           {timelineItems.map((item, index) => (
             <motion.div
@@ -356,7 +356,7 @@ export default function Home() {
       </AppCard>
 
       <AppCard className="mb-8 p-5 glass-panel">
-        <SectionHeader title="Acciones rápidas" subtitle="Un toque y listo" />
+        <SectionHeader title="⚡ Acciones rápidas" subtitle="Un toque y listo" />
         <div className="grid grid-cols-3 gap-3">
           <motion.button
             whileTap={{ scale: 0.97 }}
@@ -365,7 +365,7 @@ export default function Home() {
             className="pressable pulse-surface rounded-xl border border-[var(--app-border)] bg-black/35 px-3 py-4 text-xs font-semibold text-white"
           >
             <Dumbbell size={16} className="mx-auto mb-2 app-accent" />
-            Registrar serie
+            Registrar serie 📝
           </motion.button>
           <motion.button
             whileTap={{ scale: 0.97 }}
@@ -374,7 +374,7 @@ export default function Home() {
             className="pressable pulse-surface rounded-xl border border-[var(--app-border)] bg-black/35 px-3 py-4 text-xs font-semibold text-white"
           >
             <Utensils size={16} className="mx-auto mb-2 app-accent" />
-            Swap meal
+            Swap meal 🔄
           </motion.button>
           <motion.button
             whileTap={{ scale: 0.97 }}
@@ -383,7 +383,7 @@ export default function Home() {
             className="pressable pulse-surface rounded-xl border border-[var(--app-border)] bg-black/35 px-3 py-4 text-xs font-semibold text-white"
           >
             <Camera size={16} className="mx-auto mb-2 app-accent" />
-            Subir progreso
+            Subir progreso 📸
           </motion.button>
         </div>
       </AppCard>
@@ -397,7 +397,7 @@ export default function Home() {
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/35 to-transparent p-4 flex items-end">
             <div>
-              <p className="text-[10px] uppercase tracking-[0.18em] text-gray-300 mb-1">Modo mental</p>
+              <p className="text-[10px] uppercase tracking-[0.18em] text-gray-300 mb-1">🧠 Modo mental</p>
               <p className="text-base font-bold text-white max-w-[90%]">
                 {motivationPhrase || 'Hoy toca. Sin excusas.'}
               </p>
