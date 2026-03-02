@@ -3,6 +3,10 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# Accept GEMINI_API_KEY at build time so Vite can bake it into the frontend
+ARG GEMINI_API_KEY=""
+ENV GEMINI_API_KEY=$GEMINI_API_KEY
+
 # Copy package files
 COPY package*.json ./
 

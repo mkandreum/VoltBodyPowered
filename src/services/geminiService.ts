@@ -1,11 +1,22 @@
 import { GoogleGenAI, Type } from '@google/genai';
 import { WorkoutDay, DietPlan, Meal, Insights } from '../store/useAppStore';
 
-const apiKey = process.env.GEMINI_API_KEY;
-if (!apiKey) {
-  console.warn('GEMINI_API_KEY not set. AI features will not work.');
+// Lazy initialization - only create the client when actually needed
+// This prevents crashes at module load time if the API key is missing
+let _ai: GoogleGenAI | null = null;
+
+function getAI(): GoogleGenAI {
+  if (!_ai) {
+    const apiKey = typeof process !== 'undefined' && process.env
+      ? process.env.GEMINI_API_KEY
+      : '';
+    if (!apiKey) {
+      throw new Error('GEMINI_API_KEY no está configurada. Configúrala en las variables de entorno.');
+    }
+    _ai = new GoogleGenAI({ apiKey });
+  }
+  return _ai;
 }
-const ai = new GoogleGenAI({ apiKey: apiKey || '' });
 
 export async function generatePlan(profile: any): Promise<{ routine: WorkoutDay[]; diet: DietPlan; insights: Insights }> {
   const prompt = `
@@ -73,7 +84,7 @@ export async function generatePlan(profile: any): Promise<{ routine: WorkoutDay[
   `;
 
   try {
-    const response = await ai.models.generateContent({
+    const response = await getAI().models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: prompt,
       config: {
@@ -187,7 +198,7 @@ export async function generateAlternativeMeal(oldMeal: Meal, profile: any): Prom
   `;
 
   try {
-    const response = await ai.models.generateContent({
+    const response = await getAI().models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: prompt,
       config: {

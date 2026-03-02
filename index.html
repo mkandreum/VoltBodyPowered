@@ -6,7 +6,18 @@
     <title>VoltBody Powered</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="loading-fallback" style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#050505;color:#39ff14;font-family:sans-serif;flex-direction:column">
+        <div style="font-size:2rem;font-weight:bold;margin-bottom:1rem">⚡ VoltBody</div>
+        <div style="color:#666">Cargando...</div>
+      </div>
+    </div>
+    <noscript>
+      <div style="padding:2rem;color:white;background:#050505;min-height:100vh;font-family:sans-serif;text-align:center">
+        <h1>VoltBody Powered</h1>
+        <p>JavaScript es necesario para usar esta aplicación.</p>
+      </div>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
