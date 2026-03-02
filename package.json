@@ -6,13 +6,19 @@
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
     "dev:server": "node server/index.js",
+    "dev:all": "concurrently -n api,web -c \"magenta,cyan\" \"npm:dev:server\" \"npm:dev\"",
     "build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:studio": "prisma studio"
+    "prisma:studio": "prisma studio",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev --name local",
+    "db:deploy": "prisma migrate deploy",
+    "db:reset": "prisma migrate reset --skip-seed --force",
+    "setup": "npm install && npm run db:generate && npm run db:migrate"
   },
   "dependencies": {
     "@google/genai": "^1.43.0",
@@ -45,6 +51,7 @@
     "@types/jsonwebtoken": "^9.0.7",
     "@types/node": "^22.14.0",
     "autoprefixer": "^10.4.21",
+    "concurrently": "^9.1.0",
     "prisma": "^6.1.0",
     "tailwindcss": "^4.1.14",
     "terser": "^5.46.0",
