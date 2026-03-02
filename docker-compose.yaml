@@ -23,10 +23,11 @@ services:
       context: .
       dockerfile: Dockerfile
     restart: always
-    ports:
-      - "${PORT:-3000}:3000"
+    expose:
+      - "3000"
     environment:
       NODE_ENV: production
+      PORT: 3000
       DATABASE_URL: postgresql://${POSTGRES_USER:-voltbody}:${POSTGRES_PASSWORD:-voltbody123}@db:5432/${POSTGRES_DB:-voltbody}?schema=public
       JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-in-production}
       GEMINI_API_KEY: ${GEMINI_API_KEY}
@@ -38,6 +39,8 @@ services:
       - voltbody-network
     volumes:
       - uploads_data:/app/uploads
+    labels:
+      - "coolify.managed=true"
 
 volumes:
   postgres_data:

@@ -4,97 +4,118 @@
 
 # VoltBody Powered 🔋
 
-**Tu entrenador personal inteligente con IA** - Ahora con autenticación de usuarios, base de datos PostgreSQL y despliegue automático en Coolify.
+**Tu entrenador personal inteligente con IA** - Con autenticación de usuarios, base de datos PostgreSQL y despliegue automático en Coolify.
 
 ## 🚀 Características
 
-- ✅ **Autenticación de Usuario**: Login y registro con email
-- ✅ **Perfiles Personalizados**: Cada usuario tiene su propio perfil
-- ✅ **IA con Google Gemini**: Planes personalizados
-- ✅ **Base de Datos PostgreSQL**: Almacenamiento persistente
-- ✅ **Docker & Coolify**: Auto-despliegue con una sola URL
+- ✅ **Autenticación JWT**: Login y registro con email
+- ✅ **Perfiles Personalizados**: Cada usuario tiene sus propios datos
+- ✅ **IA con Google Gemini**: Rutinas y dietas generadas por IA
+- ✅ **Base de Datos PostgreSQL**: Todo se almacena persistentemente
+- ✅ **Docker Compose**: Despliegue automático en Coolify
 
 ## 🏃 Ejecutar Localmente
 
-**Prerequisitos:** Node.js 20+, Docker (opcional para PostgreSQL)
+### Prerequisitos
+- Node.js 20+
+- Docker (para PostgreSQL)
 
-1. **Instalar dependencias:**
-   ```bash
-   npm install
-   ```
+### Instalación
 
-2. **Configurar variables de entorno:**
-   ```bash
-   cp .env.example .env
-   # Edita .env con tus valores
-   ```
+```bash
+# 1. Instalar dependencias
+npm install
 
-3. **Iniciar PostgreSQL** (con Docker o local):
-   ```bash
-   docker run --name voltbody-db \
-     -e POSTGRES_PASSWORD=voltbody123 \
-     -e POSTGRES_USER=voltbody \
-     -e POSTGRES_DB=voltbody \
-     -p 5432:5432 -d postgres:16-alpine
-   ```
+# 2. Configurar variables de entorno
+cp .env.example .env
+# Edita .env con tus valores (JWT_SECRET, GEMINI_API_KEY, etc.)
 
-4. **Ejecutar migraciones de Prisma:**
-   ```bash
-   npx prisma migrate dev
-   npx prisma generate
-   ```
+# 3. Iniciar PostgreSQL
+docker run --name voltbody-db \
+  -e POSTGRES_PASSWORD=voltbody123 \
+  -e POSTGRES_USER=voltbody \
+  -e POSTGRES_DB=voltbody \
+  -p 5432:5432 -d postgres:16-alpine
 
-5. **Iniciar la aplicación:**
-   ```bash
-   # Frontend (terminal 1)
-   npm run dev
-   
-   # Backend API (terminal 2)
-   npm run dev:server
-   ```
+# 4. Ejecutar migraciones
+npx prisma migrate dev
+npx prisma generate
 
-6. **Abrir:** http://localhost:3000
+# 5. Iniciar aplicación (2 terminales)
+npm run dev          # Terminal 1: Frontend
+npm run dev:server   # Terminal 2: Backend API
+```
+
+**Abrir:** http://localhost:3000
 
 ## 🚢 Despliegue en Coolify
 
-Para despliegue en producción con Coolify, consulta la guía completa: **[COOLIFY_SETUP.md](./COOLIFY_SETUP.md)**
+### 1. Configuración en Coolify
+- Tipo: **Docker Compose**
+- Coolify detecta automáticamente `docker-compose.yaml`
 
-### Resumen rápido:
-1. Crea proyecto en Coolify con Docker Compose
-2. Sube `docker-compose.yaml` y Dockerfile
-3. Configura variables de entorno (ver `.env.example`)
-4. Conecta repositorio Git
-5. Deploy automático ✨
+### 2. Variables de Entorno Requeridas
 
-**Nota:** Toda la información generada por la IA (rutinas, dietas, insights) se almacena automáticamente en PostgreSQL.
-
-## 🔑 Variables de Entorno Requeridas
+**⚠️ IMPORTANTE:** NO configures `PORT` - Coolify lo gestiona automáticamente.
 
 ```env
-DATABASE_URL=postgresql://user:password@localhost:5432/voltbody
-JWT_SECRET=your-secret-key-here
-GEMINI_API_KEY=your-gemini-api-key
-APP_URL=http://localhost:3000
+# Base de Datos
+POSTGRES_USER=voltbody
+POSTGRES_PASSWORD=tu_password_segura_aqui
+POSTGRES_DB=voltbody
+DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
+
+# Aplicación
+NODE_ENV=production
+APP_URL=https://tu-dominio.coolify.app
+
+# Seguridad (CAMBIAR EN PRODUCCIÓN)
+JWT_SECRET=genera_una_clave_aleatoria_de_32_caracteres
+
+# Google Gemini AI
+GEMINI_API_KEY=tu-api-key-de-gemini
 ```
 
-## 📱 Uso
+### 3. Deploy
+1. Conecta tu repositorio Git a Coolify
+2. Configura las variables de entorno
+3. Haz push al repositorio
+4. Coolify despliega automáticamente
 
-1. **Registro** → Crea tu cuenta
-2. **Onboarding** → Completa tu perfil
-3. **Dashboard** → Rutinas y dieta personalizadas
-4. **Progreso** → Sube fotos y registra entrenamientos
+✅ **Incluye:**
+- Migraciones de Prisma automáticas
+- SSL con Let's Encrypt
+- Volúmenes persistentes (PostgreSQL + uploads)
+- Health checks
+- Reinicio automático
 
 ## 🛠️ Stack Técnico
 
-**Frontend:** React 19, TypeScript, TailwindCSS, Motion, Three.js  
-**Backend:** Node.js, Express, Prisma, PostgreSQL, JWT  
-**DevOps:** Docker, Docker Compose, Coolify
+| Categoría | Tecnología |
+|-----------|------------|
+| **Frontend** | React 19, TypeScript, TailwindCSS, Motion, Three.js |
+| **Backend** | Node.js, Express, Prisma ORM |
+| **Base de Datos** | PostgreSQL 16 |
+| **Autenticación** | JWT + bcryptjs |
+| **IA** | Google Gemini API |
+| **DevOps** | Docker, Docker Compose, Coolify |
 
-## 📞 Soporte
+## 📦 Almacenamiento
 
-- Ver logs: `docker logs voltbody-app`
-- Prisma Studio: `npx prisma studio`
-- Documentación completa: [COOLIFY_SETUP.md](./COOLIFY_SETUP.md)
+Toda la información generada por la IA se guarda en PostgreSQL:
+- ✅ Rutinas de entrenamiento
+- ✅ Planes de dieta
+- ✅ Insights y recomendaciones
+- ✅ Logs de ejercicios
+- ✅ Fotos de progreso
+
+## 🔐 Seguridad
+
+- Contraseñas hasheadas con bcrypt
+- Autenticación JWT con expiración
+- Variables de entorno seguras
+- HTTPS en producción (Coolify)
+- Protección SQL injection (Prisma)
 
 ---
 
