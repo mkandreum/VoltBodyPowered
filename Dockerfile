@@ -20,6 +20,9 @@ FROM node:20-alpine
 
 WORKDIR /app
 
+# Install curl for health checks
+RUN apk add --no-cache curl
+
 # Install production dependencies
 COPY package*.json ./
 RUN npm install --production
@@ -29,15 +32,14 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/server ./server
 COPY --from=builder /app/prisma ./prisma
 
-# Install Prisma CLI
-RUN npm install -g prisma
+# Generate Prisma Client
+RUN npx prisma generate
 
-# Copy entrypoint script
-COPY docker-entrypoint.sh /app/docker-entrypoint.sh
-RUN chmod +x /app/docker-entrypoint.sh
+# Create uploads directory for persistent storage
+RUN mkdir -p uploads
 
 # Expose port
 EXPOSE 3000
 
-# Start command
-ENTRYPOINT ["/app/docker-entrypoint.sh"]
+# Start command: run migrations and start server
+CMD ["sh", "-c", "npx prisma db push --accept-data-loss && node server/index.js"]
