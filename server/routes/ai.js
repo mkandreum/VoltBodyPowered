@@ -1,21 +1,26 @@
 import express from 'express';
 import { GoogleGenAI } from '@google/genai';
 import { authMiddleware } from '../middleware/auth.js';
+import { createRateLimiter } from '../middleware/rateLimit.js';
+import { validateGeneratePlanPayload, validateAlternativeMealPayload } from '../middleware/validators.js';
+import { logError, logInfo } from '../utils/logger.js';
+import { incrementAiError } from '../utils/metrics.js';
 
 const router = express.Router();
+const aiRateLimiter = createRateLimiter({ windowMs: 10 * 60 * 1000, max: 12, keyPrefix: 'ai' });
 
 // Initialize Gemini client
 const apiKey = process.env.GEMINI_API_KEY;
 if (!apiKey) {
-  console.error('⚠️ GEMINI_API_KEY no está configurada');
+  logError('ai.config.missing_key');
 } else {
-  console.log('✅ GEMINI_API_KEY detectada');
+  logInfo('ai.config.key_detected');
 }
 
 const ai = new GoogleGenAI({ apiKey });
 
 // POST /api/ai/generate-plan
-router.post('/generate-plan', authMiddleware, async (req, res) => {
+router.post('/generate-plan', authMiddleware, aiRateLimiter, validateGeneratePlanPayload, async (req, res) => {
   try {
     const profile = req.body;
     console.log('📋 generate-plan request:', { name: profile.name, goal: profile.goal });
@@ -30,13 +35,19 @@ PERFIL DEL USUARIO:
 - Peso: ${profile.weight}kg | Altura: ${profile.height}cm | IMC: ${bmi}
 - Nivel de condición física: ${profile.currentState}
 - Objetivo principal: ${profile.goal}
+- Meta específica: ${profile.goalDirection || 'Perder'} ${profile.goalTargetKg || 0}kg en ${profile.goalTimelineMonths || 0} meses
 - Disponibilidad de entrenamiento: ${profile.schedule}
+- Días por semana: ${profile.trainingDaysPerWeek || 'N/A'} | Minutos por sesión: ${profile.sessionMinutes || 'N/A'}
 - Horario laboral/estudio: ${profile.workHours}
-- Horarios de comida: Desayuno ${profile.mealTimes?.breakfast}, Comida ${profile.mealTimes?.lunch}, Merienda ${profile.mealTimes?.snack}, Cena ${profile.mealTimes?.dinner}
+- Horarios de comida: Desayuno ${profile.mealTimes?.breakfast}, Almuerzo ${profile.mealTimes?.brunch}, Comida ${profile.mealTimes?.lunch}, Merienda ${profile.mealTimes?.snack}, Cena ${profile.mealTimes?.dinner}
+- Preferencias de alimentos: verduras ${Array.isArray(profile.foodPreferences?.vegetables) ? profile.foodPreferences.vegetables.join(', ') : 'N/A'}, carbohidratos ${Array.isArray(profile.foodPreferences?.carbs) ? profile.foodPreferences.carbs.join(', ') : 'N/A'}, proteínas ${Array.isArray(profile.foodPreferences?.proteins) ? profile.foodPreferences.proteins.join(', ') : 'N/A'}
+- Plato especial sugerido por el usuario: ${profile.specialDish?.ingredients || 'N/A'} (${profile.specialDish?.targetCalories || 'N/A'} kcal objetivo)
+- Clase especial semanal: ${profile.weeklySpecialSession?.enabled ? `${profile.weeklySpecialSession.activity} el ${profile.weeklySpecialSession.day} por ${profile.weeklySpecialSession.durationMinutes} minutos` : 'No aplica'}
 
 INSTRUCCIONES PARA LA RUTINA:
 - Genera ÚNICAMENTE los días de entrenamiento según la disponibilidad indicada (no generes días de descanso)
 - Cada día debe tener entre 5 y 8 ejercicios específicos y variados
+- Si hay clase especial semanal activa, inclúyela en la planificación semanal como actividad adicional de cardio/funcional (sin reemplazar fuerza)
 - Incluye siempre: ejercicios compuestos (multi-articulares) + ejercicios de aislamiento
 - Adapta las series, repeticiones y peso al nivel del usuario
 - Asigna grupos musculares correctos y específicos (ej: "Pecho", "Espalda", "Hombros", "Bíceps", "Tríceps", "Piernas", "Glúteos", "Core", "Cardio")
@@ -45,10 +56,14 @@ INSTRUCCIONES PARA LA RUTINA:
 
 INSTRUCCIONES PARA LA DIETA:
 - Calcula las calorías según el objetivo: déficit calórico para perder grasa, superávit para ganar masa, mantenimiento para salud
+- Ajusta el déficit/superávit para acercarse a la meta de kg en meses de forma realista y segura
 - Distribuye los macros correctamente según el objetivo (más proteína para volumen/definición)
 - Las comidas deben ser realistas, variadas y con alimentos accesibles en España/Latinoamérica
 - Cada comida debe tener nombre concreto (ej: "Tortilla de avena con plátano") no genérico
 - Ajusta los horarios de comida al horario laboral del usuario
+- Incluye 5 tiempos si hay horario de almuerzo (desayuno, almuerzo, comida, merienda, cena)
+- Prioriza alimentos de las listas de verduras, carbohidratos y proteínas indicadas por el usuario
+- Incluye una versión del plato especial cercano a las calorías objetivo cuando sea posible
 
 Responde SOLO con JSON válido (sin markdown, sin bloques de código, sin comentarios) con esta estructura exacta:
 {
@@ -87,7 +102,7 @@ Responde SOLO con JSON válido (sin markdown, sin bloques de código, sin coment
   },
   "insights": {
     "sleepRecommendation": "string (recomendación de sueño personalizada y detallada)",
-    "estimatedResults": "string (resultados estimados realistas en 4, 8 y 12 semanas)",
+    "estimatedResults": "string (resultados estimados realistas en 4, 8 y 12 semanas, alineados a la meta de kg/meses)",
     "dailyQuote": "string (frase motivacional personalizada mencionando el nombre ${profile.name})"
   }
 }`;
@@ -105,19 +120,20 @@ Responde SOLO con JSON válido (sin markdown, sin bloques de código, sin coment
       console.log('✅ JSON parseado exitosamente');
       res.json(plan);
     } catch (parseErr) {
+      incrementAiError();
       console.error('❌ Error parseando JSON:', parseErr.message);
       console.error('Raw response:', response.text?.substring(0, 200));
       res.status(500).json({ error: 'JSON inválido de Gemini', details: parseErr.message });
     }
   } catch (error) {
-    console.error('❌ Error en generate-plan:', error.message);
-    console.error('Stack:', error.stack);
+    incrementAiError();
+    logError('ai.generate_plan.error', { requestId: req.requestId, message: error.message, stack: error.stack });
     res.status(500).json({ error: 'Error al generar el plan', details: error.message });
   }
 });
 
 // POST /api/ai/generate-alternative-meal
-router.post('/generate-alternative-meal', authMiddleware, async (req, res) => {
+router.post('/generate-alternative-meal', authMiddleware, aiRateLimiter, validateAlternativeMealPayload, async (req, res) => {
   try {
     const { oldMeal, profile } = req.body;
     console.log('🍽️ generate-alternative-meal request:', oldMeal.name);
@@ -152,11 +168,13 @@ Responde SOLO con JSON válido (sin markdown, sin comentarios):
       console.log('✅ JSON parseado exitosamente');
       res.json(meal);
     } catch (parseErr) {
+      incrementAiError();
       console.error('❌ Error parseando JSON:', parseErr.message);
       res.status(500).json({ error: 'JSON inválido de Gemini', details: parseErr.message });
     }
   } catch (error) {
-    console.error('❌ Error en generate-alternative-meal:', error.message);
+    incrementAiError();
+    logError('ai.generate_alternative_meal.error', { requestId: req.requestId, message: error.message, stack: error.stack });
     res.status(500).json({ error: 'Error al generar comida alternativa', details: error.message });
   }
 });

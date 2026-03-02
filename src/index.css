@@ -11,11 +11,69 @@
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 }
 
+:root {
+  --app-accent: #39ff14;
+  --app-accent-dim: rgba(57, 255, 20, 0.2);
+  --app-bg: #050505;
+  --app-surface: #121212;
+  --app-border: #262626;
+  --app-surface-elevated: #171717;
+  --app-text-muted: #9ca3af;
+
+  --motion-fast: 120ms;
+  --motion-base: 220ms;
+  --motion-expressive: 360ms;
+}
+
 body {
-  background-color: var(--color-dark-bg);
+  background-color: var(--app-bg);
   color: #ffffff;
   font-family: var(--font-sans);
   -webkit-tap-highlight-color: transparent;
+}
+
+body[data-theme="verde-negro"] {
+  --app-accent: #39ff14;
+  --app-accent-dim: rgba(57, 255, 20, 0.2);
+  --app-bg: #050505;
+  --app-surface: #121212;
+  --app-border: #262626;
+}
+
+body[data-theme="aguamarina-negro"] {
+  --app-accent: #3ff5d0;
+  --app-accent-dim: rgba(63, 245, 208, 0.2);
+  --app-bg: #03110e;
+  --app-surface: #0a1a16;
+  --app-border: #1f3a34;
+}
+
+body[data-theme="ocaso-negro"] {
+  --app-accent: #ff8a3d;
+  --app-accent-dim: rgba(255, 138, 61, 0.25);
+  --app-bg: #120905;
+  --app-surface: #1a100a;
+  --app-border: #3a271c;
+}
+
+.app-shell {
+  background-color: var(--app-bg);
+}
+
+.app-surface {
+  background-color: var(--app-surface);
+}
+
+.app-elevated {
+  background-color: var(--app-surface-elevated);
+}
+
+.app-border {
+  border-color: var(--app-border);
+}
+
+.app-accent {
+  color: var(--app-accent);
 }
 
 /* Custom Scrollbar for a modern look */
@@ -27,18 +85,30 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--color-dark-border);
+  background: var(--app-border);
   border-radius: 10px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-neon-green);
+  background: var(--app-accent);
 }
 
 /* Neon Glow Utility */
 .glow-text {
-  text-shadow: 0 0 10px var(--color-neon-green-dim), 0 0 20px var(--color-neon-green-dim);
+  text-shadow: 0 0 10px var(--app-accent-dim), 0 0 20px var(--app-accent-dim);
 }
 .glow-box {
-  box-shadow: 0 0 15px var(--color-neon-green-dim);
+  box-shadow: 0 0 15px var(--app-accent-dim);
+}
+
+.transition-fast {
+  transition-duration: var(--motion-fast);
+}
+
+.transition-base {
+  transition-duration: var(--motion-base);
+}
+
+.transition-expressive {
+  transition-duration: var(--motion-expressive);
 }
 

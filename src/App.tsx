@@ -11,7 +11,7 @@ import BottomNav from './components/BottomNav';
 import { AnimatePresence, motion } from 'motion/react';
 
 export default function App() {
-  const { isAuthenticated, isOnboarded, currentTab } = useAppStore();
+  const { isAuthenticated, isOnboarded, currentTab, theme } = useAppStore();
 
   // Disable overscroll on mobile
   useEffect(() => {
@@ -20,6 +20,13 @@ export default function App() {
       document.body.style.overscrollBehavior = 'auto';
     };
   }, []);
+
+  useEffect(() => {
+    document.body.setAttribute('data-theme', theme);
+    return () => {
+      document.body.removeAttribute('data-theme');
+    };
+  }, [theme]);
 
   // Show login if not authenticated
   if (!isAuthenticated) {
@@ -49,7 +56,7 @@ export default function App() {
   };
 
   return (
-    <div className="bg-[#050505] min-h-screen text-white overflow-x-hidden">
+    <div className="app-shell min-h-screen text-white overflow-x-hidden">
       <AnimatePresence mode="wait">
         <motion.div
           key={currentTab}

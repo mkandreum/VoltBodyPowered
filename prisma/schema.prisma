@@ -32,11 +32,22 @@ model UserProfile {
   height        Float?
   gender        String?
   goal          String?
+  goalDirection String?
+  goalTargetKg  Float?
+  goalTimelineMonths Int?
   currentState  String?
   schedule      String?
+  trainingDaysPerWeek Int?
+  sessionMinutes Int?
   workHours     String?
+  theme         String?
+  motivationPhrase String?
+  motivationPhoto String?
   
-  mealTimes     Json?    // {breakfast, lunch, snack, dinner}
+  mealTimes     Json?    // {breakfast, brunch, lunch, snack, dinner}
+  foodPreferences Json?  // {vegetables, carbs, proteins}
+  weeklySpecialSession Json? // {enabled, activity, day, durationMinutes}
+  specialDish   Json?    // {ingredients, targetCalories}
   avatarConfig  Json?    // {muscleMass, bodyFat}
   
   routine       Json?    // WorkoutDay[]

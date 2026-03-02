@@ -2,10 +2,24 @@ import { useState } from 'react';
 import { motion } from 'motion/react';
 import { Zap, Mail, Lock, User, LogIn } from 'lucide-react';
 import { authService } from '../services/authService';
+import { workoutService } from '../services/workoutService';
 import { useAppStore } from '../store/useAppStore';
 
 export default function Login() {
-  const { setAuthToken, setUser, setProfile, setRoutine, setDiet, setInsights, completeOnboarding } = useAppStore();
+  const {
+    setAuthToken,
+    setUser,
+    setProfile,
+    setRoutine,
+    setDiet,
+    setInsights,
+    completeOnboarding,
+    setTheme,
+    setMotivationPhrase,
+    setMotivationPhoto,
+    setLogs,
+    setProgressPhotos,
+  } = useAppStore();
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -44,6 +58,8 @@ export default function Login() {
         try {
           const profile = await authService.getProfile(response.token);
           if (profile && profile.routine && profile.diet) {
+            const appPreferences = profile.insights?.appPreferences || {};
+
             setProfile({
               name: response.user.name || '',
               age: profile.age,
@@ -54,7 +70,29 @@ export default function Login() {
               currentState: profile.currentState,
               schedule: profile.schedule,
               workHours: profile.workHours,
-              mealTimes: profile.mealTimes,
+              trainingDaysPerWeek: profile.trainingDaysPerWeek || appPreferences.trainingDaysPerWeek || 3,
+              sessionMinutes: profile.sessionMinutes || appPreferences.sessionMinutes || 45,
+              goalDirection: profile.goalDirection || appPreferences.goalDirection || 'Perder',
+              goalTargetKg: profile.goalTargetKg || appPreferences.goalTargetKg || 5,
+              goalTimelineMonths: profile.goalTimelineMonths || appPreferences.goalTimelineMonths || 3,
+              mealTimes: {
+                breakfast: profile.mealTimes?.breakfast || '08:00',
+                brunch: profile.mealTimes?.brunch || '11:30',
+                lunch: profile.mealTimes?.lunch || '14:00',
+                snack: profile.mealTimes?.snack || '18:00',
+                dinner: profile.mealTimes?.dinner || '21:00',
+              },
+              foodPreferences: {
+                vegetables: profile.foodPreferences?.vegetables || appPreferences.foodPreferences?.vegetables || [],
+                carbs: profile.foodPreferences?.carbs || appPreferences.foodPreferences?.carbs || [],
+                proteins: profile.foodPreferences?.proteins || appPreferences.foodPreferences?.proteins || [],
+              },
+              weeklySpecialSession: profile.weeklySpecialSession || appPreferences.weeklySpecialSession || {
+                enabled: false,
+                activity: 'Zumba',
+                day: 'Sábado',
+                durationMinutes: 60,
+              },
               avatarConfig: profile.avatarConfig,
             });
             setRoutine(profile.routine);
@@ -62,6 +100,27 @@ export default function Login() {
             if (profile.insights) {
               setInsights(profile.insights);
             }
+            if (profile.theme || appPreferences.theme) {
+              setTheme(profile.theme || appPreferences.theme);
+            }
+            if (profile.motivationPhrase || appPreferences.motivationPhrase) {
+              setMotivationPhrase(profile.motivationPhrase || appPreferences.motivationPhrase);
+            }
+            if (profile.motivationPhoto) {
+              setMotivationPhoto(profile.motivationPhoto);
+            }
+
+            try {
+              const [logs, photos] = await Promise.all([
+                workoutService.getLogs(response.token),
+                workoutService.getPhotos(response.token),
+              ]);
+              setLogs(logs);
+              setProgressPhotos(photos);
+            } catch (syncError) {
+              console.error('Could not sync logs/photos from backend:', syncError);
+            }
+
             completeOnboarding();
           }
         } catch (err) {

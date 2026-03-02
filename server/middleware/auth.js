@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import { logError } from '../utils/logger.js';
 
 export const authMiddleware = (req, res, next) => {
   try {
@@ -12,6 +13,10 @@ export const authMiddleware = (req, res, next) => {
     req.userId = decoded.userId;
     next();
   } catch (error) {
+    logError('auth.middleware.invalid_token', {
+      requestId: req.requestId,
+      message: error.message,
+    });
     return res.status(401).json({ error: 'Invalid token' });
   }
 };

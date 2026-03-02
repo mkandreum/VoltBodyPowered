@@ -11,6 +11,7 @@ const steps = [
   { id: 'goal', title: 'Tu Objetivo' },
   { id: 'training', title: 'Tu Entrenamiento' },
   { id: 'schedule', title: 'Tu Rutina Diaria' },
+  { id: 'preferences', title: 'Tus Preferencias' },
 ];
 
 export default function Onboarding() {
@@ -27,13 +28,34 @@ export default function Onboarding() {
     currentState: 'Principiante (Nunca he entrenado)',
     goal: 'Ganar masa muscular (Volumen)',
     schedule: '3 días a la semana, 45 min',
+    trainingDaysPerWeek: 3,
+    sessionMinutes: 45,
+    goalDirection: 'Perder' as 'Perder' | 'Ganar',
+    goalTargetKg: 5,
+    goalTimelineMonths: 3,
     workHours: '09:00 - 17:00',
     mealTimes: {
       breakfast: '08:00',
+      brunch: '11:30',
       lunch: '14:00',
       snack: '18:00',
       dinner: '21:00'
-    }
+    },
+    foodPreferences: {
+      vegetables: 'brócoli, espinaca, zanahoria',
+      carbs: 'arroz, papa, avena',
+      proteins: 'pollo, huevo, atún'
+    },
+    weeklySpecialSession: {
+      enabled: true,
+      activity: 'Zumba',
+      day: 'Sábado',
+      durationMinutes: 60,
+    },
+    specialDish: {
+      ingredients: 'arroz, lentejas, tomate, queso feta',
+      targetCalories: 390,
+    },
   });
 
   const handleNext = async () => {
@@ -47,13 +69,30 @@ export default function Onboarding() {
     } else {
       setLoading(true);
       try {
-        const plan = await generatePlan(formData);
+        const sanitizedData = {
+          ...formData,
+          age: Number(formData.age) || 25,
+          weight: Number(formData.weight) || 70,
+          height: Number(formData.height) || 175,
+          trainingDaysPerWeek: Number(formData.trainingDaysPerWeek) || 3,
+          sessionMinutes: Number(formData.sessionMinutes) || 45,
+          goalTargetKg: Number(formData.goalTargetKg) || 5,
+          goalTimelineMonths: Number(formData.goalTimelineMonths) || 3,
+          schedule: `${formData.trainingDaysPerWeek} días a la semana, ${formData.sessionMinutes} min`,
+          foodPreferences: {
+            vegetables: formData.foodPreferences.vegetables.split(',').map((value) => value.trim()).filter(Boolean),
+            carbs: formData.foodPreferences.carbs.split(',').map((value) => value.trim()).filter(Boolean),
+            proteins: formData.foodPreferences.proteins.split(',').map((value) => value.trim()).filter(Boolean),
+          },
+        };
+
+        const plan = await generatePlan(sanitizedData);
         
         const profileData = {
-          ...formData,
+          ...sanitizedData,
           avatarConfig: {
-            muscleMass: formData.goal.includes('masa') ? 0.6 : 0.4,
-            bodyFat: formData.goal.includes('perder') ? 0.3 : 0.5,
+            muscleMass: sanitizedData.goal.includes('masa') ? 0.6 : 0.4,
+            bodyFat: sanitizedData.goal.includes('perder') ? 0.3 : 0.5,
           }
         };
 
@@ -69,16 +108,24 @@ export default function Onboarding() {
         if (authToken) {
           try {
             await authService.updateProfile(authToken, {
-              age: formData.age,
-              weight: formData.weight,
-              height: formData.height,
-              gender: formData.gender,
-              goal: formData.goal,
-              currentState: formData.currentState,
-              schedule: formData.schedule,
-              workHours: formData.workHours,
-              mealTimes: formData.mealTimes,
+              age: sanitizedData.age,
+              weight: sanitizedData.weight,
+              height: sanitizedData.height,
+              gender: sanitizedData.gender,
+              goal: sanitizedData.goal,
+              currentState: sanitizedData.currentState,
+              schedule: sanitizedData.schedule,
+              workHours: sanitizedData.workHours,
+              mealTimes: sanitizedData.mealTimes,
               avatarConfig: profileData.avatarConfig,
+              goalDirection: sanitizedData.goalDirection,
+              goalTargetKg: sanitizedData.goalTargetKg,
+              goalTimelineMonths: sanitizedData.goalTimelineMonths,
+              trainingDaysPerWeek: sanitizedData.trainingDaysPerWeek,
+              sessionMinutes: sanitizedData.sessionMinutes,
+              weeklySpecialSession: sanitizedData.weeklySpecialSession,
+              foodPreferences: sanitizedData.foodPreferences,
+              specialDish: sanitizedData.specialDish,
               routine: plan.routine,
               diet: plan.diet,
               insights: plan.insights
@@ -124,8 +171,8 @@ export default function Onboarding() {
               <label className="block text-sm text-gray-400 mb-2">Edad</label>
               <input
                 type="number"
-                value={formData.age}
-                onChange={(e) => setFormData({ ...formData, age: Number(e.target.value) })}
+                value={formData.age || ''}
+                onChange={(e) => setFormData({ ...formData, age: e.target.value === '' ? 0 : Number(e.target.value) })}
                 className="w-full bg-[#121212] border border-[#262626] rounded-xl p-4 text-white focus:border-[#39ff14] focus:ring-1 focus:ring-[#39ff14] outline-none transition-all"
               />
             </div>
@@ -156,8 +203,8 @@ export default function Onboarding() {
               <label className="block text-sm text-gray-400 mb-2">Peso (kg)</label>
               <input
                 type="number"
-                value={formData.weight}
-                onChange={(e) => setFormData({ ...formData, weight: Number(e.target.value) })}
+                value={formData.weight || ''}
+                onChange={(e) => setFormData({ ...formData, weight: e.target.value === '' ? 0 : Number(e.target.value) })}
                 className="w-full bg-[#121212] border border-[#262626] rounded-xl p-4 text-white focus:border-[#39ff14] focus:ring-1 focus:ring-[#39ff14] outline-none transition-all"
               />
             </div>
@@ -165,8 +212,8 @@ export default function Onboarding() {
               <label className="block text-sm text-gray-400 mb-2">Altura (cm)</label>
               <input
                 type="number"
-                value={formData.height}
-                onChange={(e) => setFormData({ ...formData, height: Number(e.target.value) })}
+                value={formData.height || ''}
+                onChange={(e) => setFormData({ ...formData, height: e.target.value === '' ? 0 : Number(e.target.value) })}
                 className="w-full bg-[#121212] border border-[#262626] rounded-xl p-4 text-white focus:border-[#39ff14] focus:ring-1 focus:ring-[#39ff14] outline-none transition-all"
               />
             </div>
@@ -186,7 +233,7 @@ export default function Onboarding() {
         );
       case 2:
         return (
-          <div className="space-y-4">
+          <div className="space-y-6">
             <label className="block text-sm text-gray-400 mb-2">¿Cómo te quieres ver?</label>
             {[
               'Ganar masa muscular (Volumen)',
@@ -206,23 +253,74 @@ export default function Onboarding() {
                 {goal}
               </button>
             ))}
+
+            <div className="grid grid-cols-2 gap-4">
+              {(['Perder', 'Ganar'] as const).map((direction) => (
+                <button
+                  key={direction}
+                  onClick={() => setFormData({ ...formData, goalDirection: direction })}
+                  className={`p-4 rounded-xl border transition-all ${
+                    formData.goalDirection === direction
+                      ? 'border-[#39ff14] bg-[#39ff14]/10 text-[#39ff14]'
+                      : 'border-[#262626] bg-[#121212] text-gray-400'
+                  }`}
+                >
+                  {direction} peso
+                </button>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-gray-400 mb-2">Cantidad (kg)</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={formData.goalTargetKg || ''}
+                  onChange={(e) => setFormData({ ...formData, goalTargetKg: e.target.value === '' ? 0 : Number(e.target.value) })}
+                  className="w-full bg-[#121212] border border-[#262626] rounded-xl p-4 text-white focus:border-[#39ff14] focus:ring-1 focus:ring-[#39ff14] outline-none transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-2">Tiempo (meses)</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={formData.goalTimelineMonths || ''}
+                  onChange={(e) => setFormData({ ...formData, goalTimelineMonths: e.target.value === '' ? 0 : Number(e.target.value) })}
+                  className="w-full bg-[#121212] border border-[#262626] rounded-xl p-4 text-white focus:border-[#39ff14] focus:ring-1 focus:ring-[#39ff14] outline-none transition-all"
+                />
+              </div>
+            </div>
           </div>
         );
       case 3:
         return (
           <div className="space-y-6">
             <div>
-              <label className="block text-sm text-gray-400 mb-2">¿Cuánto tiempo puedes entrenar?</label>
-              <select
-                value={formData.schedule}
-                onChange={(e) => setFormData({ ...formData, schedule: e.target.value })}
-                className="w-full bg-[#121212] border border-[#262626] rounded-xl p-4 text-white focus:border-[#39ff14] focus:ring-1 focus:ring-[#39ff14] outline-none transition-all appearance-none"
-              >
-                <option>3 días a la semana, 45 min</option>
-                <option>4 días a la semana, 1 hora</option>
-                <option>5 días a la semana, 1 hora</option>
-                <option>6 días a la semana, 1.5 horas</option>
-              </select>
+              <label className="block text-sm text-gray-400 mb-2">Días de entrenamiento por semana</label>
+              <input
+                type="number"
+                min={1}
+                max={7}
+                value={formData.trainingDaysPerWeek}
+                onChange={(e) => setFormData({ ...formData, trainingDaysPerWeek: Number(e.target.value) })}
+                className="w-full bg-[#121212] border border-[#262626] rounded-xl p-4 text-white focus:border-[#39ff14] focus:ring-1 focus:ring-[#39ff14] outline-none transition-all"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">Tiempo por sesión (minutos)</label>
+              <input
+                type="number"
+                min={20}
+                max={180}
+                value={formData.sessionMinutes}
+                onChange={(e) => setFormData({ ...formData, sessionMinutes: Number(e.target.value) })}
+                className="w-full bg-[#121212] border border-[#262626] rounded-xl p-4 text-white focus:border-[#39ff14] focus:ring-1 focus:ring-[#39ff14] outline-none transition-all"
+              />
+            </div>
+            <div className="p-4 rounded-xl border border-[#39ff14]/30 bg-[#39ff14]/5 text-sm text-[#39ff14]">
+              Tu disponibilidad quedará como: {formData.trainingDaysPerWeek} días/semana y {formData.sessionMinutes} min por sesión.
             </div>
           </div>
         );
@@ -246,6 +344,15 @@ export default function Onboarding() {
                   type="time"
                   value={formData.mealTimes.breakfast}
                   onChange={(e) => setFormData({ ...formData, mealTimes: { ...formData.mealTimes, breakfast: e.target.value } })}
+                  className="w-full bg-[#121212] border border-[#262626] rounded-xl p-3 text-white focus:border-[#39ff14] outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Almuerzo</label>
+                <input
+                  type="time"
+                  value={formData.mealTimes.brunch}
+                  onChange={(e) => setFormData({ ...formData, mealTimes: { ...formData.mealTimes, brunch: e.target.value } })}
                   className="w-full bg-[#121212] border border-[#262626] rounded-xl p-3 text-white focus:border-[#39ff14] outline-none"
                 />
               </div>
@@ -276,6 +383,139 @@ export default function Onboarding() {
                   className="w-full bg-[#121212] border border-[#262626] rounded-xl p-3 text-white focus:border-[#39ff14] outline-none"
                 />
               </div>
+            </div>
+          </div>
+        );
+      case 5:
+        return (
+          <div className="space-y-6">
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">Verduras y vegetales que comes</label>
+              <input
+                type="text"
+                value={formData.foodPreferences.vegetables}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    foodPreferences: { ...formData.foodPreferences, vegetables: e.target.value },
+                  })
+                }
+                placeholder="Ej: brócoli, espinaca, tomate"
+                className="w-full bg-[#121212] border border-[#262626] rounded-xl p-4 text-white focus:border-[#39ff14] focus:ring-1 focus:ring-[#39ff14] outline-none transition-all"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">Carbohidratos que sueles consumir</label>
+              <input
+                type="text"
+                value={formData.foodPreferences.carbs}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    foodPreferences: { ...formData.foodPreferences, carbs: e.target.value },
+                  })
+                }
+                placeholder="Ej: arroz, papa, avena"
+                className="w-full bg-[#121212] border border-[#262626] rounded-xl p-4 text-white focus:border-[#39ff14] focus:ring-1 focus:ring-[#39ff14] outline-none transition-all"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">Proteínas preferidas</label>
+              <input
+                type="text"
+                value={formData.foodPreferences.proteins}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    foodPreferences: { ...formData.foodPreferences, proteins: e.target.value },
+                  })
+                }
+                placeholder="Ej: pollo, huevo, atún"
+                className="w-full bg-[#121212] border border-[#262626] rounded-xl p-4 text-white focus:border-[#39ff14] focus:ring-1 focus:ring-[#39ff14] outline-none transition-all"
+              />
+            </div>
+
+            <div className="bg-[#121212] border border-[#262626] rounded-xl p-4 space-y-4">
+              <label className="flex items-center justify-between text-sm text-gray-300">
+                Activar clase especial semanal
+                <input
+                  type="checkbox"
+                  checked={formData.weeklySpecialSession.enabled}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      weeklySpecialSession: {
+                        ...formData.weeklySpecialSession,
+                        enabled: e.target.checked,
+                      },
+                    })
+                  }
+                />
+              </label>
+
+              {formData.weeklySpecialSession.enabled && (
+                <div className="grid grid-cols-2 gap-4">
+                  <input
+                    type="text"
+                    value={formData.weeklySpecialSession.activity}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        weeklySpecialSession: {
+                          ...formData.weeklySpecialSession,
+                          activity: e.target.value,
+                        },
+                      })
+                    }
+                    placeholder="Actividad (zumba, trote...)"
+                    className="bg-black border border-[#262626] rounded-xl p-3 text-white outline-none focus:border-[#39ff14]"
+                  />
+                  <input
+                    type="text"
+                    value={formData.weeklySpecialSession.day}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        weeklySpecialSession: {
+                          ...formData.weeklySpecialSession,
+                          day: e.target.value,
+                        },
+                      })
+                    }
+                    placeholder="Día"
+                    className="bg-black border border-[#262626] rounded-xl p-3 text-white outline-none focus:border-[#39ff14]"
+                  />
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">Plato especial (ingredientes)</label>
+              <input
+                type="text"
+                value={formData.specialDish.ingredients}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    specialDish: { ...formData.specialDish, ingredients: e.target.value },
+                  })
+                }
+                placeholder="Ej: arroz, lentejas, tomate, queso feta"
+                className="w-full bg-[#121212] border border-[#262626] rounded-xl p-4 text-white focus:border-[#39ff14] focus:ring-1 focus:ring-[#39ff14] outline-none transition-all"
+              />
+              <label className="block text-sm text-gray-400 mt-3 mb-2">Calorías objetivo del plato</label>
+              <input
+                type="number"
+                min={100}
+                value={formData.specialDish.targetCalories}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    specialDish: { ...formData.specialDish, targetCalories: Number(e.target.value) },
+                  })
+                }
+                className="w-full bg-[#121212] border border-[#262626] rounded-xl p-4 text-white focus:border-[#39ff14] focus:ring-1 focus:ring-[#39ff14] outline-none transition-all"
+              />
             </div>
           </div>
         );

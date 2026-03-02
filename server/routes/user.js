@@ -1,6 +1,7 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authMiddleware } from '../middleware/auth.js';
+import { logError } from '../utils/logger.js';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -25,7 +26,7 @@ router.get('/me', authMiddleware, async (req, res) => {
 
     res.json(user);
   } catch (error) {
-    console.error('Get user error:', error);
+    logError('user.me.error', { requestId: req.requestId, message: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to get user' });
   }
 });

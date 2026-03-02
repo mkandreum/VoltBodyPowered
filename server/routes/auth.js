@@ -2,12 +2,17 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
+import { createRateLimiter } from '../middleware/rateLimit.js';
+import { validateAuthPayload } from '../middleware/validators.js';
+import { logError } from '../utils/logger.js';
+import { incrementAuthError } from '../utils/metrics.js';
 
 const router = express.Router();
 const prisma = new PrismaClient();
+const authRateLimiter = createRateLimiter({ windowMs: 15 * 60 * 1000, max: 20, keyPrefix: 'auth' });
 
 // Register
-router.post('/register', async (req, res) => {
+router.post('/register', authRateLimiter, validateAuthPayload, async (req, res) => {
   try {
     const { email, password, name } = req.body;
 
@@ -59,13 +64,14 @@ router.post('/register', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Register error:', error);
+    incrementAuthError();
+    logError('auth.register.error', { requestId: req.requestId, message: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to register' });
   }
 });
 
 // Login
-router.post('/login', async (req, res) => {
+router.post('/login', authRateLimiter, validateAuthPayload, async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -106,7 +112,8 @@ router.post('/login', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Login error:', error);
+    incrementAuthError();
+    logError('auth.login.error', { requestId: req.requestId, message: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to login' });
   }
 });

@@ -3,10 +3,12 @@ import { motion } from 'motion/react';
 import { useAppStore, Meal } from '../store/useAppStore';
 import { Utensils, Flame, Droplet, Beef, Wheat, RefreshCw } from 'lucide-react';
 import { generateAlternativeMeal } from '../services/geminiService';
+import { AppCard, SectionHeader } from '../components/ui';
 
 export default function Diet() {
   const { diet, profile, swapMeal } = useAppStore();
   const [loadingMealId, setLoadingMealId] = useState<string | null>(null);
+  const [specialDishTarget, setSpecialDishTarget] = useState(390);
 
   if (!diet) return null;
 
@@ -24,32 +26,46 @@ export default function Diet() {
     }
   };
 
+  const baseSpecialDish = {
+    arroz: { calories: 130, grams: 100 },
+    lentejas: { calories: 116, grams: 100 },
+    tomate: { calories: 18, grams: 100 },
+    'queso feta': { calories: 265, grams: 100 },
+  };
+
+  const baseCalories =
+    baseSpecialDish.arroz.calories +
+    baseSpecialDish.lentejas.calories +
+    baseSpecialDish.tomate.calories +
+    baseSpecialDish['queso feta'].calories;
+  const scale = specialDishTarget / baseCalories;
+
   return (
-    <div className="min-h-screen bg-[#050505] p-6 pb-32">
+    <div className="min-h-screen app-shell p-6 pb-32">
       <header className="mb-8 mt-4">
         <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
-          <Utensils className="text-[#39ff14]" size={32} />
+          <Utensils className="app-accent" size={32} />
           Tu Dieta
         </h1>
         <p className="text-gray-400 font-mono text-sm">Objetivo: {diet.dailyCalories} kcal</p>
       </header>
 
       <div className="grid grid-cols-3 gap-4 mb-8">
-        <div className="bg-[#121212] border border-[#262626] rounded-3xl p-4 flex flex-col items-center justify-center text-center">
+        <AppCard className="p-4 flex flex-col items-center justify-center text-center">
           <Beef className="text-[#ff3939] mb-2" size={24} />
           <span className="text-xl font-bold text-white">{diet.macros.protein}g</span>
           <span className="text-xs text-gray-500 font-mono">Proteína</span>
-        </div>
-        <div className="bg-[#121212] border border-[#262626] rounded-3xl p-4 flex flex-col items-center justify-center text-center">
+        </AppCard>
+        <AppCard className="p-4 flex flex-col items-center justify-center text-center">
           <Wheat className="text-[#ffb839] mb-2" size={24} />
           <span className="text-xl font-bold text-white">{diet.macros.carbs}g</span>
           <span className="text-xs text-gray-500 font-mono">Carbos</span>
-        </div>
-        <div className="bg-[#121212] border border-[#262626] rounded-3xl p-4 flex flex-col items-center justify-center text-center">
+        </AppCard>
+        <AppCard className="p-4 flex flex-col items-center justify-center text-center">
           <Droplet className="text-[#39a6ff] mb-2" size={24} />
           <span className="text-xl font-bold text-white">{diet.macros.fat}g</span>
           <span className="text-xs text-gray-500 font-mono">Grasas</span>
-        </div>
+        </AppCard>
       </div>
 
       <div className="space-y-4">
@@ -59,9 +75,9 @@ export default function Diet() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
-            className="bg-[#121212] border border-[#262626] rounded-3xl p-5 relative overflow-hidden group hover:border-[#39ff14]/50 transition-colors"
+            className="app-surface border border-[var(--app-border)] rounded-3xl p-5 relative overflow-hidden group hover:border-[color:var(--app-accent)]/50 transition-colors"
           >
-            <div className="absolute top-0 right-0 w-32 h-32 bg-[#39ff14]/5 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-[#39ff14]/10 transition-colors" />
+            <div className="absolute top-0 right-0 w-32 h-32 bg-[color:var(--app-accent)]/5 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-[color:var(--app-accent)]/10 transition-colors" />
             
             <div className="flex justify-between items-start mb-4 relative z-10">
               <div>
@@ -76,12 +92,12 @@ export default function Diet() {
                 <button
                   onClick={() => handleSwap(meal)}
                   disabled={loadingMealId === meal.id}
-                  className="p-2 bg-[#262626] rounded-full text-gray-400 hover:text-[#39ff14] transition-colors disabled:opacity-50"
+                  className="p-2 bg-[var(--app-border)] rounded-full text-gray-400 hover:text-[var(--app-accent)] transition-colors disabled:opacity-50"
                   title="Cambiar comida"
                 >
                   <RefreshCw size={16} className={loadingMealId === meal.id ? 'animate-spin' : ''} />
                 </button>
-                <div className="flex items-center gap-1 text-[#39ff14] font-mono font-bold glow-text">
+                <div className="flex items-center gap-1 app-accent font-mono font-bold glow-text">
                   <Flame size={16} />
                   {meal.calories}
                 </div>
@@ -98,6 +114,39 @@ export default function Diet() {
           </motion.div>
         ))}
       </div>
+
+      {profile?.foodPreferences && (
+        <AppCard className="mt-8">
+          <SectionHeader title="Preferencias para tu dieta" />
+          <div className="space-y-2 text-sm text-gray-300">
+            <p><span className="text-gray-500">Verduras:</span> {profile.foodPreferences.vegetables.join(', ') || 'No definidas'}</p>
+            <p><span className="text-gray-500">Carbohidratos:</span> {profile.foodPreferences.carbs.join(', ') || 'No definidos'}</p>
+            <p><span className="text-gray-500">Proteínas:</span> {profile.foodPreferences.proteins.join(', ') || 'No definidas'}</p>
+          </div>
+        </AppCard>
+      )}
+
+      <AppCard className="mt-6" accent>
+        <SectionHeader title="Plato Especial Ajustable" />
+        <p className="text-sm text-gray-400 mb-4">Base: arroz + lentejas + tomate + queso feta</p>
+
+        <label className="block text-sm text-gray-400 mb-2">Calorías objetivo</label>
+        <input
+          type="number"
+          min={200}
+          max={900}
+          value={specialDishTarget}
+          onChange={(e) => setSpecialDishTarget(Number(e.target.value) || 390)}
+          className="w-full bg-black border border-[var(--app-border)] rounded-xl p-3 text-white mb-4 outline-none focus:border-[var(--app-accent)]"
+        />
+
+        <div className="space-y-2 text-sm text-gray-300">
+          <p>Arroz: {(baseSpecialDish.arroz.grams * scale).toFixed(0)} g</p>
+          <p>Lentejas: {(baseSpecialDish.lentejas.grams * scale).toFixed(0)} g</p>
+          <p>Tomate: {(baseSpecialDish.tomate.grams * scale).toFixed(0)} g</p>
+          <p>Queso feta: {(baseSpecialDish['queso feta'].grams * scale).toFixed(0)} g</p>
+        </div>
+      </AppCard>
     </div>
   );
 }

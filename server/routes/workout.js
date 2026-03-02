@@ -1,6 +1,8 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authMiddleware } from '../middleware/auth.js';
+import { validateWorkoutLogPayload, validateProgressPhotoPayload } from '../middleware/validators.js';
+import { logError } from '../utils/logger.js';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -15,13 +17,13 @@ router.get('/logs', authMiddleware, async (req, res) => {
 
     res.json(logs);
   } catch (error) {
-    console.error('Get logs error:', error);
+    logError('workout.get_logs.error', { requestId: req.requestId, message: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to get logs' });
   }
 });
 
 // Add workout log
-router.post('/logs', authMiddleware, async (req, res) => {
+router.post('/logs', authMiddleware, validateWorkoutLogPayload, async (req, res) => {
   try {
     const { date, exerciseId, weight, reps } = req.body;
 
@@ -37,7 +39,7 @@ router.post('/logs', authMiddleware, async (req, res) => {
 
     res.json(log);
   } catch (error) {
-    console.error('Add log error:', error);
+    logError('workout.add_log.error', { requestId: req.requestId, message: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to add log' });
   }
 });
@@ -52,13 +54,13 @@ router.get('/photos', authMiddleware, async (req, res) => {
 
     res.json(photos);
   } catch (error) {
-    console.error('Get photos error:', error);
+    logError('workout.get_photos.error', { requestId: req.requestId, message: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to get photos' });
   }
 });
 
 // Add progress photo
-router.post('/photos', authMiddleware, async (req, res) => {
+router.post('/photos', authMiddleware, validateProgressPhotoPayload, async (req, res) => {
   try {
     const { date, url } = req.body;
 
@@ -72,7 +74,7 @@ router.post('/photos', authMiddleware, async (req, res) => {
 
     res.json(photo);
   } catch (error) {
-    console.error('Add photo error:', error);
+    logError('workout.add_photo.error', { requestId: req.requestId, message: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to add photo' });
   }
 });

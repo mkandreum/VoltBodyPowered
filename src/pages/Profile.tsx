@@ -2,26 +2,57 @@ import { useState, useRef } from 'react';
 import { motion } from 'motion/react';
 import { useAppStore } from '../store/useAppStore';
 import { authService } from '../services/authService';
-import { User, Settings, LogOut, Activity, Target, Clock, Scale, Ruler, Camera, Plus, Edit2, Check } from 'lucide-react';
+import { workoutService } from '../services/workoutService';
+import { User, LogOut, Activity, Target, Clock, Scale, Ruler, Camera, Plus, Edit2, Check, Palette, Quote } from 'lucide-react';
 
 export default function Profile() {
-  const { profile, profilePhoto, progressPhotos, setProfilePhoto, addProgressPhoto, updateProfile, logout } = useAppStore();
+  const {
+    profile,
+    profilePhoto,
+    progressPhotos,
+    setProfilePhoto,
+    addProgressPhoto,
+    updateProfile,
+    logout,
+    theme,
+    setTheme,
+    motivationPhrase,
+    motivationPhoto,
+    setMotivationPhrase,
+    setMotivationPhoto,
+    authToken,
+  } = useAppStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const progressInputRef = useRef<HTMLInputElement>(null);
+  const motivationInputRef = useRef<HTMLInputElement>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [editData, setEditData] = useState({ weight: profile?.weight || 0, height: profile?.height || 0 });
+  const [editData, setEditData] = useState({
+    weight: String(profile?.weight || ''),
+    height: String(profile?.height || ''),
+  });
 
   if (!profile) return null;
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'profile' | 'progress') => {
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'profile' | 'progress' | 'motivation') => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => {
+      reader.onloadend = async () => {
         if (type === 'profile') {
           setProfilePhoto(reader.result as string);
+        } else if (type === 'progress') {
+          const newPhoto = { date: new Date().toISOString(), url: reader.result as string };
+          addProgressPhoto(newPhoto);
+
+          if (authToken) {
+            try {
+              await workoutService.addPhoto(authToken, newPhoto);
+            } catch (error) {
+              console.error('Error persisting progress photo:', error);
+            }
+          }
         } else {
-          addProgressPhoto({ date: new Date().toISOString(), url: reader.result as string });
+          setMotivationPhoto(reader.result as string);
         }
       };
       reader.readAsDataURL(file);
@@ -29,12 +60,21 @@ export default function Profile() {
   };
 
   const handleSaveProfile = async () => {
-    updateProfile({ weight: editData.weight, height: editData.height });
+    const parsedWeight = Number(editData.weight) || profile.weight;
+    const parsedHeight = Number(editData.height) || profile.height;
+
+    updateProfile({ weight: parsedWeight, height: parsedHeight });
     // Persist to backend
     const token = useAppStore.getState().authToken;
     if (token) {
       try {
-        await authService.updateProfile(token, { weight: editData.weight, height: editData.height });
+        await authService.updateProfile(token, {
+          weight: parsedWeight,
+          height: parsedHeight,
+          theme,
+          motivationPhrase,
+          motivationPhoto,
+        });
       } catch (e) {
         console.error('Error saving profile to backend:', e);
       }
@@ -100,7 +140,7 @@ export default function Profile() {
               <input 
                 type="number" 
                 value={editData.weight} 
-                onChange={(e) => setEditData({...editData, weight: Number(e.target.value)})}
+                  onChange={(e) => setEditData({...editData, weight: e.target.value})}
                 className="w-16 bg-black border border-[#39ff14] rounded px-2 text-white font-bold"
               />
             ) : (
@@ -116,7 +156,7 @@ export default function Profile() {
               <input 
                 type="number" 
                 value={editData.height} 
-                onChange={(e) => setEditData({...editData, height: Number(e.target.value)})}
+                  onChange={(e) => setEditData({...editData, height: e.target.value})}
                 className="w-16 bg-black border border-[#39ff14] rounded px-2 text-white font-bold"
               />
             ) : (
@@ -183,6 +223,69 @@ export default function Profile() {
           Disponibilidad
         </h3>
         <p className="text-gray-400 font-mono">{profile.schedule}</p>
+      </div>
+
+      <div className="bg-[#121212] border border-[#262626] rounded-3xl p-6 mb-8">
+        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+          <Palette className="text-[#39ff14]" size={20} />
+          Tema Visual
+        </h3>
+        <div className="grid grid-cols-1 gap-3">
+          {[
+            { id: 'aguamarina-negro', label: 'Aguamarina - Negro' },
+            { id: 'verde-negro', label: 'Verde - Negro' },
+            { id: 'ocaso-negro', label: 'Ocaso - Negro' },
+          ].map((option) => (
+            <button
+              key={option.id}
+              onClick={() => setTheme(option.id as any)}
+              className={`text-left px-4 py-3 rounded-xl border transition-all ${
+                theme === option.id
+                  ? 'border-[#39ff14] bg-[#39ff14]/10 text-[#39ff14]'
+                  : 'border-[#262626] text-gray-300'
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="bg-[#121212] border border-[#262626] rounded-3xl p-6 mb-8">
+        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+          <Quote className="text-[#39ff14]" size={20} />
+          Motivación
+        </h3>
+        <input
+          type="text"
+          value={motivationPhrase}
+          onChange={(e) => setMotivationPhrase(e.target.value)}
+          className="w-full bg-black border border-[#262626] rounded-xl py-3 px-4 text-white mb-4 focus:border-[#39ff14] outline-none"
+          placeholder="Escribe tu frase motivacional"
+        />
+
+        <button
+          onClick={() => motivationInputRef.current?.click()}
+          className="w-full mb-4 bg-[#262626] text-white py-3 rounded-xl hover:text-[#39ff14] transition-colors"
+        >
+          Subir foto motivacional
+        </button>
+        <input
+          type="file"
+          ref={motivationInputRef}
+          onChange={(e) => handlePhotoUpload(e, 'motivation')}
+          accept="image/*"
+          className="hidden"
+        />
+
+        {motivationPhoto && (
+          <div className="rounded-xl overflow-hidden border border-[#262626] relative">
+            <img src={motivationPhoto} alt="Motivación" className="w-full h-48 object-cover" />
+            <div className="absolute inset-0 bg-black/40 flex items-end p-3">
+              <p className="text-sm text-white font-medium">{motivationPhrase}</p>
+            </div>
+          </div>
+        )}
       </div>
 
       <button

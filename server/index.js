@@ -9,6 +9,10 @@ import aiRoutes from './routes/ai.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
+import { requestLogger } from './middleware/requestLogger.js';
+import { sanitizeRequestBody } from './middleware/sanitize.js';
+import { logError, logInfo } from './utils/logger.js';
+import { getMetricsSnapshot } from './utils/metrics.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -16,6 +20,8 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3000;
+
+app.set('trust proxy', 1);
 
 // Verify static files exist
 const staticPath = path.join(__dirname, '../public');
@@ -28,7 +34,9 @@ if (fs.existsSync(staticPath)) {
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(requestLogger);
+app.use(express.json({ limit: '12mb' }));
+app.use(sanitizeRequestBody);
 app.use(express.static(path.join(__dirname, '../public')));
 
 // API Routes
@@ -40,7 +48,21 @@ app.use('/api/ai', aiRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({ status: 'ok', timestamp: new Date().toISOString(), requestId: req.requestId });
+});
+
+app.get('/api/metrics', (req, res) => {
+  const metricsKey = process.env.METRICS_KEY;
+  const providedKey = req.headers['x-metrics-key'];
+
+  if (metricsKey && providedKey !== metricsKey) {
+    return res.status(401).json({ error: 'Unauthorized metrics access' });
+  }
+
+  return res.json({
+    requestId: req.requestId,
+    metrics: getMetricsSnapshot(),
+  });
 });
 
 // Serve React app for all other routes (SPA fallback)
@@ -57,18 +79,25 @@ app.get('*', (req, res) => {
 
 // Error handling
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ error: 'Something went wrong!' });
+  logError('http.request.unhandled_error', {
+    requestId: req.requestId,
+    method: req.method,
+    path: req.originalUrl,
+    message: err.message,
+    stack: err.stack,
+  });
+
+  res.status(500).json({ error: 'Something went wrong!', requestId: req.requestId });
 });
 
 // Start server
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on port ${PORT}`);
+  logInfo('server.started', { port: PORT });
 });
 
 // Graceful shutdown
 process.on('SIGTERM', async () => {
-  console.log('SIGTERM received, closing server...');
+  logInfo('server.stopping', { signal: 'SIGTERM' });
   await prisma.$disconnect();
   process.exit(0);
 });

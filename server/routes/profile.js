@@ -1,6 +1,8 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authMiddleware } from '../middleware/auth.js';
+import { validateProfileUpdatePayload } from '../middleware/validators.js';
+import { logError } from '../utils/logger.js';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -18,19 +20,39 @@ router.get('/', authMiddleware, async (req, res) => {
 
     res.json(profile);
   } catch (error) {
-    console.error('Get profile error:', error);
+    logError('profile.get.error', { requestId: req.requestId, message: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to get profile' });
   }
 });
 
 // Update profile
-router.put('/', authMiddleware, async (req, res) => {
+router.put('/', authMiddleware, validateProfileUpdatePayload, async (req, res) => {
   try {
     const { 
       age, weight, height, gender, goal, currentState, 
       schedule, workHours, mealTimes, avatarConfig, 
-      routine, diet, insights, profilePhoto 
+      routine, diet, insights, profilePhoto,
+      theme, motivationPhrase, goalDirection, goalTargetKg,
+      goalTimelineMonths, trainingDaysPerWeek, sessionMinutes,
+      weeklySpecialSession, foodPreferences, specialDish
     } = req.body;
+
+    const mergedInsights = {
+      ...(insights || {}),
+      appPreferences: {
+        ...(insights?.appPreferences || {}),
+        theme,
+        motivationPhrase,
+        goalDirection,
+        goalTargetKg,
+        goalTimelineMonths,
+        trainingDaysPerWeek,
+        sessionMinutes,
+        weeklySpecialSession,
+        foodPreferences,
+        specialDish,
+      }
+    };
 
     const profile = await prisma.userProfile.update({
       where: { userId: req.userId },
@@ -40,21 +62,32 @@ router.put('/', authMiddleware, async (req, res) => {
         height,
         gender,
         goal,
+        goalDirection,
+        goalTargetKg,
+        goalTimelineMonths,
         currentState,
         schedule,
+        trainingDaysPerWeek,
+        sessionMinutes,
         workHours,
+        theme,
+        motivationPhrase,
+        motivationPhoto,
         mealTimes,
+        foodPreferences,
+        weeklySpecialSession,
+        specialDish,
         avatarConfig,
         routine,
         diet,
-        insights,
+        insights: mergedInsights,
         profilePhoto
       }
     });
 
     res.json(profile);
   } catch (error) {
-    console.error('Update profile error:', error);
+    logError('profile.update.error', { requestId: req.requestId, message: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to update profile' });
   }
 });
