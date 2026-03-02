@@ -47,5 +47,5 @@ RUN mkdir -p uploads
 # Expose port
 EXPOSE 3000
 
-# Start command: run migrations and start server, with logging
-CMD ["sh", "-c", "echo 'Starting server...' && npx prisma db push --accept-data-loss && echo 'Migrations complete' && node server/index.js"]
+# Start command: run safe production migrations and start server
+CMD ["sh", "-c", "echo 'Starting server...' && npx prisma migrate deploy && echo 'Migrations complete' && node server/index.js"]

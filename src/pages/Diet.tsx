@@ -3,11 +3,12 @@ import { motion } from 'motion/react';
 import { useAppStore, Meal } from '../store/useAppStore';
 import { Utensils, Flame, Droplet, Beef, Wheat, RefreshCw, Sparkles } from 'lucide-react';
 import { generateAlternativeMeal } from '../services/geminiService';
+import { authService } from '../services/authService';
 import { AppCard, SectionHeader, StatPill } from '../components/ui';
 import { listStagger } from '../lib/motion';
 
 export default function Diet() {
-  const { diet, profile, swapMeal, showToast } = useAppStore();
+  const { diet, profile, swapMeal, showToast, authToken } = useAppStore();
   const [loadingMealId, setLoadingMealId] = useState<string | null>(null);
   const [specialDishTarget, setSpecialDishTarget] = useState(390);
 
@@ -18,7 +19,26 @@ export default function Diet() {
     setLoadingMealId(meal.id);
     try {
       const newMeal = await generateAlternativeMeal(meal, profile);
+      const updatedDiet = {
+        ...diet,
+        meals: diet.meals.map((item) => (item.id === meal.id ? newMeal : item)),
+      };
+
       swapMeal(meal.id, newMeal);
+
+      if (authToken) {
+        try {
+          await authService.updateProfile(authToken, { diet: updatedDiet });
+        } catch (persistError) {
+          console.error('Error persisting swapped meal:', persistError);
+          showToast({
+            type: 'info',
+            title: 'Cambio local guardado',
+            message: 'No se pudo sincronizar con el servidor en este momento.',
+          });
+        }
+      }
+
       showToast({
         type: 'success',
         title: 'Comida actualizada 🔄',

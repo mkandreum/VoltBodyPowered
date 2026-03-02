@@ -21,6 +21,7 @@ export default function Profile() {
     setMotivationPhrase,
     setMotivationPhoto,
     authToken,
+    showToast,
   } = useAppStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const progressInputRef = useRef<HTMLInputElement>(null);
@@ -33,13 +34,38 @@ export default function Profile() {
 
   if (!profile) return null;
 
+  const persistProfilePatch = async (patch: Record<string, unknown>, silent = true) => {
+    if (!authToken) return;
+
+    try {
+      await authService.updateProfile(authToken, patch);
+      if (!silent) {
+        showToast({
+          type: 'success',
+          title: 'Perfil actualizado',
+        });
+      }
+    } catch (error) {
+      console.error('Error persisting profile patch:', error);
+      if (!silent) {
+        showToast({
+          type: 'error',
+          title: 'No se pudo guardar',
+          message: 'Reintenta en unos segundos.',
+        });
+      }
+    }
+  };
+
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'profile' | 'progress' | 'motivation') => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
       reader.onloadend = async () => {
         if (type === 'profile') {
-          setProfilePhoto(reader.result as string);
+          const photo = reader.result as string;
+          setProfilePhoto(photo);
+          await persistProfilePatch({ profilePhoto: photo });
         } else if (type === 'progress') {
           const newPhoto = { date: new Date().toISOString(), url: reader.result as string };
           addProgressPhoto(newPhoto);
@@ -52,7 +78,9 @@ export default function Profile() {
             }
           }
         } else {
-          setMotivationPhoto(reader.result as string);
+          const photo = reader.result as string;
+          setMotivationPhoto(photo);
+          await persistProfilePatch({ motivationPhoto: photo });
         }
       };
       reader.readAsDataURL(file);
@@ -65,21 +93,32 @@ export default function Profile() {
 
     updateProfile({ weight: parsedWeight, height: parsedHeight });
     // Persist to backend
-    const token = useAppStore.getState().authToken;
-    if (token) {
-      try {
-        await authService.updateProfile(token, {
-          weight: parsedWeight,
-          height: parsedHeight,
-          theme,
-          motivationPhrase,
-          motivationPhoto,
-        });
-      } catch (e) {
-        console.error('Error saving profile to backend:', e);
-      }
-    }
+    await persistProfilePatch(
+      {
+        weight: parsedWeight,
+        height: parsedHeight,
+        theme,
+        motivationPhrase,
+        motivationPhoto,
+      },
+      true
+    );
+
+    showToast({
+      type: 'success',
+      title: 'Cambios guardados ✅',
+    });
+
     setIsEditing(false);
+  };
+
+  const handleThemeChange = async (nextTheme: 'aguamarina-negro' | 'verde-negro' | 'ocaso-negro') => {
+    setTheme(nextTheme);
+    await persistProfilePatch({ theme: nextTheme });
+  };
+
+  const handleMotivationPhraseBlur = async () => {
+    await persistProfilePatch({ motivationPhrase });
   };
 
   return (
@@ -238,7 +277,7 @@ export default function Profile() {
           ].map((option) => (
             <button
               key={option.id}
-              onClick={() => setTheme(option.id as any)}
+              onClick={() => handleThemeChange(option.id as 'aguamarina-negro' | 'verde-negro' | 'ocaso-negro')}
               className={`text-left px-4 py-3 rounded-xl border transition-all ${
                 theme === option.id
                   ? 'border-[#39ff14] bg-[#39ff14]/10 text-[#39ff14]'
@@ -260,6 +299,7 @@ export default function Profile() {
           type="text"
           value={motivationPhrase}
           onChange={(e) => setMotivationPhrase(e.target.value)}
+          onBlur={handleMotivationPhraseBlur}
           className="w-full bg-black border border-[#262626] rounded-xl py-3 px-4 text-white mb-4 focus:border-[#39ff14] outline-none"
           placeholder="Escribe tu frase motivacional"
         />

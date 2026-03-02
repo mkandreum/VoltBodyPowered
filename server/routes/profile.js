@@ -31,7 +31,7 @@ router.put('/', authMiddleware, validateProfileUpdatePayload, async (req, res) =
     const { 
       age, weight, height, gender, goal, currentState, 
       schedule, workHours, mealTimes, avatarConfig, 
-      routine, diet, insights, profilePhoto,
+      routine, diet, insights, profilePhoto, motivationPhoto,
       theme, motivationPhrase, goalDirection, goalTargetKg,
       goalTimelineMonths, trainingDaysPerWeek, sessionMinutes,
       weeklySpecialSession, foodPreferences, specialDish

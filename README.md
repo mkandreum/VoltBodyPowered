@@ -37,13 +37,11 @@ docker run --name voltbody-db \
   -e POSTGRES_DB=voltbody \
   -p 5432:5432 -d postgres:16-alpine
 
-# 4. Ejecutar migraciones
-npx prisma migrate dev
-npx prisma generate
+# 4. Setup automático (cliente Prisma + migraciones)
+npm run setup
 
-# 5. Iniciar aplicación (2 terminales)
-npm run dev          # Terminal 1: Frontend
-npm run dev:server   # Terminal 2: Backend API
+# 5. Iniciar aplicación completa (frontend + backend)
+npm run dev:all
 ```
 
 **Abrir:** http://localhost:3000
