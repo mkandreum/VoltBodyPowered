@@ -13,11 +13,11 @@ export DATABASE_URL="postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT
 
 echo "Connecting to: postgresql://${DB_USER}:****@${DB_HOST}:${DB_PORT}/${DB_NAME}"
 
-# Wait for PostgreSQL to be ready
+# Wait for PostgreSQL to be ready using TCP connection test
 max_attempts=30
 attempt=0
 while [ $attempt -lt $max_attempts ]; do
-  if pg_isready -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" 2>/dev/null; then
+  if timeout 2 bash -c "echo > /dev/tcp/$DB_HOST/$DB_PORT" 2>/dev/null; then
     echo "PostgreSQL is ready"
     break
   fi
