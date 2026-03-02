@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { motion } from 'motion/react';
 import { useAppStore } from '../store/useAppStore';
+import { authService } from '../services/authService';
 import { User, Settings, LogOut, Activity, Target, Clock, Scale, Ruler, Camera, Plus, Edit2, Check } from 'lucide-react';
 
 export default function Profile() {
@@ -27,8 +28,17 @@ export default function Profile() {
     }
   };
 
-  const handleSaveProfile = () => {
+  const handleSaveProfile = async () => {
     updateProfile({ weight: editData.weight, height: editData.height });
+    // Persist to backend
+    const token = useAppStore.getState().authToken;
+    if (token) {
+      try {
+        await authService.updateProfile(token, { weight: editData.weight, height: editData.height });
+      } catch (e) {
+        console.error('Error saving profile to backend:', e);
+      }
+    }
     setIsEditing(false);
   };
 

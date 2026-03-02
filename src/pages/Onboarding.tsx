@@ -24,9 +24,9 @@ export default function Onboarding() {
     gender: 'Masculino',
     weight: 70,
     height: 175,
-    currentState: 'Principiante',
-    goal: 'Ganar masa muscular',
-    schedule: '3 días a la semana, 1 hora',
+    currentState: 'Principiante (Nunca he entrenado)',
+    goal: 'Ganar masa muscular (Volumen)',
+    schedule: '3 días a la semana, 45 min',
     workHours: '09:00 - 17:00',
     mealTimes: {
       breakfast: '08:00',

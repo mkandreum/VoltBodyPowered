@@ -10,7 +10,6 @@ router.get('/me', authMiddleware, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.userId },
-      include: { profile: true },
       select: {
         id: true,
         email: true,

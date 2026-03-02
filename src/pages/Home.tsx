@@ -12,7 +12,10 @@ export default function Home() {
   const [selectedExerciseId, setSelectedExerciseId] = useState<string>('all');
 
   const today = new Date().toLocaleDateString('es-ES', { weekday: 'long' });
-  const todayRoutine = routine?.[0] || null;
+  // Map current day to routine index (Mon=0, Tue=1...Sun=6)
+  const dayIndex = new Date().getDay();
+  const routineIndex = dayIndex === 0 ? 6 : dayIndex - 1;
+  const todayRoutine = routine?.length > 0 ? routine[routineIndex % routine.length] : null;
   const todayDiet = diet || null;
 
   // Get unique exercises from routine for the selector

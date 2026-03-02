@@ -9,7 +9,10 @@ export default function Workout() {
   const [weightInput, setWeightInput] = useState<number>(0);
   const [repsInput, setRepsInput] = useState<number>(0);
 
-  const todayRoutine = routine?.[0]; // Simplified for now
+  // Map current day to routine index (Mon=0...Sun=6)
+  const dayIndex = new Date().getDay();
+  const routineIndex = dayIndex === 0 ? 6 : dayIndex - 1;
+  const todayRoutine = routine?.length > 0 ? routine[routineIndex % routine.length] : undefined;
 
   const handleLog = () => {
     if (selectedExercise && weightInput > 0 && repsInput > 0) {
@@ -19,7 +22,8 @@ export default function Workout() {
         weight: weightInput,
         reps: repsInput,
       });
-      setSelectedExercise(null);
+      // TODO: also persist to backend when authToken available
+      alert(`Serie guardada: ${weightInput}kg x ${repsInput} reps`);
       setWeightInput(0);
       setRepsInput(0);
     }

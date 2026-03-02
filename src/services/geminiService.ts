@@ -1,7 +1,11 @@
 import { GoogleGenAI, Type } from '@google/genai';
 import { WorkoutDay, DietPlan, Meal, Insights } from '../store/useAppStore';
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const apiKey = process.env.GEMINI_API_KEY;
+if (!apiKey) {
+  console.warn('GEMINI_API_KEY not set. AI features will not work.');
+}
+const ai = new GoogleGenAI({ apiKey: apiKey || '' });
 
 export async function generatePlan(profile: any): Promise<{ routine: WorkoutDay[]; diet: DietPlan; insights: Insights }> {
   const prompt = `
