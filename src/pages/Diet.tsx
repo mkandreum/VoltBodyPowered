@@ -135,7 +135,7 @@ export default function Diet() {
               <div>
                 <h3 className="text-lg font-bold text-white flex items-center gap-2">
                   {meal.name}
-                  <span className="text-xs font-mono bg-[#262626] text-gray-300 px-2 py-1 rounded-full">
+                  <span className="text-xs font-mono bg-[var(--app-border)] text-gray-300 px-2 py-1 rounded-full">
                     {meal.time}
                   </span>
                 </h3>

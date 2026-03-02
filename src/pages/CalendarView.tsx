@@ -64,7 +64,7 @@ export default function CalendarView() {
                 className={clsx(
                   'aspect-square rounded-xl flex flex-col items-center justify-center relative cursor-pointer transition-all',
                   isSelected ? 'bg-[color:var(--app-accent)]/20 border border-[var(--app-accent)] app-accent glow-box' : 
-                  isToday ? 'bg-[#262626] border border-gray-500 text-white' : 
+                  isToday ? 'bg-[var(--app-border)] border border-gray-500 text-white' : 
                   'bg-black border border-[var(--app-border)] text-gray-400 hover:border-gray-500'
                 )}
               >

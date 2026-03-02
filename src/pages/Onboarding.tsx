@@ -193,8 +193,8 @@ export default function Onboarding() {
                     onClick={() => setFormData({ ...formData, gender: g })}
                     className={`p-4 rounded-xl border transition-all ${
                       formData.gender === g
-                        ? 'border-[#39ff14] bg-[#39ff14]/10 text-[#39ff14]'
-                        : 'border-[#262626] bg-[#121212] text-gray-400'
+                        ? 'border-[var(--app-accent)] bg-[color:var(--app-accent)]/10 text-[var(--app-accent)]'
+                        : 'border-[var(--app-border)] app-surface text-gray-400'
                     }`}
                   >
                     {g}
@@ -254,8 +254,8 @@ export default function Onboarding() {
                 onClick={() => setFormData({ ...formData, goal })}
                 className={`w-full p-4 rounded-xl border text-left transition-all ${
                   formData.goal === goal
-                    ? 'border-[#39ff14] bg-[#39ff14]/10 text-[#39ff14]'
-                    : 'border-[#262626] bg-[#121212] text-gray-400'
+                    ? 'border-[var(--app-accent)] bg-[color:var(--app-accent)]/10 text-[var(--app-accent)]'
+                    : 'border-[var(--app-border)] app-surface text-gray-400'
                 }`}
               >
                 {goal}
@@ -269,8 +269,8 @@ export default function Onboarding() {
                   onClick={() => setFormData({ ...formData, goalDirection: direction })}
                   className={`p-4 rounded-xl border transition-all ${
                     formData.goalDirection === direction
-                      ? 'border-[#39ff14] bg-[#39ff14]/10 text-[#39ff14]'
-                      : 'border-[#262626] bg-[#121212] text-gray-400'
+                      ? 'border-[var(--app-accent)] bg-[color:var(--app-accent)]/10 text-[var(--app-accent)]'
+                      : 'border-[var(--app-border)] app-surface text-gray-400'
                   }`}
                 >
                   {direction} peso
@@ -327,7 +327,7 @@ export default function Onboarding() {
                 className="w-full bg-[#121212] border border-[#262626] rounded-xl p-4 text-white focus:border-[#39ff14] focus:ring-1 focus:ring-[#39ff14] outline-none transition-all"
               />
             </div>
-            <div className="p-4 rounded-xl border border-[#39ff14]/30 bg-[#39ff14]/5 text-sm text-[#39ff14]">
+            <div className="p-4 rounded-xl border border-[color:var(--app-accent)]/30 bg-[color:var(--app-accent)]/5 text-sm text-[var(--app-accent)]">
               Tu disponibilidad quedará como: {formData.trainingDaysPerWeek} días/semana y {formData.sessionMinutes} min por sesión.
             </div>
           </div>
@@ -551,7 +551,7 @@ export default function Onboarding() {
   }
 
   return (
-    <div className="min-h-screen app-shell flex flex-col p-6">
+    <div className="onboard-theme min-h-screen app-shell flex flex-col p-6">
       <div className="flex items-center justify-between mb-8 mt-4">
         <button
           onClick={handleBack}

@@ -284,7 +284,7 @@ export default function Home() {
                   <XAxis dataKey="name" stroke="#6b7280" fontSize={10} tickLine={false} axisLine={false} />
                   <YAxis hide />
                   <Tooltip
-                    contentStyle={{ backgroundColor: '#121212cc', border: '1px solid #2a2a2a', borderRadius: '10px' }}
+                    contentStyle={{ backgroundColor: 'color-mix(in srgb, var(--app-surface) 85%, transparent)', border: '1px solid var(--app-border)', borderRadius: '10px' }}
                     itemStyle={{ color: 'var(--app-accent)' }}
                   />
                   <Line

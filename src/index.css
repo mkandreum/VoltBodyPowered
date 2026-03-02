@@ -233,3 +233,20 @@ body[data-theme="ocaso-negro"] {
   box-shadow: 0 0 10px var(--app-accent-dim);
 }
 
+.onboard-theme input:not([type="checkbox"]),
+.onboard-theme select {
+  background-color: var(--app-surface) !important;
+  border-color: var(--app-border) !important;
+  color: #fff;
+}
+
+.onboard-theme input:not([type="checkbox"]):focus,
+.onboard-theme select:focus {
+  border-color: var(--app-accent) !important;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--app-accent) 65%, transparent) !important;
+}
+
+.onboard-theme ::placeholder {
+  color: #9ca3af;
+}
+
