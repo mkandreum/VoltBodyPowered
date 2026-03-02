@@ -126,7 +126,7 @@ export default function Profile() {
       <header className="mb-8 mt-4 flex justify-between items-center">
         <h1 className="brutal-title text-white flex items-center gap-3">
           <User className="app-accent" size={32} />
-          Perfil
+          👤 Perfil
         </h1>
         <button 
           onClick={() => isEditing ? handleSaveProfile() : setIsEditing(true)}
@@ -223,7 +223,7 @@ export default function Profile() {
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-bold text-white flex items-center gap-2">
             <Camera className="app-accent" size={20} />
-            Fotos de Progreso
+            📸 Fotos de Progreso
           </h3>
           <button 
             onClick={() => progressInputRef.current?.click()}
@@ -259,7 +259,7 @@ export default function Profile() {
       <div className="app-surface border border-[var(--app-border)] rounded-3xl p-6 mb-8">
         <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
           <Target className="app-accent" size={20} />
-          Disponibilidad
+          Disponibilidad 📆
         </h3>
         <p className="text-gray-400 font-mono">{profile.schedule}</p>
       </div>
@@ -267,13 +267,13 @@ export default function Profile() {
       <div className="app-surface border border-[var(--app-border)] rounded-3xl p-6 mb-8">
         <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
           <Palette className="app-accent" size={20} />
-          Tema Visual
+          Tema Visual 🎨
         </h3>
         <div className="grid grid-cols-1 gap-3">
           {[
-            { id: 'aguamarina-negro', label: 'Aguamarina - Negro' },
-            { id: 'verde-negro', label: 'Verde - Negro' },
-            { id: 'ocaso-negro', label: 'Ocaso - Negro' },
+            { id: 'aguamarina-negro', label: '🌊 Aguamarina - Negro' },
+            { id: 'verde-negro', label: '💚 Verde - Negro' },
+            { id: 'ocaso-negro', label: '🌅 Ocaso - Negro' },
           ].map((option) => (
             <button
               key={option.id}
@@ -293,7 +293,7 @@ export default function Profile() {
       <div className="glass-panel border border-[var(--app-border)] rounded-3xl p-6 mb-8">
         <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
           <Quote className="app-accent" size={20} />
-          Motivación
+          Motivación 💪
         </h3>
         <input
           type="text"
@@ -308,7 +308,7 @@ export default function Profile() {
           onClick={() => motivationInputRef.current?.click()}
           className="pressable w-full mb-4 bg-[var(--app-border)] text-white py-3 rounded-xl hover:text-[var(--app-accent)] transition-colors"
         >
-          Subir foto motivacional
+          Subir foto motivacional 📷
         </button>
         <input
           type="file"
@@ -333,7 +333,7 @@ export default function Profile() {
         className="w-full bg-red-500/10 border border-red-500/30 text-red-500 font-bold py-4 rounded-xl flex items-center justify-center gap-2 hover:bg-red-500/20 transition-colors"
       >
         <LogOut size={20} />
-        Cerrar Sesión
+        🚪 Cerrar Sesión
       </button>
     </div>
   );

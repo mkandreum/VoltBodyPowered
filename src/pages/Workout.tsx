@@ -75,7 +75,7 @@ export default function Workout() {
       <header className="mb-8 mt-4">
         <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
           <Dumbbell className="app-accent" size={32} />
-          Rutina de Hoy
+          💪 Rutina de Hoy
         </h1>
         <p className="app-accent font-mono text-sm glow-text">{todayRoutine?.focus || 'Hoy toca activar el cuerpo'}</p>
       </header>
@@ -83,7 +83,7 @@ export default function Workout() {
       <AppCard accent interactive className="mb-8 p-6 glass-panel">
         <div className="flex items-start justify-between gap-4 mb-4">
           <div>
-            <p className="text-xs uppercase tracking-[0.18em] text-gray-400 mb-2">Sesión Prioritaria</p>
+            <p className="text-xs uppercase tracking-[0.18em] text-gray-400 mb-2">🎯 Sesión Prioritaria</p>
             <h2 className="text-3xl font-black text-white leading-none tracking-tight">
               {todayRoutine?.focus || 'Crea tu sesión personalizada'}
             </h2>
@@ -120,7 +120,7 @@ export default function Workout() {
           }}
           className="pressable pulse-surface w-full rounded-xl bg-[var(--app-accent)] text-black font-bold py-3 px-4 hover:brightness-95 transition-base"
         >
-          Empezar sesión
+          Empezar sesión 🚀
         </button>
       </AppCard>
 
@@ -171,7 +171,7 @@ export default function Workout() {
         <AppCard className="mt-8" accent>
           <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-2">
             <Star size={18} className="app-accent" />
-            Clase Especial Semanal
+            ⭐ Clase Especial Semanal
           </h3>
           <p className="text-sm text-gray-300">
             {profile.weeklySpecialSession.activity} • {profile.weeklySpecialSession.day} • {profile.weeklySpecialSession.durationMinutes} min
@@ -180,7 +180,7 @@ export default function Workout() {
       )}
 
       <AppCard className="mt-8">
-        <SectionHeader title="Arma tu Entrenamiento" />
+        <SectionHeader title="🏋️ Arma tu Entrenamiento" />
 
         <div className="flex flex-wrap gap-2 mb-4">
           {muscleGroups.map((group) => (
@@ -223,7 +223,7 @@ export default function Workout() {
 
       {customWorkout.length > 0 && (
         <AppCard className="mt-6">
-          <SectionHeader title={`Tu Rutina Personal (${customWorkout.length})`} />
+          <SectionHeader title={`📋 Tu Rutina Personal (${customWorkout.length})`} />
           <div className="space-y-2">
             {customWorkout.map((exercise) => (
               <div key={exercise.id} className="flex items-center justify-between bg-black border border-[var(--app-border)] rounded-xl p-3">
@@ -282,7 +282,7 @@ export default function Workout() {
               <div className="app-surface border border-[var(--app-border)] rounded-3xl p-6 mb-8">
                 <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
                   <CheckCircle2 className="app-accent" />
-                  Registrar Serie
+                  Registrar Serie ✏️
                 </h3>
                 
                 <div className="grid grid-cols-2 gap-4 mb-6">
@@ -313,7 +313,7 @@ export default function Workout() {
                   disabled={!weightInput || !repsInput}
                   className="w-full bg-[var(--app-accent)] text-black font-bold py-4 rounded-xl flex items-center justify-center gap-2 hover:brightness-95 transition-colors disabled:opacity-50 disabled:cursor-not-allowed glow-box"
                 >
-                  Guardar Serie
+                  Guardar Serie 💾
                 </button>
               </div>
             </div>

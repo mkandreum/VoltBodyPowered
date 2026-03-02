@@ -7,9 +7,9 @@ export const motionTiming = {
 const easeOut = [0.22, 1, 0.36, 1] as const;
 
 export const pageTransition = {
-  initial: { opacity: 0, x: 20 },
-  animate: { opacity: 1, x: 0 },
-  exit: { opacity: 0, x: -20 },
+  initial: { opacity: 0, y: 10 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -10 },
   transition: { duration: motionTiming.base, ease: easeOut },
 };
 
