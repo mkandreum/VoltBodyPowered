@@ -22,8 +22,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        GEMINI_API_KEY: ${GEMINI_API_KEY:-}
     restart: always
     expose:
       - "3000"

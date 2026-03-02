@@ -15,7 +15,7 @@
     "prisma:studio": "prisma studio"
   },
   "dependencies": {
-    "@google/genai": "^1.29.0",
+    "@google/genai": "^1.43.0",
     "@prisma/client": "^6.1.0",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.5.0",
