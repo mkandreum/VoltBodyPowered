@@ -5,7 +5,7 @@ import { authService } from '../services/authService';
 import { useAppStore } from '../store/useAppStore';
 
 export default function Login() {
-  const { setAuthToken, setUser } = useAppStore();
+  const { setAuthToken, setUser, setProfile, setRoutine, setDiet, setInsights, completeOnboarding } = useAppStore();
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -38,6 +38,36 @@ export default function Login() {
 
       setAuthToken(response.token);
       setUser(response.user);
+
+      // If logging in (not registering), try to restore saved plan from backend
+      if (isLogin) {
+        try {
+          const profile = await authService.getProfile(response.token);
+          if (profile && profile.routine && profile.diet) {
+            setProfile({
+              name: response.user.name || '',
+              age: profile.age,
+              weight: profile.weight,
+              height: profile.height,
+              gender: profile.gender,
+              goal: profile.goal,
+              currentState: profile.currentState,
+              schedule: profile.schedule,
+              workHours: profile.workHours,
+              mealTimes: profile.mealTimes,
+              avatarConfig: profile.avatarConfig,
+            });
+            setRoutine(profile.routine);
+            setDiet(profile.diet);
+            if (profile.insights) {
+              setInsights(profile.insights);
+            }
+            completeOnboarding();
+          }
+        } catch (err) {
+          console.error('Could not restore saved plan, proceeding to onboarding:', err);
+        }
+      }
     } catch (err: any) {
       setError(err.message || 'Ha ocurrido un error');
     } finally {
