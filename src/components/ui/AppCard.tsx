@@ -13,10 +13,10 @@ export default function AppCard({ children, className, interactive = false, acce
   return (
     <div
       className={cn(
-        'rounded-3xl border p-5 transition-all',
+        'app-card rounded-3xl border p-5 transition-all',
         'bg-[var(--app-surface)] border-[var(--app-border)]',
         accent && 'border-[color:var(--app-accent)]/40 bg-[color:var(--app-accent)]/5',
-        interactive && 'hover:border-[color:var(--app-accent)]/50',
+        interactive && 'interactive-card hover:border-[color:var(--app-accent)]/50',
         className
       )}
     >

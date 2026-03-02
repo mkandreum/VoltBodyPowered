@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore, Exercise } from '../store/useAppStore';
-import { ChevronLeft, Play, CheckCircle2, Dumbbell, PlusCircle, Trash2, Star } from 'lucide-react';
+import { ChevronLeft, Play, CheckCircle2, Dumbbell, PlusCircle, Trash2, Star, CalendarClock, Flame } from 'lucide-react';
 import { workoutService } from '../services/workoutService';
-import { AppCard, SectionHeader } from '../components/ui';
+import { AppCard, SectionHeader, StatPill } from '../components/ui';
+import { listStagger } from '../lib/motion';
 
 export default function Workout() {
   const {
@@ -15,6 +16,7 @@ export default function Workout() {
     removeFromCustomWorkout,
     profile,
     authToken,
+    showToast,
   } = useAppStore();
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
   const [weightInput, setWeightInput] = useState<number>(0);
@@ -29,6 +31,11 @@ export default function Workout() {
   const filteredLibrary = selectedMuscleGroup === 'Todos'
     ? exerciseLibrary
     : exerciseLibrary.filter((item) => item.muscleGroup === selectedMuscleGroup);
+  const totalTodayExercises = todayRoutine?.exercises?.length || 0;
+  const todayLabel = new Intl.DateTimeFormat('es-ES', { weekday: 'long' }).format(new Date());
+  const isSpecialClassToday =
+    Boolean(profile?.weeklySpecialSession?.enabled) &&
+    profile?.weeklySpecialSession?.day?.toLowerCase() === todayLabel.toLowerCase();
 
   const handleLog = async () => {
     if (selectedExercise && weightInput > 0 && repsInput > 0) {
@@ -49,7 +56,11 @@ export default function Workout() {
         }
       }
 
-      alert(`Serie guardada: ${weightInput}kg x ${repsInput} reps`);
+      showToast({
+        type: 'success',
+        title: 'Serie guardada 💪',
+        message: `${weightInput}kg x ${repsInput} reps`,
+      });
       setWeightInput(0);
       setRepsInput(0);
     }
@@ -69,13 +80,67 @@ export default function Workout() {
         <p className="app-accent font-mono text-sm glow-text">{todayRoutine?.focus || 'Descanso'}</p>
       </header>
 
+      <AppCard accent interactive className="mb-8 p-6">
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <div>
+            <p className="text-xs uppercase tracking-wide text-gray-400 mb-2">Sesión Prioritaria</p>
+            <h2 className="text-2xl font-extrabold text-white leading-tight">
+              {todayRoutine?.focus || 'Crea tu sesión personalizada'}
+            </h2>
+            <p className="text-sm text-gray-300 mt-2">
+              {todayRoutine
+                ? `${totalTodayExercises} ejercicios listos para ejecutar`
+                : 'No hay rutina asignada hoy, arma una sesión en 1 minuto'}
+            </p>
+          </div>
+          <Flame className="app-accent shrink-0" />
+        </div>
+
+        <div className="grid grid-cols-3 gap-2 mb-4">
+          <StatPill label="estado" value={todayRoutine ? 'activo ✅' : 'custom'} />
+          <StatPill label="ejercicios" value={`${totalTodayExercises}`} />
+          <StatPill label="tu lista" value={`${customWorkout.length}`} />
+        </div>
+
+        <button
+          onClick={() => {
+            if (!todayRoutine?.exercises?.length) {
+              showToast({
+                type: 'info',
+                title: 'Sin rutina automática',
+                message: 'Añade ejercicios en “Arma tu Entrenamiento”.',
+              });
+              return;
+            }
+            showToast({
+              type: 'success',
+              title: 'Sesión iniciada ⚡',
+              message: `Enfócate en ${todayRoutine.focus}.`,
+            });
+          }}
+          className="pressable w-full rounded-xl bg-[var(--app-accent)] text-black font-bold py-3 px-4 hover:brightness-95 transition-base"
+        >
+          Empezar sesión
+        </button>
+      </AppCard>
+
+      {isSpecialClassToday && (
+        <AppCard className="mb-8 border-[color:var(--app-accent)]/30 bg-[color:var(--app-accent)]/5">
+          <div className="flex items-center gap-3">
+            <CalendarClock className="app-accent" />
+            <div>
+              <p className="text-sm font-bold text-white">Hoy toca clase especial 🎯</p>
+              <p className="text-xs text-gray-300">Prioriza técnica y ritmo para sumar calidad al progreso.</p>
+            </div>
+          </div>
+        </AppCard>
+      )}
+
       <div className="space-y-4">
         {todayRoutine?.exercises.map((exercise, index) => (
           <motion.div
             key={exercise.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
+            {...listStagger(index)}
             onClick={() => setSelectedExercise(exercise)}
             className="app-surface border border-[var(--app-border)] rounded-3xl p-5 flex items-center gap-4 cursor-pointer hover:border-[color:var(--app-accent)]/50 transition-colors group"
           >

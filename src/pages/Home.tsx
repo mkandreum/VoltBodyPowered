@@ -2,10 +2,11 @@ import { useState, useMemo } from 'react';
 import { motion } from 'motion/react';
 import { useAppStore } from '../store/useAppStore';
 import Avatar3D from '../components/Avatar3D';
-import { Dumbbell, Utensils, Flame, Activity, Moon, TrendingUp, Quote } from 'lucide-react';
+import { Dumbbell, Utensils, Flame, Activity, Moon, TrendingUp, Quote, Sparkles, Target, CalendarCheck2 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { format, subDays, isAfter } from 'date-fns';
+import { format, subDays } from 'date-fns';
 import { AppCard, SectionHeader, StatPill } from '../components/ui';
+import { fadeSlideUp } from '../lib/motion';
 
 export default function Home() {
   const { profile, routine, diet, logs, insights, setTab, motivationPhrase, motivationPhoto } = useAppStore();
@@ -18,6 +19,26 @@ export default function Home() {
   const routineIndex = dayIndex === 0 ? 6 : dayIndex - 1;
   const todayRoutine = routine?.length > 0 ? routine[routineIndex % routine.length] : null;
   const todayDiet = diet || null;
+
+  const completedDays = useMemo(() => {
+    const uniqueDates = new Set(logs.map((log) => format(new Date(log.date), 'yyyy-MM-dd')));
+    return uniqueDates.size;
+  }, [logs]);
+
+  const currentStreak = useMemo(() => {
+    if (logs.length === 0) return 0;
+
+    const dateSet = new Set(logs.map((log) => format(new Date(log.date), 'yyyy-MM-dd')));
+    let streak = 0;
+    let cursor = new Date();
+
+    while (dateSet.has(format(cursor, 'yyyy-MM-dd'))) {
+      streak += 1;
+      cursor = subDays(cursor, 1);
+    }
+
+    return streak;
+  }, [logs]);
 
   // Get unique exercises from routine for the selector
   const allExercises = useMemo(() => {
@@ -73,8 +94,9 @@ export default function Home() {
 
       {insights?.dailyQuote && (
         <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={fadeSlideUp.initial}
+          animate={fadeSlideUp.animate}
+          transition={fadeSlideUp.transition}
           className="mb-8"
         >
           <AppCard accent className="rounded-2xl p-4 flex gap-3 items-start">
@@ -85,8 +107,52 @@ export default function Home() {
       )}
 
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={fadeSlideUp.initial}
+        animate={fadeSlideUp.animate}
+        transition={fadeSlideUp.transition}
+        className="mb-8"
+      >
+        <AppCard accent interactive className="p-6">
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-gray-400 mb-2">Plan de Hoy</p>
+              <h2 className="text-2xl font-extrabold text-white leading-tight">
+                {todayRoutine?.focus || 'Día de recuperación activa'}
+              </h2>
+              <p className="text-sm text-gray-300 mt-2">
+                {todayRoutine ? `${todayRoutine.exercises.length} ejercicios programados` : 'Aprovecha para movilidad, caminata o clase ligera'}
+              </p>
+            </div>
+            <Sparkles className="app-accent shrink-0" />
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 mb-4">
+            <StatPill label="racha" value={`${currentStreak} 🔥`} />
+            <StatPill label="días" value={`${completedDays}`} />
+            <StatPill label="kcal" value={todayDiet?.dailyCalories || 0} />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={() => setTab('workout')}
+              className="pressable rounded-xl bg-[var(--app-accent)] text-black font-bold py-3 px-4 hover:brightness-95 transition-base"
+            >
+              Empezar entreno ⚡
+            </button>
+            <button
+              onClick={() => setTab('diet')}
+              className="pressable rounded-xl border border-[var(--app-border)] bg-black/30 text-white font-semibold py-3 px-4 hover:border-[color:var(--app-accent)]/40 transition-base"
+            >
+              Ver nutrición 🍽️
+            </button>
+          </div>
+        </AppCard>
+      </motion.div>
+
+      <motion.div
+        initial={fadeSlideUp.initial}
+        animate={fadeSlideUp.animate}
+        transition={fadeSlideUp.transition}
         className="mb-8"
       >
         <Avatar3D />
@@ -118,7 +184,7 @@ export default function Home() {
 
       {profile && (
         <AppCard className="mb-8">
-          <SectionHeader title="Meta de Transformación" />
+          <SectionHeader title="Meta de Transformación" icon={Target} />
           <p className="text-sm text-gray-300">
             {profile.goalDirection} {profile.goalTargetKg} kg en {profile.goalTimelineMonths} meses.
           </p>
@@ -148,7 +214,7 @@ export default function Home() {
 
       {insights && (
         <div className="grid grid-cols-1 gap-4 mb-8">
-          <div className="bg-[#121212] border border-[#262626] rounded-3xl p-5 flex items-start gap-4">
+          <AppCard className="flex items-start gap-4">
             <div className="bg-blue-500/10 p-2 rounded-full mt-1">
               <Moon className="text-blue-400" size={20} />
             </div>
@@ -156,8 +222,8 @@ export default function Home() {
               <h3 className="text-sm font-bold text-white mb-1">Descanso Recomendado</h3>
               <p className="text-xs text-gray-400 leading-relaxed">{insights.sleepRecommendation}</p>
             </div>
-          </div>
-          <div className="bg-[#121212] border border-[#262626] rounded-3xl p-5 flex items-start gap-4">
+          </AppCard>
+          <AppCard className="flex items-start gap-4">
             <div className="bg-purple-500/10 p-2 rounded-full mt-1">
               <TrendingUp className="text-purple-400" size={20} />
             </div>
@@ -165,7 +231,7 @@ export default function Home() {
               <h3 className="text-sm font-bold text-white mb-1">Proyección de Resultados</h3>
               <p className="text-xs text-gray-400 leading-relaxed">{insights.estimatedResults}</p>
             </div>
-          </div>
+          </AppCard>
         </div>
       )}
 
@@ -189,6 +255,7 @@ export default function Home() {
         </div>
 
         <div className="flex gap-2 mb-4">
+          <StatPill label="hábito" value={currentStreak > 0 ? 'activo ✅' : 'inicia hoy'} />
           <StatPill label="rango" value={timeRange === 'week' ? '7 días' : '30 días'} />
           <StatPill label="ejercicio" value={selectedExerciseId === 'all' ? 'todos' : '1'} />
         </div>

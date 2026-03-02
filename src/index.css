@@ -19,6 +19,8 @@
   --app-border: #262626;
   --app-surface-elevated: #171717;
   --app-text-muted: #9ca3af;
+  --app-shadow-soft: 0 10px 36px rgba(0, 0, 0, 0.28);
+  --app-shadow-accent: 0 18px 54px var(--app-accent-dim);
 
   --motion-fast: 120ms;
   --motion-base: 220ms;
@@ -110,5 +112,58 @@ body[data-theme="ocaso-negro"] {
 
 .transition-expressive {
   transition-duration: var(--motion-expressive);
+}
+
+.app-card {
+  transition: transform var(--motion-base) cubic-bezier(0.22, 1, 0.36, 1),
+    border-color var(--motion-base),
+    box-shadow var(--motion-base),
+    background-color var(--motion-base);
+  box-shadow: var(--app-shadow-soft);
+}
+
+.app-card.interactive-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--app-shadow-accent);
+}
+
+.app-card.interactive-card:active {
+  transform: translateY(0);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.32);
+}
+
+.stat-pill {
+  transition: transform var(--motion-fast) ease, border-color var(--motion-fast), background-color var(--motion-fast);
+}
+
+.stat-pill:hover {
+  transform: translateY(-1px);
+  border-color: var(--app-accent);
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+.stat-pill:active {
+  transform: translateY(0);
+}
+
+.pressable {
+  transition: transform var(--motion-fast) cubic-bezier(0.22, 1, 0.36, 1),
+    filter var(--motion-fast),
+    box-shadow var(--motion-fast);
+}
+
+.pressable:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.03);
+}
+
+.pressable:active {
+  transform: translateY(0);
+  filter: brightness(0.97);
+}
+
+.pressable:focus-visible {
+  outline: 2px solid var(--app-accent);
+  outline-offset: 3px;
 }
 

@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
 import { useAppStore, Meal } from '../store/useAppStore';
-import { Utensils, Flame, Droplet, Beef, Wheat, RefreshCw } from 'lucide-react';
+import { Utensils, Flame, Droplet, Beef, Wheat, RefreshCw, Sparkles } from 'lucide-react';
 import { generateAlternativeMeal } from '../services/geminiService';
-import { AppCard, SectionHeader } from '../components/ui';
+import { AppCard, SectionHeader, StatPill } from '../components/ui';
+import { listStagger } from '../lib/motion';
 
 export default function Diet() {
-  const { diet, profile, swapMeal } = useAppStore();
+  const { diet, profile, swapMeal, showToast } = useAppStore();
   const [loadingMealId, setLoadingMealId] = useState<string | null>(null);
   const [specialDishTarget, setSpecialDishTarget] = useState(390);
 
@@ -18,9 +19,18 @@ export default function Diet() {
     try {
       const newMeal = await generateAlternativeMeal(meal, profile);
       swapMeal(meal.id, newMeal);
+      showToast({
+        type: 'success',
+        title: 'Comida actualizada 🔄',
+        message: `${meal.name} fue reemplazada por una alternativa equivalente.`,
+      });
     } catch (error) {
       console.error('Error swapping meal:', error);
-      alert('Hubo un error al cambiar la comida.');
+      showToast({
+        type: 'error',
+        title: 'No se pudo cambiar la comida',
+        message: 'Prueba nuevamente en un momento.',
+      });
     } finally {
       setLoadingMealId(null);
     }
@@ -39,6 +49,7 @@ export default function Diet() {
     baseSpecialDish.tomate.calories +
     baseSpecialDish['queso feta'].calories;
   const scale = specialDishTarget / baseCalories;
+  const avgMealCalories = Math.round(diet.dailyCalories / Math.max(1, diet.meals.length));
 
   return (
     <div className="min-h-screen app-shell p-6 pb-32">
@@ -49,6 +60,29 @@ export default function Diet() {
         </h1>
         <p className="text-gray-400 font-mono text-sm">Objetivo: {diet.dailyCalories} kcal</p>
       </header>
+
+      <AppCard accent interactive className="mb-8 p-6">
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <div>
+            <p className="text-xs uppercase tracking-wide text-gray-400 mb-2">Resumen Nutricional</p>
+            <h2 className="text-2xl font-extrabold text-white leading-tight">Hoy comes para rendir</h2>
+            <p className="text-sm text-gray-300 mt-2">
+              {diet.meals.length} comidas planificadas con foco en energía estable y recuperación.
+            </p>
+          </div>
+          <Sparkles className="app-accent shrink-0" />
+        </div>
+
+        <div className="grid grid-cols-3 gap-2 mb-4">
+          <StatPill label="kcal" value={`${diet.dailyCalories}`} />
+          <StatPill label="comidas" value={`${diet.meals.length}`} />
+          <StatPill label="promedio" value={`${avgMealCalories}`} />
+        </div>
+
+        <div className="rounded-xl border border-[var(--app-border)] bg-black/30 p-3 text-xs text-gray-300">
+          Tip: si entrenas intenso hoy, prioriza proteína + carbohidrato en la comida post-entreno.
+        </div>
+      </AppCard>
 
       <div className="grid grid-cols-3 gap-4 mb-8">
         <AppCard className="p-4 flex flex-col items-center justify-center text-center">
@@ -72,9 +106,7 @@ export default function Diet() {
         {diet.meals.map((meal, index) => (
           <motion.div
             key={meal.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
+            {...listStagger(index)}
             className="app-surface border border-[var(--app-border)] rounded-3xl p-5 relative overflow-hidden group hover:border-[color:var(--app-accent)]/50 transition-colors"
           >
             <div className="absolute top-0 right-0 w-32 h-32 bg-[color:var(--app-accent)]/5 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-[color:var(--app-accent)]/10 transition-colors" />

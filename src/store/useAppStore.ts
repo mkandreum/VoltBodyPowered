@@ -101,6 +101,13 @@ export type ExerciseLibraryEntry = {
   defaultReps: string;
 };
 
+export type AppToast = {
+  id: string;
+  type: 'success' | 'error' | 'info';
+  title: string;
+  message?: string;
+};
+
 interface AppState {
   // Auth
   authToken: string | null;
@@ -122,6 +129,7 @@ interface AppState {
   exerciseLibrary: ExerciseLibraryEntry[];
   motivationPhrase: string;
   motivationPhoto: string | null;
+  toasts: AppToast[];
   
   // Auth actions
   setAuthToken: (token: string | null) => void;
@@ -146,6 +154,9 @@ interface AppState {
   removeFromCustomWorkout: (exerciseId: string) => void;
   setMotivationPhrase: (phrase: string) => void;
   setMotivationPhoto: (photo: string | null) => void;
+  showToast: (toast: Omit<AppToast, 'id'>) => void;
+  dismissToast: (id: string) => void;
+  clearToasts: () => void;
   completeOnboarding: () => void;
   resetApp: () => void;
 }
@@ -200,6 +211,7 @@ export const useAppStore = create<AppState>()(
       exerciseLibrary: defaultExerciseLibrary,
       motivationPhrase: 'Cada repetición te acerca a tu mejor versión.',
       motivationPhoto: null,
+      toasts: [],
 
       // Auth actions
       setAuthToken: (token) => set({ authToken: token, isAuthenticated: !!token }),
@@ -218,7 +230,8 @@ export const useAppStore = create<AppState>()(
         insights: null,
         currentTab: 'home',
         customWorkout: [],
-        motivationPhoto: null
+        motivationPhoto: null,
+        toasts: [],
       }),
 
       // Profile actions
@@ -269,6 +282,21 @@ export const useAppStore = create<AppState>()(
         })),
       setMotivationPhrase: (phrase) => set({ motivationPhrase: phrase }),
       setMotivationPhoto: (photo) => set({ motivationPhoto: photo }),
+      showToast: (toast) =>
+        set((state) => ({
+          toasts: [
+            ...state.toasts,
+            {
+              id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+              ...toast,
+            },
+          ],
+        })),
+      dismissToast: (id) =>
+        set((state) => ({
+          toasts: state.toasts.filter((toast) => toast.id !== id),
+        })),
+      clearToasts: () => set({ toasts: [] }),
       completeOnboarding: () => set({ isOnboarded: true }),
       resetApp: () => set({
         isOnboarded: false,
@@ -282,6 +310,7 @@ export const useAppStore = create<AppState>()(
         currentTab: 'home',
         customWorkout: [],
         motivationPhoto: null,
+        toasts: [],
       }),
     }),
     {

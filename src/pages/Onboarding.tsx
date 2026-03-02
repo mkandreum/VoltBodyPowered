@@ -15,7 +15,7 @@ const steps = [
 ];
 
 export default function Onboarding() {
-  const { setProfile, setRoutine, setDiet, setInsights, completeOnboarding, authToken } = useAppStore();
+  const { setProfile, setRoutine, setDiet, setInsights, completeOnboarding, authToken, showToast } = useAppStore();
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(false);
 
@@ -60,7 +60,11 @@ export default function Onboarding() {
 
   const handleNext = async () => {
     if (currentStep === 0 && !formData.name.trim()) {
-      alert('Por favor, introduce tu nombre.');
+      showToast({
+        type: 'info',
+        title: 'Falta tu nombre',
+        message: 'Introduce tu nombre para continuar.',
+      });
       return;
     }
 
@@ -139,7 +143,11 @@ export default function Onboarding() {
         completeOnboarding();
       } catch (error) {
         console.error('Error generating plan:', error);
-        alert('Hubo un error al generar tu plan. Inténtalo de nuevo.');
+        showToast({
+          type: 'error',
+          title: 'No se pudo generar tu plan',
+          message: 'Inténtalo de nuevo en unos segundos.',
+        });
       } finally {
         setLoading(false);
       }
