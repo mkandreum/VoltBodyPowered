@@ -28,7 +28,11 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      DATABASE_URL: postgresql://${POSTGRES_USER:-voltbody}:${POSTGRES_PASSWORD:-voltbody123}@db:5432/${POSTGRES_DB:-voltbody}?schema=public
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: ${POSTGRES_USER:-voltbody}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-voltbody123}
+      DB_NAME: ${POSTGRES_DB:-voltbody}
       JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-in-production}
       GEMINI_API_KEY: ${GEMINI_API_KEY}
       APP_URL: ${APP_URL:-http://localhost:3000}

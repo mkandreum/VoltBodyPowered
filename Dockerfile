@@ -32,8 +32,12 @@ COPY --from=builder /app/prisma ./prisma
 # Install Prisma CLI
 RUN npm install -g prisma
 
+# Copy entrypoint script
+COPY docker-entrypoint.sh /app/docker-entrypoint.sh
+RUN chmod +x /app/docker-entrypoint.sh
+
 # Expose port
 EXPOSE 3000
 
 # Start command
-CMD ["sh", "-c", "npx prisma migrate deploy && node server/index.js"]
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
