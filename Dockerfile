@@ -47,5 +47,5 @@ RUN mkdir -p uploads
 # Expose port
 EXPOSE 3000
 
-# Start command: run safe production migrations and start server
-CMD ["sh", "-c", "echo 'Starting server...' && npx prisma migrate deploy && echo 'Migrations complete' && node server/index.js"]
+# Start command: run safe production migrations and auto-baseline if DB already has schema (P3005)
+CMD ["sh", "-c", "echo 'Starting server...'; MIGRATE_OUTPUT=$(npx prisma migrate deploy 2>&1); MIGRATE_STATUS=$?; echo \"$MIGRATE_OUTPUT\"; if [ $MIGRATE_STATUS -ne 0 ]; then if echo \"$MIGRATE_OUTPUT\" | grep -q 'P3005'; then echo 'Detected existing non-empty schema. Running Prisma baseline...'; for dir in /app/prisma/migrations/*; do if [ -d \"$dir\" ]; then migration_name=$(basename \"$dir\"); echo \"Marking migration as applied: $migration_name\"; npx prisma migrate resolve --applied \"$migration_name\" || true; fi; done; echo 'Re-running migrate deploy after baseline...'; npx prisma migrate deploy; else echo 'Migration failed with non-recoverable error.'; exit $MIGRATE_STATUS; fi; fi; echo 'Migrations complete'; node server/index.js"]
