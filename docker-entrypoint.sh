@@ -2,7 +2,6 @@
 set -e
 
 # Build DATABASE_URL from individual components at runtime
-# Use POSTGRES_* variables (set by Coolify) to ensure consistency
 DB_USER="${POSTGRES_USER:-voltbody}"
 DB_PASSWORD="${POSTGRES_PASSWORD:-voltbody123}"
 DB_HOST="${DB_HOST:-db}"
@@ -11,39 +10,30 @@ DB_NAME="${POSTGRES_DB:-voltbody}"
 
 export DATABASE_URL="postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?schema=public"
 
-echo "Connecting to: postgresql://${DB_USER}:****@${DB_HOST}:${DB_PORT}/${DB_NAME}"
+echo "Database: ${DB_NAME} at ${DB_HOST}:${DB_PORT}"
+echo "Waiting for database to be ready (initial 10s wait)..."
+sleep 10
 
-# Wait for PostgreSQL to be ready using TCP connection test
-max_attempts=30
-attempt=0
-while [ $attempt -lt $max_attempts ]; do
-  if timeout 2 bash -c "echo > /dev/tcp/$DB_HOST/$DB_PORT" 2>/dev/null; then
-    echo "PostgreSQL is ready"
-    break
-  fi
-  attempt=$((attempt + 1))
-  echo "Waiting for PostgreSQL... (attempt $attempt/$max_attempts)"
-  sleep 2
-done
-
-if [ $attempt -eq $max_attempts ]; then
-  echo "PostgreSQL did not become ready in time"
-  exit 1
-fi
-
-# Run migrations with retry logic
+# Run migrations with retry logic - let Prisma handle connection retries
 echo "Running Prisma migrations..."
-for i in 1 2 3 4 5; do
-  npx prisma migrate deploy && break || {
-    if [ $i -lt 5 ]; then
-      echo "Migration failed, retrying in 5 seconds... (attempt $i/5)"
-      sleep 5
+MAX_RETRIES=5
+RETRY_COUNT=0
+
+while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+  if npx prisma migrate deploy; then
+    echo "Migrations completed successfully"
+    break
+  else
+    RETRY_COUNT=$((RETRY_COUNT + 1))
+    if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+      echo "Migration failed, retrying in 10 seconds... (attempt $RETRY_COUNT/$MAX_RETRIES)"
+      sleep 10
     else
-      echo "Migration failed after 5 attempts"
+      echo "Migration failed after $MAX_RETRIES attempts"
       exit 1
     fi
-  }
+  fi
 done
 
-echo "Starting server..."
+echo "Starting server on port 3000..."
 exec node server/index.js
