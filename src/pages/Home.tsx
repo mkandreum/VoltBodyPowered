@@ -1,24 +1,46 @@
-import { useState, useMemo } from 'react';
-import { motion } from 'motion/react';
+import { useMemo } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore } from '../store/useAppStore';
-import Avatar3D from '../components/Avatar3D';
-import { Dumbbell, Utensils, Flame, Activity, Moon, TrendingUp, Quote, Sparkles, Target, CalendarCheck2 } from 'lucide-react';
+import { Dumbbell, Utensils, Flame, Moon, Activity, Sparkles, Quote, Clock3, Camera } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { format, subDays } from 'date-fns';
 import { AppCard, SectionHeader, StatPill } from '../components/ui';
-import { fadeSlideUp } from '../lib/motion';
+import { fadeSlideUp, listStagger } from '../lib/motion';
+
+function FlipMetric({ value, label }: { value: string; label: string }) {
+  return (
+    <div className="rounded-2xl border border-[var(--app-border)] bg-black/35 px-3 py-2">
+      <AnimatePresence mode="wait">
+        <motion.p
+          key={value}
+          initial={{ opacity: 0, y: 8, rotateX: -45 }}
+          animate={{ opacity: 1, y: 0, rotateX: 0 }}
+          exit={{ opacity: 0, y: -8, rotateX: 45 }}
+          transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+          className="text-xl font-black text-white tracking-tight"
+        >
+          {value}
+        </motion.p>
+      </AnimatePresence>
+      <p className="text-[10px] uppercase tracking-wider text-gray-400">{label}</p>
+    </div>
+  );
+}
 
 export default function Home() {
-  const { profile, routine, diet, logs, insights, setTab, motivationPhrase, motivationPhoto } = useAppStore();
-  const [timeRange, setTimeRange] = useState<'week' | 'month'>('week');
-  const [selectedExerciseId, setSelectedExerciseId] = useState<string>('all');
+  const { profile, routine, diet, logs, insights, setTab, motivationPhrase, motivationPhoto, showToast } = useAppStore();
 
   const today = new Date().toLocaleDateString('es-ES', { weekday: 'long' });
-  // Map current day to routine index (Mon=0, Tue=1...Sun=6)
   const dayIndex = new Date().getDay();
   const routineIndex = dayIndex === 0 ? 6 : dayIndex - 1;
   const todayRoutine = routine?.length > 0 ? routine[routineIndex % routine.length] : null;
-  const todayDiet = diet || null;
+  const todayDateKey = format(new Date(), 'yyyy-MM-dd');
+
+  const triggerHaptic = () => {
+    if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+      navigator.vibrate(12);
+    }
+  };
 
   const completedDays = useMemo(() => {
     const uniqueDates = new Set(logs.map((log) => format(new Date(log.date), 'yyyy-MM-dd')));
@@ -40,54 +62,149 @@ export default function Home() {
     return streak;
   }, [logs]);
 
-  // Get unique exercises from routine for the selector
-  const allExercises = useMemo(() => {
-    const exercises = new Map();
-    routine.forEach(day => {
-      day.exercises.forEach(ex => {
-        exercises.set(ex.id, ex.name);
-      });
-    });
-    return Array.from(exercises.entries()).map(([id, name]) => ({ id, name }));
-  }, [routine]);
-
-  // Generate chart data based on logs
   const chartData = useMemo(() => {
-    const days = timeRange === 'week' ? 7 : 30;
-    
     const data = [];
-    for (let i = days - 1; i >= 0; i--) {
+    for (let i = 6; i >= 0; i--) {
       const date = subDays(new Date(), i);
       const dateStr = format(date, 'yyyy-MM-dd');
-      
-      // Filter logs for this day
-      const dayLogs = logs.filter(log => {
-        const logDate = new Date(log.date);
-        return format(logDate, 'yyyy-MM-dd') === dateStr &&
-               (selectedExerciseId === 'all' || log.exerciseId === selectedExerciseId);
-      });
-
-      // Calculate max weight for the day
-      const maxWeight = dayLogs.length > 0 
-        ? Math.max(...dayLogs.map(l => l.weight))
-        : 0;
+      const dayLogs = logs.filter((log) => format(new Date(log.date), 'yyyy-MM-dd') === dateStr);
+      const maxWeight = dayLogs.length > 0 ? Math.max(...dayLogs.map((log) => log.weight)) : 0;
 
       data.push({
-        name: format(date, timeRange === 'week' ? 'EEE' : 'dd/MM'),
+        name: format(date, 'EEE'),
         peso: maxWeight,
       });
     }
+
     return data;
-  }, [logs, timeRange, selectedExerciseId]);
+  }, [logs]);
+
+  const todayExerciseIds = useMemo(
+    () => new Set(logs.filter((log) => format(new Date(log.date), 'yyyy-MM-dd') === todayDateKey).map((log) => log.exerciseId)),
+    [logs, todayDateKey]
+  );
+
+  const routineCompletion = useMemo(() => {
+    if (!todayRoutine?.exercises?.length) return 0;
+    const total = todayRoutine.exercises.length;
+    const done = todayRoutine.exercises.filter((exercise) => todayExerciseIds.has(exercise.id)).length;
+    return Math.round((done / total) * 100);
+  }, [todayRoutine, todayExerciseIds]);
+
+  const weeklyConsistency = Math.min(Math.round((completedDays / 7) * 100), 100);
+  const caloriesTarget = diet?.dailyCalories || 0;
+  const mealCount = diet?.meals?.length || 0;
+  const nutritionAdherence = mealCount > 0 ? Math.min(100, Math.round((mealCount / 5) * 100)) : 0;
+
+  const sleepScore = useMemo(() => {
+    if (!insights?.sleepRecommendation) return 72;
+    const match = insights.sleepRecommendation.match(/(\d+(?:[.,]\d+)?)\s*hor/i);
+    const hours = match ? Number(match[1].replace(',', '.')) : 7;
+    const score = Math.round(Math.min(Math.max((hours / 8) * 100, 40), 100));
+    return score;
+  }, [insights?.sleepRecommendation]);
+
+  const aiCoachCopy = useMemo(() => {
+    if (sleepScore < 70) {
+      return {
+        title: 'Recuperación primero',
+        subtitle: 'Dormiste poco. Baja volumen y prioriza técnica limpia hoy.',
+        cta: 'Modo recovery',
+      };
+    }
+
+    if (routineCompletion < 45 && todayRoutine) {
+      return {
+        title: 'Hoy toca. Sin excusas.',
+        subtitle: `Completa al menos ${Math.max(1, Math.ceil(todayRoutine.exercises.length * 0.6))} ejercicios para cerrar el día en verde.`,
+        cta: 'Empezar ahora',
+      };
+    }
+
+    return {
+      title: 'Ritmo perfecto',
+      subtitle: 'Mantén intensidad y cuida la ejecución. +1% mejor hoy.',
+      cta: 'Seguir plan',
+    };
+  }, [sleepScore, routineCompletion, todayRoutine]);
+
+  const bentoCards = useMemo(() => {
+    const cards = [
+      {
+        id: 'consistency',
+        title: 'Consistencia semanal',
+        value: `${weeklyConsistency}%`,
+        subtitle: currentStreak > 0 ? `${currentStreak} días en racha` : 'Inicia tu racha hoy',
+        icon: Activity,
+      },
+      {
+        id: 'calories',
+        title: 'Objetivo calórico',
+        value: `${caloriesTarget}`,
+        subtitle: mealCount > 0 ? `${mealCount} comidas planificadas` : 'Sin plan nutricional',
+        icon: Flame,
+      },
+      {
+        id: 'recovery',
+        title: 'Recuperación',
+        value: `${sleepScore}%`,
+        subtitle: 'Estado de descanso',
+        icon: Moon,
+      },
+      {
+        id: 'nutrition',
+        title: 'Adherencia nutricional',
+        value: `${nutritionAdherence}%`,
+        subtitle: 'Cumplimiento del día',
+        icon: Utensils,
+      },
+    ];
+
+    if (sleepScore < 70) {
+      return [cards[2], cards[0], cards[1], cards[3]];
+    }
+
+    if (routineCompletion < 45) {
+      return [cards[0], cards[2], cards[1], cards[3]];
+    }
+
+    return cards;
+  }, [weeklyConsistency, currentStreak, caloriesTarget, mealCount, sleepScore, nutritionAdherence, routineCompletion]);
+
+  const timelineItems = [
+    {
+      time: profile?.mealTimes?.breakfast || '08:00',
+      title: 'Desayuno de arranque',
+      done: false,
+    },
+    {
+      time: profile?.mealTimes?.lunch || '14:00',
+      title: 'Comida principal',
+      done: false,
+    },
+    {
+      time: 'Entreno',
+      title: todayRoutine?.focus || 'Sesión rápida',
+      done: routineCompletion >= 100,
+    },
+    {
+      time: 'Progreso',
+      title: 'Subir foto del día',
+      done: false,
+    },
+  ];
 
   return (
     <div className="min-h-screen app-shell p-6 pb-32">
       <header className="flex justify-between items-center mb-6 mt-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Hola, {profile?.name || (profile?.gender === 'Femenino' ? 'Guerrera' : 'Guerrero')} ⚡</h1>
-          <p className="text-gray-400 capitalize">{today}</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-gray-500">VoltBody OS</p>
+          <h1 className="brutal-title text-white leading-none mt-1">
+            {profile?.name ? `Hola, ${profile.name}` : 'Modo Bestia'}
+          </h1>
+          <p className="text-gray-400 capitalize text-sm mt-1">{today} · {routineCompletion}% sesión</p>
         </div>
-        <div className="w-12 h-12 app-surface rounded-full border border-[var(--app-border)] flex items-center justify-center glow-box">
+        <div className="w-12 h-12 app-surface rounded-2xl border border-[var(--app-border)] flex items-center justify-center glow-box">
           <Flame className="app-accent" />
         </div>
       </header>
@@ -99,7 +216,7 @@ export default function Home() {
           transition={fadeSlideUp.transition}
           className="mb-8"
         >
-          <AppCard accent className="rounded-2xl p-4 flex gap-3 items-start">
+          <AppCard accent className="rounded-2xl p-4 flex gap-3 items-start glass-panel">
             <Quote className="app-accent flex-shrink-0 mt-1" size={20} />
             <p className="text-sm app-accent italic font-medium">{insights.dailyQuote}</p>
           </AppCard>
@@ -112,186 +229,180 @@ export default function Home() {
         transition={fadeSlideUp.transition}
         className="mb-8"
       >
-        <AppCard accent interactive className="p-6">
-          <div className="flex items-start justify-between gap-4 mb-4">
+        <AppCard accent interactive className="p-6 glass-panel">
+          <div className="flex items-start justify-between gap-4 mb-5">
             <div>
-              <p className="text-xs uppercase tracking-wide text-gray-400 mb-2">Plan de Hoy</p>
-              <h2 className="text-2xl font-extrabold text-white leading-tight">
-                {todayRoutine?.focus || 'Día de recuperación activa'}
+              <p className="text-xs uppercase tracking-[0.18em] text-gray-400 mb-2">Hoy conquistas</p>
+              <h2 className="text-3xl font-black text-white leading-none tracking-tight">
+                {todayRoutine?.focus || 'Recuperación activa'}
               </h2>
-              <p className="text-sm text-gray-300 mt-2">
-                {todayRoutine ? `${todayRoutine.exercises.length} ejercicios programados` : 'Aprovecha para movilidad, caminata o clase ligera'}
+              <p className="text-sm text-gray-300 mt-3">
+                {todayRoutine
+                  ? `${todayRoutine.exercises.length} ejercicios cargados para cerrar en verde`
+                  : 'Sin rutina cargada. Activa una sesión rápida en menos de 2 min'}
               </p>
             </div>
             <Sparkles className="app-accent shrink-0" />
           </div>
 
-          <div className="grid grid-cols-3 gap-2 mb-4">
-            <StatPill label="racha" value={`${currentStreak} 🔥`} />
-            <StatPill label="días" value={`${completedDays}`} />
-            <StatPill label="kcal" value={todayDiet?.dailyCalories || 0} />
+          <div className="grid grid-cols-3 gap-2 mb-5">
+            <FlipMetric value={`${currentStreak}🔥`} label="Racha" />
+            <FlipMetric value={`${routineCompletion}%`} label="Sesión" />
+            <FlipMetric value={`${caloriesTarget}`} label="Kcal" />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <button
+            <motion.button
               onClick={() => setTab('workout')}
-              className="pressable rounded-xl bg-[var(--app-accent)] text-black font-bold py-3 px-4 hover:brightness-95 transition-base"
+              whileTap={{ scale: 0.98 }}
+              onTapStart={triggerHaptic}
+              className="pulse-surface pressable rounded-xl bg-[var(--app-accent)] text-black font-bold py-3 px-4 hover:brightness-95 transition-base"
             >
-              Empezar entreno ⚡
-            </button>
-            <button
+              Empezar sesión ⚡
+            </motion.button>
+            <motion.button
               onClick={() => setTab('diet')}
-              className="pressable rounded-xl border border-[var(--app-border)] bg-black/30 text-white font-semibold py-3 px-4 hover:border-[color:var(--app-accent)]/40 transition-base"
+              whileTap={{ scale: 0.98 }}
+              onTapStart={triggerHaptic}
+              className="pulse-surface pressable rounded-xl border border-[var(--app-border)] bg-black/30 text-white font-semibold py-3 px-4 hover:border-[color:var(--app-accent)]/40 transition-base"
             >
-              Ver nutrición 🍽️
-            </button>
+              Optimizar comida 🍽️
+            </motion.button>
           </div>
         </AppCard>
       </motion.div>
 
-      <motion.div
-        initial={fadeSlideUp.initial}
-        animate={fadeSlideUp.animate}
-        transition={fadeSlideUp.transition}
-        className="mb-8"
-      >
-        <Avatar3D />
-      </motion.div>
+      <div className="bento-grid mb-8">
+        <motion.div {...listStagger(0)} className="bento-primary">
+          <AppCard interactive className="h-full p-5 glass-panel">
+            <SectionHeader title={bentoCards[0].title} icon={bentoCards[0].icon} />
+            <p className="text-4xl font-black tracking-tight text-white mb-2">{bentoCards[0].value}</p>
+            <p className="text-sm text-gray-400 mb-4">{bentoCards[0].subtitle}</p>
+            <div className="h-24 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData}>
+                  <XAxis dataKey="name" stroke="#6b7280" fontSize={10} tickLine={false} axisLine={false} />
+                  <YAxis hide />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: '#121212cc', border: '1px solid #2a2a2a', borderRadius: '10px' }}
+                    itemStyle={{ color: 'var(--app-accent)' }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="peso"
+                    stroke="var(--app-accent)"
+                    strokeWidth={3}
+                    dot={{ r: 0 }}
+                    activeDot={{ r: 5, fill: 'var(--app-accent)' }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </AppCard>
+        </motion.div>
 
-      <div className="grid grid-cols-2 gap-4 mb-8">
-        <button
-          onClick={() => setTab('workout')}
-          className="app-surface border border-[var(--app-border)] rounded-3xl p-5 flex flex-col items-start hover:border-[color:var(--app-accent)]/50 transition-colors group"
-        >
-          <div className="bg-[color:var(--app-accent)]/10 p-3 rounded-full mb-4 group-hover:bg-[color:var(--app-accent)]/20 transition-colors">
-            <Dumbbell className="app-accent" size={24} />
-          </div>
-          <h3 className="text-lg font-bold text-white mb-1">Rutina</h3>
-          <p className="text-sm text-gray-400 text-left line-clamp-1">{todayRoutine?.focus || 'Descanso'}</p>
-        </button>
-
-        <button
-          onClick={() => setTab('diet')}
-          className="app-surface border border-[var(--app-border)] rounded-3xl p-5 flex flex-col items-start hover:border-[color:var(--app-accent)]/50 transition-colors group"
-        >
-          <div className="bg-[color:var(--app-accent)]/10 p-3 rounded-full mb-4 group-hover:bg-[color:var(--app-accent)]/20 transition-colors">
-            <Utensils className="app-accent" size={24} />
-          </div>
-          <h3 className="text-lg font-bold text-white mb-1">Dieta</h3>
-          <p className="text-sm text-gray-400 text-left line-clamp-1">{todayDiet?.dailyCalories || 0} kcal</p>
-        </button>
+        {bentoCards.slice(1).map((card, index) => (
+          <motion.div key={card.id} {...listStagger(index + 1)}>
+            <AppCard interactive className="h-full p-4 glass-panel">
+              <div className="flex items-center justify-between mb-3">
+                <card.icon className="app-accent" size={18} />
+                <StatPill label="status" value="live" />
+              </div>
+              <p className="text-2xl font-black text-white tracking-tight">{card.value}</p>
+              <p className="text-xs uppercase tracking-wider text-gray-500 mt-1">{card.title}</p>
+              <p className="text-xs text-gray-400 mt-2">{card.subtitle}</p>
+            </AppCard>
+          </motion.div>
+        ))}
       </div>
 
-      {profile && (
-        <AppCard className="mb-8">
-          <SectionHeader title="Meta de Transformación" icon={Target} />
-          <p className="text-sm text-gray-300">
-            {profile.goalDirection} {profile.goalTargetKg} kg en {profile.goalTimelineMonths} meses.
-          </p>
-          <p className="text-xs app-accent mt-2">
-            Ritmo sugerido: {(profile.goalTargetKg / Math.max(profile.goalTimelineMonths * 4, 1)).toFixed(2)} kg por semana.
-          </p>
-          {profile.weeklySpecialSession?.enabled && (
-            <p className="text-xs text-gray-400 mt-2">
-              Día especial: {profile.weeklySpecialSession.activity} ({profile.weeklySpecialSession.day})
-            </p>
-          )}
-        </AppCard>
-      )}
-
-      <AppCard className="mb-8" accent>
-        <SectionHeader title="Motivación" />
-        <p className="text-sm app-accent italic">“{motivationPhrase || insights?.dailyQuote || 'Disciplina hoy, resultados mañana.'}”</p>
-        {motivationPhoto && (
-          <div className="mt-4 rounded-2xl overflow-hidden border border-[var(--app-border)] relative">
-            <img src={motivationPhoto} alt="Motivación" className="w-full h-40 object-cover" />
-            <div className="absolute inset-0 bg-black/40 flex items-end p-3">
-              <p className="text-xs text-white font-medium">{motivationPhrase}</p>
-            </div>
-          </div>
-        )}
+      <AppCard className="mb-8 p-5 glass-panel" accent>
+        <SectionHeader title={aiCoachCopy.title} icon={Sparkles} subtitle="AI Coach en tiempo real" />
+        <p className="text-sm text-gray-200 mb-4">{aiCoachCopy.subtitle}</p>
+        <motion.button
+          whileTap={{ scale: 0.98 }}
+          onTapStart={triggerHaptic}
+          onClick={() => {
+            showToast({
+              type: 'info',
+              title: 'Sugerencia activada',
+              message: aiCoachCopy.subtitle,
+            });
+          }}
+          className="pressable pulse-surface rounded-xl border border-[var(--app-accent)]/40 px-4 py-3 text-sm font-bold text-white"
+        >
+          {aiCoachCopy.cta}
+        </motion.button>
       </AppCard>
 
-      {insights && (
-        <div className="grid grid-cols-1 gap-4 mb-8">
-          <AppCard className="flex items-start gap-4">
-            <div className="bg-blue-500/10 p-2 rounded-full mt-1">
-              <Moon className="text-blue-400" size={20} />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-white mb-1">Descanso Recomendado</h3>
-              <p className="text-xs text-gray-400 leading-relaxed">{insights.sleepRecommendation}</p>
-            </div>
-          </AppCard>
-          <AppCard className="flex items-start gap-4">
-            <div className="bg-purple-500/10 p-2 rounded-full mt-1">
-              <TrendingUp className="text-purple-400" size={20} />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-white mb-1">Proyección de Resultados</h3>
-              <p className="text-xs text-gray-400 leading-relaxed">{insights.estimatedResults}</p>
-            </div>
-          </AppCard>
-        </div>
-      )}
-
-      <AppCard className="p-6">
-        <div className="flex items-center justify-between mb-6">
-          <SectionHeader title="Progreso" icon={Activity} />
-          <div className="flex bg-black rounded-lg p-1 border border-[var(--app-border)]">
-            <button 
-              onClick={() => setTimeRange('week')}
-              className={`px-3 py-1 text-xs rounded-md transition-colors ${timeRange === 'week' ? 'bg-[var(--app-accent)] text-black font-bold' : 'text-gray-400'}`}
+      <AppCard className="mb-8 p-5 glass-panel">
+        <SectionHeader title="Timeline del día" icon={Clock3} />
+        <div className="space-y-3">
+          {timelineItems.map((item, index) => (
+            <motion.div
+              key={`${item.time}-${item.title}`}
+              {...listStagger(index)}
+              className="flex items-center gap-3 rounded-xl border border-[var(--app-border)] bg-black/35 p-3"
             >
-              Semana
-            </button>
-            <button 
-              onClick={() => setTimeRange('month')}
-              className={`px-3 py-1 text-xs rounded-md transition-colors ${timeRange === 'month' ? 'bg-[var(--app-accent)] text-black font-bold' : 'text-gray-400'}`}
-            >
-              Mes
-            </button>
-          </div>
+              <div className={`timeline-dot ${item.done ? 'done' : ''}`} />
+              <div className="min-w-[54px] text-xs font-mono text-gray-400">{item.time}</div>
+              <p className="text-sm text-white flex-1">{item.title}</p>
+              <span className={`text-[10px] font-semibold uppercase tracking-wider ${item.done ? 'text-emerald-400' : 'text-gray-500'}`}>
+                {item.done ? 'Hecho' : 'Pendiente'}
+              </span>
+            </motion.div>
+          ))}
         </div>
+      </AppCard>
 
-        <div className="flex gap-2 mb-4">
-          <StatPill label="hábito" value={currentStreak > 0 ? 'activo ✅' : 'inicia hoy'} />
-          <StatPill label="rango" value={timeRange === 'week' ? '7 días' : '30 días'} />
-          <StatPill label="ejercicio" value={selectedExerciseId === 'all' ? 'todos' : '1'} />
-        </div>
-
-        <div className="mb-6">
-          <select 
-            value={selectedExerciseId}
-            onChange={(e) => setSelectedExerciseId(e.target.value)}
-            className="w-full bg-black border border-[var(--app-border)] rounded-xl p-3 text-sm text-white focus:border-[var(--app-accent)] outline-none appearance-none"
+      <AppCard className="mb-8 p-5 glass-panel">
+        <SectionHeader title="Acciones rápidas" subtitle="Un toque y listo" />
+        <div className="grid grid-cols-3 gap-3">
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onTapStart={triggerHaptic}
+            onClick={() => setTab('workout')}
+            className="pressable pulse-surface rounded-xl border border-[var(--app-border)] bg-black/35 px-3 py-4 text-xs font-semibold text-white"
           >
-            <option value="all">Todos los ejercicios (Peso Máx)</option>
-            {allExercises.map(ex => (
-              <option key={ex.id} value={ex.id}>{ex.name}</option>
-            ))}
-          </select>
+            <Dumbbell size={16} className="mx-auto mb-2 app-accent" />
+            Registrar serie
+          </motion.button>
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onTapStart={triggerHaptic}
+            onClick={() => setTab('diet')}
+            className="pressable pulse-surface rounded-xl border border-[var(--app-border)] bg-black/35 px-3 py-4 text-xs font-semibold text-white"
+          >
+            <Utensils size={16} className="mx-auto mb-2 app-accent" />
+            Swap meal
+          </motion.button>
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onTapStart={triggerHaptic}
+            onClick={() => setTab('profile')}
+            className="pressable pulse-surface rounded-xl border border-[var(--app-border)] bg-black/35 px-3 py-4 text-xs font-semibold text-white"
+          >
+            <Camera size={16} className="mx-auto mb-2 app-accent" />
+            Subir progreso
+          </motion.button>
         </div>
+      </AppCard>
 
-        <div className="h-48 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData}>
-              <XAxis dataKey="name" stroke="#525252" fontSize={10} tickLine={false} axisLine={false} />
-              <YAxis stroke="#525252" fontSize={10} tickLine={false} axisLine={false} width={30} />
-              <Tooltip 
-                contentStyle={{ backgroundColor: '#121212', border: '1px solid #262626', borderRadius: '8px' }}
-                itemStyle={{ color: 'var(--app-accent)' }}
-              />
-              <Line 
-                type="monotone" 
-                dataKey="peso" 
-                stroke="var(--app-accent)" 
-                strokeWidth={3}
-                dot={{ fill: '#050505', stroke: 'var(--app-accent)', strokeWidth: 2, r: 4 }}
-                activeDot={{ r: 6, fill: 'var(--app-accent)' }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+      <AppCard className="mb-4 p-0 overflow-hidden glass-panel" accent>
+        <div className="relative min-h-[170px]">
+          {motivationPhoto ? (
+            <img src={motivationPhoto} alt="Motivación" className="w-full h-[170px] object-cover" />
+          ) : (
+            <div className="w-full h-[170px] bg-gradient-to-br from-[color:var(--app-accent)]/20 to-black" />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/35 to-transparent p-4 flex items-end">
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.18em] text-gray-300 mb-1">Modo mental</p>
+              <p className="text-base font-bold text-white max-w-[90%]">
+                {motivationPhrase || 'Hoy toca. Sin excusas.'}
+              </p>
+            </div>
+          </div>
         </div>
       </AppCard>
     </div>

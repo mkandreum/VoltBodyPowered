@@ -534,15 +534,15 @@ export default function Onboarding() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#050505] p-6 text-center">
+      <div className="min-h-screen app-shell flex flex-col items-center justify-center p-6 text-center">
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
-          className="mb-8"
+          className="mb-8 w-20 h-20 rounded-3xl border border-[color:var(--app-accent)]/35 bg-[color:var(--app-accent)]/10 flex items-center justify-center glow-box"
         >
-          <Zap size={64} className="text-[#39ff14] drop-shadow-[0_0_15px_rgba(57,255,20,0.8)]" />
+          <Zap size={40} className="app-accent drop-shadow-[0_0_15px_var(--app-accent-dim)]" />
         </motion.div>
-        <h2 className="text-2xl font-bold mb-4 glow-text text-[#39ff14]">Generando tu plan...</h2>
+        <h2 className="brutal-title mb-4 glow-text app-accent">Generando tu plan...</h2>
         <p className="text-gray-400 max-w-xs">
           La IA de VoltBody está creando una rutina y dieta personalizadas basadas en tus datos.
         </p>
@@ -551,11 +551,11 @@ export default function Onboarding() {
   }
 
   return (
-    <div className="min-h-screen bg-[#050505] flex flex-col p-6">
+    <div className="min-h-screen app-shell flex flex-col p-6">
       <div className="flex items-center justify-between mb-8 mt-4">
         <button
           onClick={handleBack}
-          className={`p-2 rounded-full bg-[#121212] border border-[#262626] ${currentStep === 0 ? 'opacity-0 pointer-events-none' : ''}`}
+          className={`pressable p-2 rounded-full app-surface border border-[var(--app-border)] ${currentStep === 0 ? 'opacity-0 pointer-events-none' : ''}`}
         >
           <ChevronLeft size={24} className="text-white" />
         </button>
@@ -564,7 +564,7 @@ export default function Onboarding() {
             <div
               key={i}
               className={`h-2 rounded-full transition-all duration-300 ${
-                i === currentStep ? 'w-8 bg-[#39ff14] glow-box' : 'w-2 bg-[#262626]'
+                i === currentStep ? 'w-8 bg-[var(--app-accent)] glow-box' : 'w-2 bg-[var(--app-border)]'
               }`}
             />
           ))}
@@ -572,7 +572,7 @@ export default function Onboarding() {
         <div className="w-10" /> {/* Spacer */}
       </div>
 
-      <div className="flex-1">
+      <div className="flex-1 glass-panel border border-[var(--app-border)] rounded-3xl p-5">
         <motion.div
           key={currentStep}
           initial={{ opacity: 0, x: 20 }}
@@ -580,8 +580,9 @@ export default function Onboarding() {
           exit={{ opacity: 0, x: -20 }}
           className="h-full flex flex-col"
         >
-          <h1 className="text-3xl font-bold mb-2">{steps[currentStep].title}</h1>
-          <p className="text-gray-400 mb-8">Personaliza tu experiencia en VoltBody.</p>
+          <p className="text-xs uppercase tracking-[0.18em] text-gray-500 mb-2">Setup AI-First</p>
+          <h1 className="brutal-title mb-2 text-white">{steps[currentStep].title}</h1>
+          <p className="text-gray-400 mb-8">Configura tu plan con precisión para resultados reales.</p>
           
           {renderStepContent()}
         </motion.div>
@@ -589,7 +590,7 @@ export default function Onboarding() {
 
       <button
         onClick={handleNext}
-        className="w-full bg-[#39ff14] text-black font-bold py-4 rounded-xl mt-8 flex items-center justify-center gap-2 hover:bg-[#32e612] transition-colors glow-box"
+        className="pulse-surface pressable w-full bg-[var(--app-accent)] text-black font-bold py-4 rounded-xl mt-8 flex items-center justify-center gap-2 transition-colors glow-box"
       >
         {currentStep === steps.length - 1 ? 'Generar Plan' : 'Siguiente'}
         {currentStep < steps.length - 1 && <ChevronRight size={20} />}

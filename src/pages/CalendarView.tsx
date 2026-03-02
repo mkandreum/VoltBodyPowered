@@ -23,24 +23,24 @@ export default function CalendarView() {
   const dayLogs = logs.filter(log => format(new Date(log.date), 'yyyy-MM-dd') === selectedDateStr);
 
   return (
-    <div className="min-h-screen bg-[#050505] p-6 pb-32">
+    <div className="min-h-screen app-shell p-6 pb-32">
       <header className="mb-8 mt-4">
-        <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
-          <CalendarIcon className="text-[#39ff14]" size={32} />
+        <h1 className="brutal-title text-white mb-2 flex items-center gap-3">
+          <CalendarIcon className="app-accent" size={32} />
           Calendario
         </h1>
         <p className="text-gray-400 font-mono text-sm">Planificación y Registro</p>
       </header>
 
-      <div className="bg-[#121212] border border-[#262626] rounded-3xl p-6 mb-8">
+      <div className="glass-panel border border-[var(--app-border)] rounded-3xl p-6 mb-8">
         <div className="flex justify-between items-center mb-6">
-          <button onClick={() => setCurrentDate(addDays(currentDate, -7))} className="p-2 text-gray-400 hover:text-white transition-colors">
+          <button onClick={() => setCurrentDate(addDays(currentDate, -7))} className="pressable p-2 text-gray-400 hover:text-white transition-colors">
             <ChevronLeft />
           </button>
           <span className="text-lg font-bold text-white capitalize">
             {format(currentDate, 'MMMM yyyy', { locale: es })}
           </span>
-          <button onClick={() => setCurrentDate(addDays(currentDate, 7))} className="p-2 text-gray-400 hover:text-white transition-colors">
+          <button onClick={() => setCurrentDate(addDays(currentDate, 7))} className="pressable p-2 text-gray-400 hover:text-white transition-colors">
             <ChevronRight />
           </button>
         </div>
@@ -63,14 +63,14 @@ export default function CalendarView() {
                 onClick={() => setSelectedDate(date)}
                 className={clsx(
                   'aspect-square rounded-xl flex flex-col items-center justify-center relative cursor-pointer transition-all',
-                  isSelected ? 'bg-[#39ff14]/20 border border-[#39ff14] text-[#39ff14] glow-box' : 
+                  isSelected ? 'bg-[color:var(--app-accent)]/20 border border-[var(--app-accent)] app-accent glow-box' : 
                   isToday ? 'bg-[#262626] border border-gray-500 text-white' : 
-                  'bg-black border border-[#262626] text-gray-400 hover:border-gray-500'
+                  'bg-black border border-[var(--app-border)] text-gray-400 hover:border-gray-500'
                 )}
               >
                 <span className="text-sm font-bold font-mono">{format(date, 'd')}</span>
                 {hasLogs && (
-                  <div className="absolute bottom-1 w-1.5 h-1.5 rounded-full bg-[#39ff14] glow-box" />
+                  <div className="absolute bottom-1 w-1.5 h-1.5 rounded-full bg-[var(--app-accent)] glow-box" />
                 )}
               </div>
             );
@@ -91,19 +91,19 @@ export default function CalendarView() {
               {format(selectedDate, 'EEEE, d MMMM', { locale: es })}
             </h2>
             {isSameDay(selectedDate, new Date()) && (
-              <span className="bg-[#39ff14]/10 text-[#39ff14] px-2 py-1 rounded text-xs font-mono border border-[#39ff14]/30">HOY</span>
+              <span className="bg-[color:var(--app-accent)]/10 text-[var(--app-accent)] px-2 py-1 rounded text-xs font-mono border border-[color:var(--app-accent)]/30">HOY</span>
             )}
           </div>
 
           {/* Planned Routine */}
           {plannedRoutine && (
-            <div className="bg-[#121212] border border-[#262626] rounded-3xl p-5">
+            <div className="glass-panel border border-[var(--app-border)] rounded-3xl p-5">
               <h3 className="text-sm text-gray-400 font-mono mb-4 flex items-center gap-2">
                 <Dumbbell size={16} /> Rutina Planificada
               </h3>
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-black border border-[#39ff14]/30 flex items-center justify-center">
-                  <Dumbbell className="text-[#39ff14]" size={20} />
+                <div className="w-12 h-12 rounded-full bg-black border border-[color:var(--app-accent)]/30 flex items-center justify-center">
+                  <Dumbbell className="app-accent" size={20} />
                 </div>
                 <div>
                   <h4 className="text-lg font-bold text-white">{plannedRoutine.focus}</h4>
@@ -114,7 +114,7 @@ export default function CalendarView() {
           )}
 
           {/* Logs */}
-          <div className="bg-[#121212] border border-[#262626] rounded-3xl p-5">
+          <div className="app-surface border border-[var(--app-border)] rounded-3xl p-5">
             <h3 className="text-sm text-gray-400 font-mono mb-4 flex items-center gap-2">
               <CheckCircle2 size={16} /> Registro de Entrenamiento
             </h3>
@@ -129,11 +129,11 @@ export default function CalendarView() {
                   });
 
                   return (
-                    <div key={i} className="flex justify-between items-center bg-black p-3 rounded-xl border border-[#262626]">
+                    <div key={i} className="flex justify-between items-center bg-black p-3 rounded-xl border border-[var(--app-border)]">
                       <span className="text-white font-medium">{exName}</span>
                       <div className="flex gap-3 text-sm font-mono">
                         <span className="text-gray-400">{log.weight}kg</span>
-                        <span className="text-[#39ff14]">x{log.reps}</span>
+                        <span className="app-accent">x{log.reps}</span>
                       </div>
                     </div>
                   );
@@ -146,7 +146,7 @@ export default function CalendarView() {
 
           {/* Diet Summary */}
           {diet && (
-            <div className="bg-[#121212] border border-[#262626] rounded-3xl p-5">
+            <div className="glass-panel border border-[var(--app-border)] rounded-3xl p-5">
               <h3 className="text-sm text-gray-400 font-mono mb-4 flex items-center gap-2">
                 <Flame size={16} /> Objetivo Nutricional
               </h3>

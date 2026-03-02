@@ -77,20 +77,20 @@ export default function Workout() {
           <Dumbbell className="app-accent" size={32} />
           Rutina de Hoy
         </h1>
-        <p className="app-accent font-mono text-sm glow-text">{todayRoutine?.focus || 'Descanso'}</p>
+        <p className="app-accent font-mono text-sm glow-text">{todayRoutine?.focus || 'Hoy toca activar el cuerpo'}</p>
       </header>
 
-      <AppCard accent interactive className="mb-8 p-6">
+      <AppCard accent interactive className="mb-8 p-6 glass-panel">
         <div className="flex items-start justify-between gap-4 mb-4">
           <div>
-            <p className="text-xs uppercase tracking-wide text-gray-400 mb-2">Sesión Prioritaria</p>
-            <h2 className="text-2xl font-extrabold text-white leading-tight">
+            <p className="text-xs uppercase tracking-[0.18em] text-gray-400 mb-2">Sesión Prioritaria</p>
+            <h2 className="text-3xl font-black text-white leading-none tracking-tight">
               {todayRoutine?.focus || 'Crea tu sesión personalizada'}
             </h2>
             <p className="text-sm text-gray-300 mt-2">
               {todayRoutine
-                ? `${totalTodayExercises} ejercicios listos para ejecutar`
-                : 'No hay rutina asignada hoy, arma una sesión en 1 minuto'}
+                ? `${totalTodayExercises} ejercicios listos para ejecutar. Hoy toca. Sin excusas.`
+                : 'No hay rutina asignada hoy. Arma una sesión en 1 minuto.'}
             </p>
           </div>
           <Flame className="app-accent shrink-0" />
@@ -118,7 +118,7 @@ export default function Workout() {
               message: `Enfócate en ${todayRoutine.focus}.`,
             });
           }}
-          className="pressable w-full rounded-xl bg-[var(--app-accent)] text-black font-bold py-3 px-4 hover:brightness-95 transition-base"
+          className="pressable pulse-surface w-full rounded-xl bg-[var(--app-accent)] text-black font-bold py-3 px-4 hover:brightness-95 transition-base"
         >
           Empezar sesión
         </button>

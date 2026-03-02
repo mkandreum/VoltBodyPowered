@@ -122,36 +122,36 @@ export default function Profile() {
   };
 
   return (
-    <div className="min-h-screen bg-[#050505] p-6 pb-32">
+    <div className="min-h-screen app-shell p-6 pb-32">
       <header className="mb-8 mt-4 flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-          <User className="text-[#39ff14]" size={32} />
+        <h1 className="brutal-title text-white flex items-center gap-3">
+          <User className="app-accent" size={32} />
           Perfil
         </h1>
         <button 
           onClick={() => isEditing ? handleSaveProfile() : setIsEditing(true)}
-          className="p-2 bg-[#121212] border border-[#262626] rounded-full hover:border-[#39ff14]/50 transition-colors"
+          className="pressable p-2 app-surface border border-[var(--app-border)] rounded-full hover:border-[color:var(--app-accent)]/50 transition-colors"
         >
-          {isEditing ? <Check className="text-[#39ff14]" /> : <Edit2 className="text-gray-400 hover:text-white transition-colors" />}
+          {isEditing ? <Check className="app-accent" /> : <Edit2 className="text-gray-400 hover:text-white transition-colors" />}
         </button>
       </header>
 
-      <div className="bg-[#121212] border border-[#262626] rounded-3xl p-6 mb-8 flex items-center gap-6 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-[#39ff14]/5 rounded-full blur-3xl -mr-16 -mt-16" />
+      <div className="glass-panel border border-[var(--app-border)] rounded-3xl p-6 mb-8 flex items-center gap-6 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-[color:var(--app-accent)]/10 rounded-full blur-3xl -mr-16 -mt-16" />
         
         <div className="relative">
-          <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[#39ff14] to-black p-1 glow-box">
+          <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[color:var(--app-accent)] to-black p-1 glow-box">
             <div className="w-full h-full bg-black rounded-full flex items-center justify-center border-2 border-[#121212] overflow-hidden">
               {profilePhoto ? (
                 <img src={profilePhoto} alt="Profile" className="w-full h-full object-cover" />
               ) : (
-                <User className="text-[#39ff14]" size={40} />
+                <User className="app-accent" size={40} />
               )}
             </div>
           </div>
           <button 
             onClick={() => fileInputRef.current?.click()}
-            className="absolute bottom-0 right-0 bg-[#39ff14] p-2 rounded-full text-black hover:bg-[#32e612] transition-colors"
+            className="pressable absolute bottom-0 right-0 bg-[var(--app-accent)] p-2 rounded-full text-black hover:brightness-95 transition-colors"
           >
             <Camera size={16} />
           </button>
@@ -166,13 +166,13 @@ export default function Profile() {
         
         <div>
           <h2 className="text-2xl font-bold text-white mb-1">{profile.name || 'Usuario Volt'}</h2>
-          <p className="text-[#39ff14] font-mono text-sm glow-text">{profile.goal}</p>
+          <p className="app-accent font-mono text-sm glow-text">{profile.goal}</p>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4 mb-8">
-        <div className="bg-[#121212] border border-[#262626] rounded-3xl p-5 flex items-center gap-4">
-          <Scale className="text-[#39ff14]" size={24} />
+        <div className="app-surface border border-[var(--app-border)] rounded-3xl p-5 flex items-center gap-4">
+          <Scale className="app-accent" size={24} />
           <div>
             <p className="text-xs text-gray-500 font-mono">Peso</p>
             {isEditing ? (
@@ -180,15 +180,15 @@ export default function Profile() {
                 type="number" 
                 value={editData.weight} 
                   onChange={(e) => setEditData({...editData, weight: e.target.value})}
-                className="w-16 bg-black border border-[#39ff14] rounded px-2 text-white font-bold"
+                className="w-16 bg-black border border-[var(--app-accent)] rounded px-2 text-white font-bold"
               />
             ) : (
               <p className="text-lg font-bold text-white">{profile.weight} kg</p>
             )}
           </div>
         </div>
-        <div className="bg-[#121212] border border-[#262626] rounded-3xl p-5 flex items-center gap-4">
-          <Ruler className="text-[#39ff14]" size={24} />
+        <div className="app-surface border border-[var(--app-border)] rounded-3xl p-5 flex items-center gap-4">
+          <Ruler className="app-accent" size={24} />
           <div>
             <p className="text-xs text-gray-500 font-mono">Altura</p>
             {isEditing ? (
@@ -196,22 +196,22 @@ export default function Profile() {
                 type="number" 
                 value={editData.height} 
                   onChange={(e) => setEditData({...editData, height: e.target.value})}
-                className="w-16 bg-black border border-[#39ff14] rounded px-2 text-white font-bold"
+                className="w-16 bg-black border border-[var(--app-accent)] rounded px-2 text-white font-bold"
               />
             ) : (
               <p className="text-lg font-bold text-white">{profile.height} cm</p>
             )}
           </div>
         </div>
-        <div className="bg-[#121212] border border-[#262626] rounded-3xl p-5 flex items-center gap-4">
-          <Activity className="text-[#39ff14]" size={24} />
+        <div className="app-surface border border-[var(--app-border)] rounded-3xl p-5 flex items-center gap-4">
+          <Activity className="app-accent" size={24} />
           <div>
             <p className="text-xs text-gray-500 font-mono">Nivel</p>
             <p className="text-lg font-bold text-white capitalize">{profile.currentState.split(' ')[0]}</p>
           </div>
         </div>
-        <div className="bg-[#121212] border border-[#262626] rounded-3xl p-5 flex items-center gap-4">
-          <Clock className="text-[#39ff14]" size={24} />
+        <div className="app-surface border border-[var(--app-border)] rounded-3xl p-5 flex items-center gap-4">
+          <Clock className="app-accent" size={24} />
           <div>
             <p className="text-xs text-gray-500 font-mono">Edad</p>
             <p className="text-lg font-bold text-white">{profile.age} años</p>
@@ -219,15 +219,15 @@ export default function Profile() {
         </div>
       </div>
 
-      <div className="bg-[#121212] border border-[#262626] rounded-3xl p-6 mb-8">
+      <div className="glass-panel border border-[var(--app-border)] rounded-3xl p-6 mb-8">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-bold text-white flex items-center gap-2">
-            <Camera className="text-[#39ff14]" size={20} />
+            <Camera className="app-accent" size={20} />
             Fotos de Progreso
           </h3>
           <button 
             onClick={() => progressInputRef.current?.click()}
-            className="p-2 bg-[#262626] rounded-full text-white hover:text-[#39ff14] transition-colors"
+            className="pressable p-2 bg-[var(--app-border)] rounded-full text-white hover:text-[var(--app-accent)] transition-colors"
           >
             <Plus size={16} />
           </button>
@@ -243,7 +243,7 @@ export default function Profile() {
         {progressPhotos.length > 0 ? (
           <div className="flex gap-4 overflow-x-auto pb-2">
             {progressPhotos.map((photo, i) => (
-              <div key={i} className="min-w-[120px] h-[160px] rounded-xl overflow-hidden border border-[#262626] relative">
+              <div key={i} className="min-w-[120px] h-[160px] rounded-xl overflow-hidden border border-[var(--app-border)] relative">
                 <img src={photo.url} alt="Progreso" className="w-full h-full object-cover" />
                 <div className="absolute bottom-0 inset-x-0 bg-black/60 backdrop-blur-sm p-1 text-center text-[10px] font-mono text-gray-300">
                   {new Date(photo.date).toLocaleDateString()}
@@ -256,17 +256,17 @@ export default function Profile() {
         )}
       </div>
 
-      <div className="bg-[#121212] border border-[#262626] rounded-3xl p-6 mb-8">
+      <div className="app-surface border border-[var(--app-border)] rounded-3xl p-6 mb-8">
         <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-          <Target className="text-[#39ff14]" size={20} />
+          <Target className="app-accent" size={20} />
           Disponibilidad
         </h3>
         <p className="text-gray-400 font-mono">{profile.schedule}</p>
       </div>
 
-      <div className="bg-[#121212] border border-[#262626] rounded-3xl p-6 mb-8">
+      <div className="app-surface border border-[var(--app-border)] rounded-3xl p-6 mb-8">
         <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-          <Palette className="text-[#39ff14]" size={20} />
+          <Palette className="app-accent" size={20} />
           Tema Visual
         </h3>
         <div className="grid grid-cols-1 gap-3">
@@ -280,8 +280,8 @@ export default function Profile() {
               onClick={() => handleThemeChange(option.id as 'aguamarina-negro' | 'verde-negro' | 'ocaso-negro')}
               className={`text-left px-4 py-3 rounded-xl border transition-all ${
                 theme === option.id
-                  ? 'border-[#39ff14] bg-[#39ff14]/10 text-[#39ff14]'
-                  : 'border-[#262626] text-gray-300'
+                  ? 'border-[var(--app-accent)] bg-[color:var(--app-accent)]/10 text-[var(--app-accent)]'
+                  : 'border-[var(--app-border)] text-gray-300'
               }`}
             >
               {option.label}
@@ -290,9 +290,9 @@ export default function Profile() {
         </div>
       </div>
 
-      <div className="bg-[#121212] border border-[#262626] rounded-3xl p-6 mb-8">
+      <div className="glass-panel border border-[var(--app-border)] rounded-3xl p-6 mb-8">
         <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-          <Quote className="text-[#39ff14]" size={20} />
+          <Quote className="app-accent" size={20} />
           Motivación
         </h3>
         <input
@@ -300,13 +300,13 @@ export default function Profile() {
           value={motivationPhrase}
           onChange={(e) => setMotivationPhrase(e.target.value)}
           onBlur={handleMotivationPhraseBlur}
-          className="w-full bg-black border border-[#262626] rounded-xl py-3 px-4 text-white mb-4 focus:border-[#39ff14] outline-none"
+          className="w-full bg-black border border-[var(--app-border)] rounded-xl py-3 px-4 text-white mb-4 focus:border-[var(--app-accent)] outline-none"
           placeholder="Escribe tu frase motivacional"
         />
 
         <button
           onClick={() => motivationInputRef.current?.click()}
-          className="w-full mb-4 bg-[#262626] text-white py-3 rounded-xl hover:text-[#39ff14] transition-colors"
+          className="pressable w-full mb-4 bg-[var(--app-border)] text-white py-3 rounded-xl hover:text-[var(--app-accent)] transition-colors"
         >
           Subir foto motivacional
         </button>
@@ -319,7 +319,7 @@ export default function Profile() {
         />
 
         {motivationPhoto && (
-          <div className="rounded-xl overflow-hidden border border-[#262626] relative">
+          <div className="rounded-xl overflow-hidden border border-[var(--app-border)] relative">
             <img src={motivationPhoto} alt="Motivación" className="w-full h-48 object-cover" />
             <div className="absolute inset-0 bg-black/40 flex items-end p-3">
               <p className="text-sm text-white font-medium">{motivationPhrase}</p>

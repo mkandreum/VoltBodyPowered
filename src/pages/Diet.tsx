@@ -78,14 +78,14 @@ export default function Diet() {
           <Utensils className="app-accent" size={32} />
           Tu Dieta
         </h1>
-        <p className="text-gray-400 font-mono text-sm">Objetivo: {diet.dailyCalories} kcal</p>
+        <p className="text-gray-400 font-mono text-sm">Objetivo diario: {diet.dailyCalories} kcal</p>
       </header>
 
-      <AppCard accent interactive className="mb-8 p-6">
+      <AppCard accent interactive className="mb-8 p-6 glass-panel">
         <div className="flex items-start justify-between gap-4 mb-4">
           <div>
-            <p className="text-xs uppercase tracking-wide text-gray-400 mb-2">Resumen Nutricional</p>
-            <h2 className="text-2xl font-extrabold text-white leading-tight">Hoy comes para rendir</h2>
+            <p className="text-xs uppercase tracking-[0.18em] text-gray-400 mb-2">Resumen Nutricional</p>
+            <h2 className="text-3xl font-black text-white leading-none tracking-tight">Hoy comes para rendir</h2>
             <p className="text-sm text-gray-300 mt-2">
               {diet.meals.length} comidas planificadas con foco en energía estable y recuperación.
             </p>
@@ -144,7 +144,7 @@ export default function Diet() {
                 <button
                   onClick={() => handleSwap(meal)}
                   disabled={loadingMealId === meal.id}
-                  className="p-2 bg-[var(--app-border)] rounded-full text-gray-400 hover:text-[var(--app-accent)] transition-colors disabled:opacity-50"
+                  className="pressable pulse-surface p-2 bg-[var(--app-border)] rounded-full text-gray-400 hover:text-[var(--app-accent)] transition-colors disabled:opacity-50"
                   title="Cambiar comida"
                 >
                   <RefreshCw size={16} className={loadingMealId === meal.id ? 'animate-spin' : ''} />

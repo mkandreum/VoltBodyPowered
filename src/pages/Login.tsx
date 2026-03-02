@@ -135,40 +135,38 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-[#050505] flex items-center justify-center p-4">
+    <div className="min-h-screen app-shell flex items-center justify-center p-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-md"
       >
-        {/* Logo */}
         <div className="text-center mb-8">
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: 'spring', duration: 0.6 }}
-            className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-[#FF6B00] to-[#FFB800] mb-4"
+            className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-[color:var(--app-accent)]/15 border border-[color:var(--app-accent)]/35 mb-4 glow-box"
           >
-            <Zap className="w-10 h-10 text-white" />
+            <Zap className="w-10 h-10 app-accent" />
           </motion.div>
-          <h1 className="text-3xl font-bold text-white mb-2">VoltBody Powered</h1>
-          <p className="text-gray-400">Tu entrenador personal inteligente</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-gray-500 mb-2">VoltBody OS</p>
+          <h1 className="brutal-title text-white mb-1">MODO BESTIA</h1>
+          <p className="text-gray-400">Entrena, come y evoluciona con IA.</p>
         </div>
 
-        {/* Form Card */}
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.2 }}
-          className="bg-[#0A0A0A] border border-[#1a1a1a] rounded-2xl p-8 backdrop-blur-xl"
+          className="glass-panel border border-[var(--app-border)] rounded-3xl p-8"
         >
-          {/* Toggle */}
-          <div className="flex gap-2 mb-6 bg-[#141414] rounded-xl p-1">
+          <div className="flex gap-2 mb-6 bg-black/40 rounded-xl p-1 border border-[var(--app-border)]">
             <button
               onClick={() => setIsLogin(true)}
-              className={`flex-1 py-2.5 rounded-lg font-medium transition-all ${
+              className={`pressable flex-1 py-2.5 rounded-lg font-medium transition-all ${
                 isLogin
-                  ? 'bg-gradient-to-r from-[#FF6B00] to-[#FFB800] text-white'
+                  ? 'bg-[var(--app-accent)] text-black'
                   : 'text-gray-400 hover:text-white'
               }`}
             >
@@ -176,9 +174,9 @@ export default function Login() {
             </button>
             <button
               onClick={() => setIsLogin(false)}
-              className={`flex-1 py-2.5 rounded-lg font-medium transition-all ${
+              className={`pressable flex-1 py-2.5 rounded-lg font-medium transition-all ${
                 !isLogin
-                  ? 'bg-gradient-to-r from-[#FF6B00] to-[#FFB800] text-white'
+                  ? 'bg-[var(--app-accent)] text-black'
                   : 'text-gray-400 hover:text-white'
               }`}
             >
@@ -186,7 +184,6 @@ export default function Login() {
             </button>
           </div>
 
-          {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             {!isLogin && (
               <div>
@@ -199,7 +196,7 @@ export default function Login() {
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full bg-[#141414] border border-[#1a1a1a] rounded-xl py-3 pl-11 pr-4 text-white placeholder-gray-500 focus:outline-none focus:border-[#FF6B00] transition-colors"
+                    className="w-full bg-black/35 border border-[var(--app-border)] rounded-xl py-3 pl-11 pr-4 text-white placeholder-gray-500 focus:outline-none focus:border-[var(--app-accent)] transition-colors"
                     placeholder="Tu nombre"
                   />
                 </div>
@@ -217,7 +214,7 @@ export default function Login() {
                   required
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full bg-[#141414] border border-[#1a1a1a] rounded-xl py-3 pl-11 pr-4 text-white placeholder-gray-500 focus:outline-none focus:border-[#FF6B00] transition-colors"
+                  className="w-full bg-black/35 border border-[var(--app-border)] rounded-xl py-3 pl-11 pr-4 text-white placeholder-gray-500 focus:outline-none focus:border-[var(--app-accent)] transition-colors"
                   placeholder="tu@email.com"
                 />
               </div>
@@ -234,7 +231,7 @@ export default function Login() {
                   required
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full bg-[#141414] border border-[#1a1a1a] rounded-xl py-3 pl-11 pr-4 text-white placeholder-gray-500 focus:outline-none focus:border-[#FF6B00] transition-colors"
+                  className="w-full bg-black/35 border border-[var(--app-border)] rounded-xl py-3 pl-11 pr-4 text-white placeholder-gray-500 focus:outline-none focus:border-[var(--app-accent)] transition-colors"
                   placeholder="••••••••"
                   minLength={6}
                 />
@@ -254,7 +251,7 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-[#FF6B00] to-[#FFB800] text-white py-3.5 rounded-xl font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
+              className="pulse-surface pressable w-full bg-[var(--app-accent)] text-black py-3.5 rounded-xl font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>
@@ -275,7 +272,6 @@ export default function Login() {
           </form>
         </motion.div>
 
-        {/* Footer */}
         <p className="text-center text-gray-500 text-sm mt-6">
           Al continuar, aceptas nuestros términos y condiciones
         </p>

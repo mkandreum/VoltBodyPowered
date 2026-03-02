@@ -21,6 +21,8 @@
   --app-text-muted: #9ca3af;
   --app-shadow-soft: 0 10px 36px rgba(0, 0, 0, 0.28);
   --app-shadow-accent: 0 18px 54px var(--app-accent-dim);
+  --app-glass: color-mix(in srgb, var(--app-surface) 76%, transparent);
+  --app-glass-border: color-mix(in srgb, var(--app-border) 68%, white 10%);
 
   --motion-fast: 120ms;
   --motion-base: 220ms;
@@ -122,6 +124,12 @@ body[data-theme="ocaso-negro"] {
   box-shadow: var(--app-shadow-soft);
 }
 
+.glass-panel {
+  background: var(--app-glass);
+  border-color: var(--app-glass-border);
+  backdrop-filter: blur(16px);
+}
+
 .app-card.interactive-card:hover {
   transform: translateY(-2px);
   box-shadow: var(--app-shadow-accent);
@@ -165,5 +173,63 @@ body[data-theme="ocaso-negro"] {
 .pressable:focus-visible {
   outline: 2px solid var(--app-accent);
   outline-offset: 3px;
+}
+
+.pulse-surface {
+  position: relative;
+  overflow: hidden;
+}
+
+.pulse-surface::after {
+  content: '';
+  position: absolute;
+  inset: -40%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--app-accent) 28%, transparent) 0%, transparent 58%);
+  transform: scale(0.82);
+  opacity: 0;
+  transition: opacity var(--motion-fast), transform var(--motion-fast);
+  pointer-events: none;
+}
+
+.pulse-surface:active::after {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.brutal-title {
+  font-size: clamp(1.9rem, 5.8vw, 2.5rem);
+  font-weight: 900;
+  letter-spacing: -0.04em;
+}
+
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.bento-primary {
+  grid-column: span 4 / span 4;
+}
+
+@media (min-width: 420px) {
+  .bento-primary {
+    grid-column: span 2 / span 2;
+    grid-row: span 2 / span 2;
+  }
+}
+
+.timeline-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 9999px;
+  border: 2px solid var(--app-border);
+  background: #111;
+}
+
+.timeline-dot.done {
+  border-color: var(--app-accent);
+  background: var(--app-accent);
+  box-shadow: 0 0 10px var(--app-accent-dim);
 }
 
