@@ -1,0 +1,5 @@
+{
+  "name": "VoltBody",
+  "description": "App de seguimiento de gimnasio con IA, rutinas y dietas personalizadas.",
+  "requestFramePermissions": []
+}
