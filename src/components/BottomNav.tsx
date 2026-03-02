@@ -64,7 +64,7 @@ export default function BottomNav() {
                 </span>
               )}
               {!isCenter && isActive && (
-                <span className="absolute -bottom-1 text-[8px] font-semibold app-accent whitespace-nowrap">
+                <span className="absolute -bottom-1 text-[10px] font-semibold app-accent whitespace-nowrap">
                   {item.label}
                 </span>
               )}
