@@ -4,7 +4,7 @@ import { useAppStore } from '../store/useAppStore';
 import { User, Settings, LogOut, Activity, Target, Clock, Scale, Ruler, Camera, Plus, Edit2, Check } from 'lucide-react';
 
 export default function Profile() {
-  const { profile, profilePhoto, progressPhotos, setProfilePhoto, addProgressPhoto, updateProfile, resetApp } = useAppStore();
+  const { profile, profilePhoto, progressPhotos, setProfilePhoto, addProgressPhoto, updateProfile, logout } = useAppStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const progressInputRef = useRef<HTMLInputElement>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -176,11 +176,11 @@ export default function Profile() {
       </div>
 
       <button
-        onClick={resetApp}
+        onClick={logout}
         className="w-full bg-red-500/10 border border-red-500/30 text-red-500 font-bold py-4 rounded-xl flex items-center justify-center gap-2 hover:bg-red-500/20 transition-colors"
       >
         <LogOut size={20} />
-        Cerrar Sesión / Reiniciar
+        Cerrar Sesión
       </button>
     </div>
   );

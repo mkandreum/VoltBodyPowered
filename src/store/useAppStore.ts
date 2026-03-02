@@ -75,6 +75,12 @@ export type Insights = {
 };
 
 interface AppState {
+  // Auth
+  authToken: string | null;
+  user: { id: string; email: string; name: string | null } | null;
+  isAuthenticated: boolean;
+  
+  // Onboarding
   isOnboarded: boolean;
   profile: UserProfile | null;
   profilePhoto: string | null;
@@ -85,6 +91,12 @@ interface AppState {
   insights: Insights | null;
   currentTab: 'home' | 'workout' | 'diet' | 'calendar' | 'profile';
   
+  // Auth actions
+  setAuthToken: (token: string | null) => void;
+  setUser: (user: { id: string; email: string; name: string | null } | null) => void;
+  logout: () => void;
+  
+  // Profile actions
   setProfile: (profile: UserProfile) => void;
   updateProfile: (updates: Partial<UserProfile>) => void;
   setProfilePhoto: (url: string) => void;
@@ -102,6 +114,12 @@ interface AppState {
 export const useAppStore = create<AppState>()(
   persist(
     (set) => ({
+      // Auth state
+      authToken: null,
+      user: null,
+      isAuthenticated: false,
+      
+      // App state
       isOnboarded: false,
       profile: null,
       profilePhoto: null,
@@ -112,6 +130,25 @@ export const useAppStore = create<AppState>()(
       insights: null,
       currentTab: 'home',
 
+      // Auth actions
+      setAuthToken: (token) => set({ authToken: token, isAuthenticated: !!token }),
+      setUser: (user) => set({ user }),
+      logout: () => set({ 
+        authToken: null, 
+        user: null, 
+        isAuthenticated: false,
+        isOnboarded: false,
+        profile: null,
+        profilePhoto: null,
+        progressPhotos: [],
+        routine: [],
+        diet: null,
+        logs: [],
+        insights: null,
+        currentTab: 'home'
+      }),
+
+      // Profile actions
       setProfile: (profile) => set({ profile }),
       updateProfile: (updates) => set((state) => ({ profile: state.profile ? { ...state.profile, ...updates } : null })),
       setProfilePhoto: (url) => set({ profilePhoto: url }),

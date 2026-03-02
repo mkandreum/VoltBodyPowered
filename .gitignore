@@ -6,3 +6,6 @@ coverage/
 *.log
 .env*
 !.env.example
+uploads/
+prisma/migrations/*_/
+!prisma/migrations/20260302000000_init/

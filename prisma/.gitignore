@@ -1,0 +1,44 @@
+# Prisma
+.env
+.env.local
+prisma/*.db
+prisma/*.db-journal
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build
+dist/
+build/
+.next/
+out/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Testing
+coverage/
+.nyc_output/
+
+# Temp
+tmp/
+temp/
+uploads/
+
+# Docker
+.dockerignore

@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useAppStore } from './store/useAppStore';
+import Login from './pages/Login';
 import Onboarding from './pages/Onboarding';
 import Home from './pages/Home';
 import Workout from './pages/Workout';
@@ -10,7 +11,7 @@ import BottomNav from './components/BottomNav';
 import { AnimatePresence, motion } from 'motion/react';
 
 export default function App() {
-  const { isOnboarded, currentTab } = useAppStore();
+  const { isAuthenticated, isOnboarded, currentTab } = useAppStore();
 
   // Disable overscroll on mobile
   useEffect(() => {
@@ -20,6 +21,12 @@ export default function App() {
     };
   }, []);
 
+  // Show login if not authenticated
+  if (!isAuthenticated) {
+    return <Login />;
+  }
+
+  // Show onboarding if authenticated but not onboarded
   if (!isOnboarded) {
     return <Onboarding />;
   }

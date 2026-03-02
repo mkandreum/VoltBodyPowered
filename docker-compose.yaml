@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-voltbody}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-voltbody123}
+      POSTGRES_DB: ${POSTGRES_DB:-voltbody}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - voltbody-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-voltbody}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-voltbody}:${POSTGRES_PASSWORD:-voltbody123}@db:5432/${POSTGRES_DB:-voltbody}?schema=public
+      JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-in-production}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      APP_URL: ${APP_URL:-http://localhost:3000}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - voltbody-network
+    volumes:
+      - uploads_data:/app/uploads
+
+volumes:
+  postgres_data:
+    driver: local
+  uploads_data:
+    driver: local
+
+networks:
+  voltbody-network:
+    driver: bridge

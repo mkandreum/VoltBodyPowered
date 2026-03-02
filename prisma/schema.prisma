@@ -1,0 +1,82 @@
+# Environment variables declared in this file are automatically made available to Prisma.
+# See the documentation for more detail: https://pris.ly/d/prisma-schema#accessing-environment-variables-from-the-schema
+
+# Prisma supports the native connection string format for PostgreSQL, MySQL, SQLite, SQL Server, MongoDB and CockroachDB.
+# See the documentation for all the connection string options: https://pris.ly/d/connection-strings
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            String          @id @default(uuid())
+  email         String          @unique
+  password      String
+  name          String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  
+  profile       UserProfile?
+  workoutLogs   WorkoutLog[]
+  progressPhotos ProgressPhoto[]
+}
+
+model UserProfile {
+  id            String   @id @default(uuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  age           Int?
+  weight        Float?
+  height        Float?
+  gender        String?
+  goal          String?
+  currentState  String?
+  schedule      String?
+  workHours     String?
+  
+  mealTimes     Json?    // {breakfast, lunch, snack, dinner}
+  avatarConfig  Json?    // {muscleMass, bodyFat}
+  
+  routine       Json?    // WorkoutDay[]
+  diet          Json?    // DietPlan
+  insights      Json?    // Insights
+  
+  profilePhoto  String?
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model WorkoutLog {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  date        DateTime
+  exerciseId  String
+  weight      Float
+  reps        Int
+  
+  createdAt   DateTime @default(now())
+  
+  @@index([userId, date])
+}
+
+model ProgressPhoto {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  date      DateTime
+  url       String
+  
+  createdAt DateTime @default(now())
+  
+  @@index([userId, date])
+}

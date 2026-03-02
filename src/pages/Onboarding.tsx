@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore } from '../store/useAppStore';
 import { ChevronRight, ChevronLeft, Loader2, Zap } from 'lucide-react';
 import { generatePlan } from '../services/geminiService';
+import { authService } from '../services/authService';
 
 const steps = [
   { id: 'basics', title: 'Tus Datos' },
@@ -13,7 +14,7 @@ const steps = [
 ];
 
 export default function Onboarding() {
-  const { setProfile, setRoutine, setDiet, setInsights, completeOnboarding } = useAppStore();
+  const { setProfile, setRoutine, setDiet, setInsights, completeOnboarding, authToken } = useAppStore();
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(false);
 
@@ -48,18 +49,46 @@ export default function Onboarding() {
       try {
         const plan = await generatePlan(formData);
         
-        setProfile({
+        const profileData = {
           ...formData,
           avatarConfig: {
             muscleMass: formData.goal.includes('masa') ? 0.6 : 0.4,
             bodyFat: formData.goal.includes('perder') ? 0.3 : 0.5,
           }
-        });
+        };
+
+        // Save to local store
+        setProfile(profileData);
         setRoutine(plan.routine);
         setDiet(plan.diet);
         if (plan.insights) {
           setInsights(plan.insights);
         }
+
+        // Save to backend
+        if (authToken) {
+          try {
+            await authService.updateProfile(authToken, {
+              age: formData.age,
+              weight: formData.weight,
+              height: formData.height,
+              gender: formData.gender,
+              goal: formData.goal,
+              currentState: formData.currentState,
+              schedule: formData.schedule,
+              workHours: formData.workHours,
+              mealTimes: formData.mealTimes,
+              avatarConfig: profileData.avatarConfig,
+              routine: plan.routine,
+              diet: plan.diet,
+              insights: plan.insights
+            });
+          } catch (error) {
+            console.error('Error saving profile to backend:', error);
+            // Continue anyway, data is saved locally
+          }
+        }
+
         completeOnboarding();
       } catch (error) {
         console.error('Error generating plan:', error);
