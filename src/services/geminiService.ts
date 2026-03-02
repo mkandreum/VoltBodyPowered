@@ -2,16 +2,14 @@ import { GoogleGenAI, Type } from '@google/genai';
 import { WorkoutDay, DietPlan, Meal, Insights } from '../store/useAppStore';
 
 // Lazy initialization - only create the client when actually needed
-// This prevents crashes at module load time if the API key is missing
 let _ai: GoogleGenAI | null = null;
 
 function getAI(): GoogleGenAI {
   if (!_ai) {
-    const apiKey = typeof process !== 'undefined' && process.env
-      ? process.env.GEMINI_API_KEY
-      : '';
+    // process.env.GEMINI_API_KEY is replaced by Vite at build time
+    const apiKey = process.env.GEMINI_API_KEY as string;
     if (!apiKey) {
-      throw new Error('GEMINI_API_KEY no está configurada. Configúrala en las variables de entorno.');
+      throw new Error('GEMINI_API_KEY no está configurada. Añádela como Build Variable en Coolify y reconstruye.');
     }
     _ai = new GoogleGenAI({ apiKey });
   }
@@ -85,7 +83,7 @@ export async function generatePlan(profile: any): Promise<{ routine: WorkoutDay[
 
   try {
     const response = await getAI().models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-2.0-flash',
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
@@ -199,7 +197,7 @@ export async function generateAlternativeMeal(oldMeal: Meal, profile: any): Prom
 
   try {
     const response = await getAI().models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-2.0-flash',
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
