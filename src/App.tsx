@@ -72,7 +72,7 @@ export default function App() {
   };
 
   return (
-    <div className="app-shell min-h-[100dvh] text-white overflow-x-hidden safe-bottom">
+    <div className="app-shell min-h-[100dvh] text-white overflow-x-hidden safe-top safe-bottom">
       <AnimatePresence mode="wait">
         <motion.div
           key={currentTab}
