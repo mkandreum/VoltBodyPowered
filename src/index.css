@@ -392,6 +392,25 @@ a,
   color: #fecdd3;
 }
 
+.nav-soft-btn {
+  height: 44px;
+  border-radius: 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--app-border) 86%, white 4%);
+  background: color-mix(in srgb, var(--app-surface) 80%, black 20%);
+  color: #aeb5c1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.33rem;
+}
+
+.nav-soft-btn-active {
+  border-color: color-mix(in srgb, var(--app-accent) 55%, var(--app-border));
+  background: color-mix(in srgb, var(--app-accent) 16%, var(--app-surface));
+  color: var(--app-accent);
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--app-accent) 24%, transparent);
+}
+
 .safe-bottom {
   padding-bottom: calc(8rem + env(safe-area-inset-bottom));
 }

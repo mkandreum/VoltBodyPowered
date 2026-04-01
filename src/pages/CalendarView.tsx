@@ -24,6 +24,13 @@ export default function CalendarView() {
   const dayLogs = logs.filter(log => format(new Date(log.date), 'yyyy-MM-dd') === selectedDateStr);
   const completedIds = new Set(dayLogs.map((log) => log.exerciseId));
 
+  const groupedExercises = plannedRoutine?.exercises.reduce<Record<string, typeof plannedRoutine.exercises>>((acc, exercise) => {
+    const key = exercise.muscleGroup || 'General';
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(exercise);
+    return acc;
+  }, {});
+
   return (
     <div className="min-h-screen app-shell px-4 pt-5 md:px-6 safe-bottom">
       <div className="page-wrap">
@@ -114,25 +121,33 @@ export default function CalendarView() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                {plannedRoutine.exercises.map((exercise) => {
-                  const done = completedIds.has(exercise.id);
-
-                  return (
-                    <div
-                      key={exercise.id}
-                      className="flex items-center justify-between rounded-xl border border-[var(--app-border)] bg-black/35 px-3 py-2"
-                    >
-                      <div>
-                        <p className="text-sm font-semibold text-white">{exercise.name}</p>
-                        <p className="text-[11px] text-gray-400">{exercise.sets} series x {exercise.reps} reps</p>
-                      </div>
-                      <span className={done ? 'text-emerald-400 text-xs font-semibold' : 'text-gray-500 text-xs font-semibold'}>
-                        {done ? 'Hecho' : 'Pendiente'}
-                      </span>
+              <div className="space-y-4">
+                {groupedExercises && Object.entries(groupedExercises).map(([muscleGroup, exercises]) => (
+                  <div key={muscleGroup} className="space-y-2">
+                    <div className="inline-flex items-center rounded-full border border-[var(--app-border)] bg-black/30 px-3 py-1">
+                      <span className="text-[11px] uppercase tracking-wider text-gray-300">{muscleGroup}</span>
                     </div>
-                  );
-                })}
+
+                    {exercises.map((exercise) => {
+                      const done = completedIds.has(exercise.id);
+
+                      return (
+                        <div
+                          key={exercise.id}
+                          className="flex items-center justify-between rounded-xl border border-[var(--app-border)] bg-black/35 px-3 py-2"
+                        >
+                          <div>
+                            <p className="text-sm font-semibold text-white">{exercise.name}</p>
+                            <p className="text-[11px] text-gray-400">{exercise.sets} series x {exercise.reps} reps</p>
+                          </div>
+                          <span className={done ? 'text-emerald-400 text-xs font-semibold' : 'text-gray-500 text-xs font-semibold'}>
+                            {done ? 'Hecho' : 'Pendiente'}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
               </div>
             </div>
           ) : (

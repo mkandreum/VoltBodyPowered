@@ -1,10 +1,11 @@
 import type { LucideIcon } from 'lucide-react';
+import type { ReactNode } from 'react';
 
 type SectionHeaderProps = {
   title: string;
   subtitle?: string;
   icon?: LucideIcon;
-  right?: any;
+  right?: ReactNode;
 };
 
 export default function SectionHeader({ title, subtitle, icon: Icon, right }: SectionHeaderProps) {

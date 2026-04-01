@@ -3,6 +3,14 @@ import { useAppStore } from '../store/useAppStore';
 import { motion } from 'motion/react';
 import clsx from 'clsx';
 
+type TabId = 'home' | 'workout' | 'diet' | 'calendar' | 'profile';
+
+type NavItem = {
+  id: TabId;
+  icon: typeof Dumbbell;
+  label: string;
+};
+
 export default function BottomNav() {
   const { currentTab, setTab } = useAppStore();
 
@@ -12,65 +20,81 @@ export default function BottomNav() {
     }
   };
 
-  const navItems = [
-    { id: 'workout', icon: Dumbbell, label: '💪 Rutina' },
-    { id: 'diet', icon: Utensils, label: '🍽️ Dieta' },
-    { id: 'logo', icon: Zap, label: '⚡ VoltBody' },
-    { id: 'calendar', icon: Calendar, label: '📅 Calendario' },
-    { id: 'profile', icon: User, label: '👤 Perfil' },
-  ] as const;
+  const navItems: NavItem[] = [
+    { id: 'workout', icon: Dumbbell, label: 'Rutina' },
+    { id: 'diet', icon: Utensils, label: 'Dieta' },
+    { id: 'calendar', icon: Calendar, label: 'Calendario' },
+    { id: 'profile', icon: User, label: 'Perfil' },
+  ];
 
   return (
-    <div className="fixed left-1/2 -translate-x-1/2 z-50 w-[94%] max-w-[460px] bottom-[calc(0.7rem+env(safe-area-inset-bottom))]">
-      <div className="glass-panel border border-[var(--app-border)] rounded-[1.4rem] p-2 flex justify-between items-center shadow-2xl">
-        {navItems.map((item, index) => {
-          const isCenter = index === 2; // Middle item
-          const isActive = currentTab === item.id || (isCenter && currentTab === 'home');
+    <div className="fixed left-1/2 -translate-x-1/2 z-50 w-[96%] max-w-[520px] bottom-[calc(0.65rem+env(safe-area-inset-bottom))]">
+      <div className="glass-panel border border-[color:var(--app-border)]/85 rounded-[1.35rem] p-2.5 shadow-2xl">
+        <div className="grid grid-cols-[1fr_1fr_auto_1fr_1fr] gap-2 items-center">
+          {navItems.slice(0, 2).map((item) => {
+            const isActive = currentTab === item.id;
 
-          return (
-            <button
-              key={item.id}
-              onClick={() => {
-                triggerHaptic();
-                if (item.id === 'logo') setTab('home');
-                else setTab(item.id as any);
-              }}
-              className={clsx(
-                'relative tap-target flex flex-col items-center justify-center w-14 h-14 rounded-2xl transition-all duration-300',
-                isCenter ? 'overflow-visible' : 'pulse-surface',
-                isActive ? 'app-accent' : 'text-gray-400 hover:text-white',
-                isCenter ? 'bg-[color:var(--app-accent)]/10 border border-[color:var(--app-accent)]/30 w-16 h-16 -mt-5 shadow-[0_0_15px_var(--app-accent-dim)] rounded-3xl' : ''
-              )}
-            >
-              {isActive && !isCenter && (
-                <motion.div
-                  className="absolute inset-0 bg-[color:var(--app-accent)]/16 rounded-2xl"
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-                />
-              )}
-              <item.icon
-                size={isCenter ? 32 : 24}
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => {
+                  triggerHaptic();
+                  setTab(item.id);
+                }}
                 className={clsx(
-                  'relative z-10 transition-transform duration-300',
-                  isActive && 'scale-110 drop-shadow-[0_0_8px_var(--app-accent-dim)]',
-                  isCenter && 'app-accent'
+                  'tap-target pressable pulse-surface nav-soft-btn',
+                  isActive && 'nav-soft-btn-active'
                 )}
-              />
-              {isCenter && (
-                <span className="absolute -bottom-4 text-[9px] font-bold tracking-[0.18em] app-accent uppercase whitespace-nowrap">
-                  ⚡ VoltBody
-                </span>
-              )}
-              {!isCenter && isActive && (
-                <span className="absolute -bottom-1 text-[9px] font-semibold app-accent whitespace-nowrap tracking-wide">
-                  {item.label}
-                </span>
-              )}
-            </button>
-          );
-        })}
+              >
+                <item.icon size={18} className={clsx('transition-transform', isActive && 'scale-110')} />
+                <span className="text-[10px] font-semibold tracking-wide">{item.label}</span>
+              </button>
+            );
+          })}
+
+          <motion.button
+            type="button"
+            whileTap={{ scale: 0.98 }}
+            onClick={() => {
+              triggerHaptic();
+              setTab('home');
+            }}
+            className={clsx(
+              'tap-target px-2 min-w-[120px] h-11 rounded-xl border transition-all text-center',
+              currentTab === 'home'
+                ? 'border-[color:var(--app-accent)]/60 bg-[color:var(--app-accent)]/10 app-accent'
+                : 'border-[color:var(--app-border)]/80 bg-black/20 text-gray-300 hover:text-white'
+            )}
+          >
+            <span className="inline-flex items-center gap-1 text-[11px] font-black tracking-[0.18em] uppercase">
+              <Zap size={12} />
+              VoltBody
+            </span>
+          </motion.button>
+
+          {navItems.slice(2).map((item) => {
+            const isActive = currentTab === item.id;
+
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => {
+                  triggerHaptic();
+                  setTab(item.id);
+                }}
+                className={clsx(
+                  'tap-target pressable pulse-surface nav-soft-btn',
+                  isActive && 'nav-soft-btn-active'
+                )}
+              >
+                <item.icon size={18} className={clsx('transition-transform', isActive && 'scale-110')} />
+                <span className="text-[10px] font-semibold tracking-wide">{item.label}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
