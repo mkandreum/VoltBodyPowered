@@ -9,6 +9,7 @@ import { incrementAiError } from '../utils/metrics.js';
 const router = express.Router();
 const aiRateLimiter = createRateLimiter({ windowMs: 10 * 60 * 1000, max: 12, keyPrefix: 'ai' });
 const AI_TIMEOUT_MS = Number(process.env.AI_TIMEOUT_MS || 15000);
+const REPORT_TIMEOUT_MS = Number(process.env.REPORT_TIMEOUT_MS || 45000);
 
 function fallbackRoutine(profile) {
   const days = ['Lunes', 'Miercoles', 'Viernes'];
@@ -382,6 +383,40 @@ router.post('/generate-progress-report', authMiddleware, aiRateLimiter, validate
     const uniqueLogDays = new Set(logs.map((item) => String(item.date || '').slice(0, 10))).size;
     const totalSessions = Number(uniqueLogDays || 0);
 
+    // Build exercise name lookup from routine so logs include readable names
+    const exerciseNameMap = {};
+    if (Array.isArray(routine)) {
+      for (const day of routine) {
+        if (Array.isArray(day?.exercises)) {
+          for (const ex of day.exercises) {
+            if (ex?.id && ex?.name) {
+              exerciseNameMap[ex.id] = ex.name;
+            }
+          }
+        }
+      }
+    }
+
+    // Enrich logs with exercise names for the AI prompt
+    const enrichedLogs = logs.slice(-200).map((log) => ({
+      date: log.date,
+      exercise: exerciseNameMap[log.exerciseId] || log.exerciseId,
+      weight: log.weight,
+      reps: log.reps,
+    }));
+
+    // Build a concise diet summary for the prompt
+    let dietSummary = 'No hay plan de dieta configurado.';
+    if (diet && typeof diet === 'object') {
+      const macroLine = diet.macros
+        ? `Macros objetivo: ${diet.macros.protein || 0}g proteina, ${diet.macros.carbs || 0}g carbos, ${diet.macros.fat || 0}g grasa`
+        : '';
+      const mealsLine = Array.isArray(diet.meals)
+        ? diet.meals.map((m) => `${m.name || 'Comida'} (${m.calories || 0} kcal, ${m.protein || 0}g prot)`).join('; ')
+        : '';
+      dietSummary = `Calorias diarias objetivo: ${diet.dailyCalories || 'N/A'}. ${macroLine}. Comidas: ${mealsLine}`;
+    }
+
     const prompt = `Eres un coach de fitness y recomposicion corporal. Analiza progreso real y da feedback accionable en ESPANOL.
 
 DATOS DEL USUARIO:
@@ -401,8 +436,11 @@ DATOS HISTORICOS:
 - Comidas del plan actual: ${diet?.meals?.length || 0}
 - Fotos de progreso: ${Array.isArray(progressPhotos) ? progressPhotos.length : 0}
 
-LOGS RECIENTES (max 200):
-${JSON.stringify(logs.slice(-200))}
+PLAN NUTRICIONAL:
+${dietSummary}
+
+LOGS RECIENTES (max 200, con nombre de ejercicio, peso y reps):
+${JSON.stringify(enrichedLogs)}
 
 RUTINA RESUMIDA:
 ${JSON.stringify(routine)}
@@ -430,6 +468,7 @@ Reglas:
       prompt,
       requestId: req.requestId,
       eventBase: 'ai.generate_progress_report',
+      timeoutMs: REPORT_TIMEOUT_MS,
     });
 
     try {
@@ -447,7 +486,7 @@ Reglas:
     }
   } catch (error) {
     if (String(error.message || '').startsWith('AI_TIMEOUT_')) {
-      logInfo('ai.generate_progress_report.timeout_fallback', { requestId: req.requestId, timeoutMs: AI_TIMEOUT_MS });
+      logInfo('ai.generate_progress_report.timeout_fallback', { requestId: req.requestId, timeoutMs: REPORT_TIMEOUT_MS });
       return res.json(fallbackProgressReport(req.body?.logs || []));
     }
 

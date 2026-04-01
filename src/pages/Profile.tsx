@@ -148,7 +148,7 @@ export default function Profile() {
         logs,
         routine,
         diet,
-        progressPhotos,
+        progressPhotos: progressPhotos.map((p) => ({ date: p.date })),
       });
       setReport(response);
       showToast({
