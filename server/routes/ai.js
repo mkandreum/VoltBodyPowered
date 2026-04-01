@@ -8,7 +8,7 @@ import { incrementAiError } from '../utils/metrics.js';
 
 const router = express.Router();
 const aiRateLimiter = createRateLimiter({ windowMs: 10 * 60 * 1000, max: 12, keyPrefix: 'ai' });
-const AI_TIMEOUT_MS = Number(process.env.AI_TIMEOUT_MS || 15000);
+const AI_TIMEOUT_MS = Number(process.env.AI_TIMEOUT_MS || 40000);
 const REPORT_TIMEOUT_MS = Number(process.env.REPORT_TIMEOUT_MS || 45000);
 
 function fallbackRoutine(profile) {
