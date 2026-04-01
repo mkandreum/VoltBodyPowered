@@ -587,6 +587,10 @@ button:active {
   padding-bottom: calc(8rem + env(safe-area-inset-bottom));
 }
 
+.safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+
 @media (hover: none) {
   .pressable:hover,
   .interactive-tile:hover,
