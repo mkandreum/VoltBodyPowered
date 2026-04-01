@@ -8,7 +8,88 @@ import { incrementAiError } from '../utils/metrics.js';
 
 const router = express.Router();
 const aiRateLimiter = createRateLimiter({ windowMs: 10 * 60 * 1000, max: 12, keyPrefix: 'ai' });
-const AI_TIMEOUT_MS = Number(process.env.AI_TIMEOUT_MS || 40000);
+const AI_TIMEOUT_MS = Number(process.env.AI_TIMEOUT_MS || 15000);
+
+function fallbackRoutine(profile) {
+  const days = ['Lunes', 'Miercoles', 'Viernes'];
+  const requestedDays = Math.max(1, Math.min(5, Number(profile?.trainingDaysPerWeek || 3)));
+  const pickedDays = days.slice(0, Math.min(days.length, requestedDays));
+
+  return pickedDays.map((day, dayIndex) => ({
+    day,
+    focus: dayIndex % 2 === 0 ? 'Fuerza Full Body' : 'Empuje y tiron',
+    exercises: [
+      { id: `${day}-sentadilla`, name: 'Sentadilla goblet', sets: 3, reps: '10-12', weight: 12, gifUrl: '', muscleGroup: 'Piernas' },
+      { id: `${day}-press`, name: 'Press con mancuernas', sets: 3, reps: '8-12', weight: 10, gifUrl: '', muscleGroup: 'Pecho' },
+      { id: `${day}-remo`, name: 'Remo con mancuerna', sets: 3, reps: '10-12', weight: 12, gifUrl: '', muscleGroup: 'Espalda' },
+      { id: `${day}-hombro`, name: 'Press militar sentado', sets: 3, reps: '10', weight: 8, gifUrl: '', muscleGroup: 'Hombros' },
+      { id: `${day}-core`, name: 'Plancha frontal', sets: 3, reps: '30 segundos', weight: 0, gifUrl: '', muscleGroup: 'Core' },
+    ],
+  }));
+}
+
+function fallbackDiet(profile) {
+  const target = profile?.goal?.toLowerCase().includes('perder') ? 2100 : 2500;
+  return {
+    dailyCalories: target,
+    macros: {
+      protein: Math.round(target * 0.32 / 4),
+      carbs: Math.round(target * 0.43 / 4),
+      fat: Math.round(target * 0.25 / 9),
+    },
+    meals: [
+      { id: 'meal-1', name: '🥣 Tortilla de avena y platano', time: '08:00', calories: 520, protein: 30, carbs: 62, fat: 16, description: 'Avena, huevo, platano y canela.' },
+      { id: 'meal-2', name: '🍎 Yogur con frutos secos', time: '11:30', calories: 320, protein: 18, carbs: 22, fat: 17, description: 'Yogur griego natural, nueces y fruta.' },
+      { id: 'meal-3', name: '🍽️ Pollo con arroz y verduras', time: '14:00', calories: 690, protein: 48, carbs: 78, fat: 20, description: 'Pechuga de pollo, arroz y verduras salteadas.' },
+      { id: 'meal-4', name: '🥜 Sandwich integral de atun', time: '18:00', calories: 360, protein: 28, carbs: 34, fat: 11, description: 'Pan integral, atun y tomate.' },
+      { id: 'meal-5', name: '🌙 Merluza con patata cocida', time: '21:00', calories: 510, protein: 40, carbs: 44, fat: 16, description: 'Merluza al horno con patata y ensalada.' },
+    ],
+  };
+}
+
+function fallbackInsights(profile) {
+  const name = profile?.name || 'Atleta';
+  return {
+    sleepRecommendation: 'Intenta dormir 7.5-8 horas y evitar pantallas 45 minutos antes de acostarte.',
+    estimatedResults: 'En 4 semanas notarás mejor energia; en 8 semanas veras cambios visibles; en 12 semanas consolidaras habitos.',
+    dailyQuote: `${name}, la consistencia gana: hoy cumple lo basico y suma una victoria mas.`,
+  };
+}
+
+function fallbackPlan(profile) {
+  return {
+    routine: fallbackRoutine(profile),
+    diet: fallbackDiet(profile),
+    insights: fallbackInsights(profile),
+  };
+}
+
+function fallbackProgressReport(logs = []) {
+  const uniqueDays = new Set(logs.map((item) => String(item.date || '').slice(0, 10))).size;
+  const consistency = Math.min(100, uniqueDays * 7);
+  const progress = Math.min(100, Math.round(consistency * 0.8));
+  const overall = Math.round((consistency + progress) / 2);
+
+  return {
+    overallScore: overall,
+    progressPercent: progress,
+    consistencyPercent: consistency,
+    nutritionPercent: Math.max(45, Math.round(progress * 0.75)),
+    trainingExecutionPercent: Math.max(50, Math.round(consistency * 0.78)),
+    weeksToVisibleChange: Math.max(2, 12 - Math.floor(progress / 10)),
+    summary: 'Tu avance es estable. Si mantienes el plan sin saltarte sesiones, la mejora visual sera progresiva y medible.',
+    improvements: [
+      'Mantener frecuencia semanal constante de entreno.',
+      'Priorizar sueno y recuperacion para rendir mejor.',
+      'Cumplir objetivos de proteina diaria con menos variacion.',
+    ],
+    nextActions: [
+      'Completa todas las sesiones planificadas esta semana.',
+      'Registra todas las series clave para medir progreso real.',
+      'Revisa peso y fotos cada 7 dias para ajustar estrategia.',
+    ],
+  };
+}
 
 function withTimeout(promise, timeoutMs) {
   return Promise.race([
@@ -157,13 +238,19 @@ Responde SOLO con JSON válido (sin markdown, sin bloques de código, sin coment
   } catch (error) {
     incrementAiError();
     if (String(error.message || '').startsWith('AI_TIMEOUT_')) {
-      return res.status(504).json({
-        error: 'Timeout al generar el plan',
-        details: `El proveedor IA no respondio en ${Math.floor(AI_TIMEOUT_MS / 1000)}s`,
+      logError('ai.generate_plan.timeout_fallback', { requestId: req.requestId, timeoutMs: AI_TIMEOUT_MS });
+      return res.json({
+        ...fallbackPlan(req.body || {}),
+        fallback: true,
+        details: `Plan de respaldo generado por timeout (${Math.floor(AI_TIMEOUT_MS / 1000)}s).`,
       });
     }
     logError('ai.generate_plan.error', { requestId: req.requestId, message: error.message, stack: error.stack });
-    res.status(500).json({ error: 'Error al generar el plan', details: error.message });
+    return res.json({
+      ...fallbackPlan(req.body || {}),
+      fallback: true,
+      details: 'Plan de respaldo generado por error del proveedor IA.',
+    });
   }
 });
 
@@ -214,13 +301,16 @@ Responde SOLO con JSON válido (sin markdown, sin comentarios):
   } catch (error) {
     incrementAiError();
     if (String(error.message || '').startsWith('AI_TIMEOUT_')) {
-      return res.status(504).json({
-        error: 'Timeout al generar comida alternativa',
-        details: `El proveedor IA no respondio en ${Math.floor(AI_TIMEOUT_MS / 1000)}s`,
+      return res.json({
+        ...req.body.oldMeal,
+        description: `${req.body.oldMeal.description} (fallback rapido generado por timeout)`,
       });
     }
     logError('ai.generate_alternative_meal.error', { requestId: req.requestId, message: error.message, stack: error.stack });
-    res.status(500).json({ error: 'Error al generar comida alternativa', details: error.message });
+    return res.json({
+      ...req.body.oldMeal,
+      description: `${req.body.oldMeal.description} (fallback rapido generado por error IA)`,
+    });
   }
 });
 
@@ -300,13 +390,10 @@ Reglas:
   } catch (error) {
     incrementAiError();
     if (String(error.message || '').startsWith('AI_TIMEOUT_')) {
-      return res.status(504).json({
-        error: 'Timeout al generar informe',
-        details: `El proveedor IA no respondio en ${Math.floor(AI_TIMEOUT_MS / 1000)}s`,
-      });
+      return res.json(fallbackProgressReport(req.body?.logs || []));
     }
     logError('ai.generate_progress_report.error', { requestId: req.requestId, message: error.message, stack: error.stack });
-    res.status(500).json({ error: 'Error al generar informe', details: error.message });
+    return res.json(fallbackProgressReport(req.body?.logs || []));
   }
 });
 

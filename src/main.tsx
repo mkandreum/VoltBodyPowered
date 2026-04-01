@@ -5,6 +5,14 @@ import './index.css';
 
 console.log('[VoltBody] main.tsx loaded');
 
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch((error) => {
+      console.error('[VoltBody] SW register error:', error);
+    });
+  });
+}
+
 // Error Boundary to catch any React crash
 class ErrorBoundary extends Component<{children: ReactNode}, {error: Error | null}> {
   constructor(props: {children: ReactNode}) {
