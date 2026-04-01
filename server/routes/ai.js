@@ -100,6 +100,48 @@ function withTimeout(promise, timeoutMs) {
   ]);
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isProviderUnavailableError(error) {
+  const message = String(error?.message || '').toLowerCase();
+  return (
+    message.includes('"code":503') ||
+    message.includes('unavailable') ||
+    message.includes('high demand')
+  );
+}
+
+async function generateContentWithRetry({ model, prompt, requestId, eventBase, timeoutMs = AI_TIMEOUT_MS }) {
+  const maxAttempts = 2;
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      return await withTimeout(
+        ai.models.generateContent({
+          model,
+          contents: prompt,
+        }),
+        timeoutMs
+      );
+    } catch (error) {
+      lastError = error;
+
+      if (isProviderUnavailableError(error) && attempt < maxAttempts) {
+        logInfo(`${eventBase}.provider_busy_retry`, { requestId, attempt, maxAttempts });
+        await sleep(350);
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  throw lastError;
+}
+
 function extractJsonBlock(rawText = '') {
   const trimmed = String(rawText).trim();
   if (trimmed.startsWith('{') && trimmed.endsWith('}')) return trimmed;
@@ -214,13 +256,12 @@ Responde SOLO con JSON válido (sin markdown, sin bloques de código, sin coment
   }
 }`;
 
-    const response = await withTimeout(
-      ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: prompt,
-      }),
-      AI_TIMEOUT_MS
-    );
+    const response = await generateContentWithRetry({
+      model: 'gemini-3-flash-preview',
+      prompt,
+      requestId: req.requestId,
+      eventBase: 'ai.generate_plan',
+    });
 
     try {
       const jsonText = extractJsonBlock(response.text);
@@ -236,15 +277,25 @@ Responde SOLO con JSON válido (sin markdown, sin bloques de código, sin coment
       res.status(502).json({ error: 'JSON invalido de Gemini', details: parseErr.message });
     }
   } catch (error) {
-    incrementAiError();
     if (String(error.message || '').startsWith('AI_TIMEOUT_')) {
-      logError('ai.generate_plan.timeout_fallback', { requestId: req.requestId, timeoutMs: AI_TIMEOUT_MS });
+      logInfo('ai.generate_plan.timeout_fallback', { requestId: req.requestId, timeoutMs: AI_TIMEOUT_MS });
       return res.json({
         ...fallbackPlan(req.body || {}),
         fallback: true,
         details: `Plan de respaldo generado por timeout (${Math.floor(AI_TIMEOUT_MS / 1000)}s).`,
       });
     }
+
+    if (isProviderUnavailableError(error)) {
+      logInfo('ai.generate_plan.provider_busy_fallback', { requestId: req.requestId });
+      return res.json({
+        ...fallbackPlan(req.body || {}),
+        fallback: true,
+        details: 'Plan de respaldo generado porque el proveedor IA esta saturado temporalmente.',
+      });
+    }
+
+    incrementAiError();
     logError('ai.generate_plan.error', { requestId: req.requestId, message: error.message, stack: error.stack });
     return res.json({
       ...fallbackPlan(req.body || {}),
@@ -277,13 +328,12 @@ Responde SOLO con JSON válido (sin markdown, sin comentarios):
   "description": "descripción corta y saludable"
 }`;
 
-    const response = await withTimeout(
-      ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: prompt,
-      }),
-      AI_TIMEOUT_MS
-    );
+    const response = await generateContentWithRetry({
+      model: 'gemini-3-flash-preview',
+      prompt,
+      requestId: req.requestId,
+      eventBase: 'ai.generate_alternative_meal',
+    });
 
     try {
       const jsonText = extractJsonBlock(response.text);
@@ -299,13 +349,22 @@ Responde SOLO con JSON válido (sin markdown, sin comentarios):
       res.status(502).json({ error: 'JSON invalido de Gemini', details: parseErr.message });
     }
   } catch (error) {
-    incrementAiError();
     if (String(error.message || '').startsWith('AI_TIMEOUT_')) {
       return res.json({
         ...req.body.oldMeal,
         description: `${req.body.oldMeal.description} (fallback rapido generado por timeout)`,
       });
     }
+
+    if (isProviderUnavailableError(error)) {
+      logInfo('ai.generate_alternative_meal.provider_busy_fallback', { requestId: req.requestId });
+      return res.json({
+        ...req.body.oldMeal,
+        description: `${req.body.oldMeal.description} (fallback rapido por saturacion del proveedor IA)`,
+      });
+    }
+
+    incrementAiError();
     logError('ai.generate_alternative_meal.error', { requestId: req.requestId, message: error.message, stack: error.stack });
     return res.json({
       ...req.body.oldMeal,
@@ -366,13 +425,12 @@ Reglas:
 - weeksToVisibleChange minimo 1 y maximo 52.
 - Basate en los datos reales entregados, no inventes metricas externas.`;
 
-    const response = await withTimeout(
-      ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: prompt,
-      }),
-      AI_TIMEOUT_MS
-    );
+    const response = await generateContentWithRetry({
+      model: 'gemini-3-flash-preview',
+      prompt,
+      requestId: req.requestId,
+      eventBase: 'ai.generate_progress_report',
+    });
 
     try {
       const jsonText = extractJsonBlock(response.text);
@@ -388,10 +446,17 @@ Reglas:
       res.status(502).json({ error: 'JSON invalido de Gemini', details: parseErr.message });
     }
   } catch (error) {
-    incrementAiError();
     if (String(error.message || '').startsWith('AI_TIMEOUT_')) {
+      logInfo('ai.generate_progress_report.timeout_fallback', { requestId: req.requestId, timeoutMs: AI_TIMEOUT_MS });
       return res.json(fallbackProgressReport(req.body?.logs || []));
     }
+
+    if (isProviderUnavailableError(error)) {
+      logInfo('ai.generate_progress_report.provider_busy_fallback', { requestId: req.requestId });
+      return res.json(fallbackProgressReport(req.body?.logs || []));
+    }
+
+    incrementAiError();
     logError('ai.generate_progress_report.error', { requestId: req.requestId, message: error.message, stack: error.stack });
     return res.json(fallbackProgressReport(req.body?.logs || []));
   }

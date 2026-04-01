@@ -1,5 +1,5 @@
 # Build stage
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
@@ -7,7 +7,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies (includes dev dependencies for building)
-RUN npm install
+RUN npm ci
 
 # Copy source code
 COPY . .
@@ -19,7 +19,7 @@ RUN npm run build
 RUN echo "Checking dist folder..." && ls -la dist/ && ls -la dist/assets/
 
 # Production stage
-FROM node:20-alpine
+FROM node:22-alpine
 
 WORKDIR /app
 
@@ -28,7 +28,7 @@ RUN apk add --no-cache curl
 
 # Install production dependencies
 COPY package*.json ./
-RUN npm install --production
+RUN npm ci --omit=dev
 
 # Copy built frontend and server files
 COPY --from=builder /app/dist ./public
