@@ -11,6 +11,7 @@ export default function Diet() {
   const { diet, profile, swapMeal, showToast, authToken } = useAppStore();
   const [loadingMealId, setLoadingMealId] = useState<string | null>(null);
   const [specialDishTarget, setSpecialDishTarget] = useState(390);
+  const [macroQuickMode, setMacroQuickMode] = useState(false);
 
   if (!diet) return null;
 
@@ -70,6 +71,9 @@ export default function Diet() {
     baseSpecialDish['queso feta'].calories;
   const scale = specialDishTarget / baseCalories;
   const avgMealCalories = Math.round(diet.dailyCalories / Math.max(1, diet.meals.length));
+  const totalMacros = Math.max(1, diet.macros.protein + diet.macros.carbs + diet.macros.fat);
+  const macroBalance = Math.round((diet.macros.protein * 4 + diet.macros.carbs * 4 + diet.macros.fat * 9) / Math.max(1, diet.dailyCalories) * 100);
+  const dailyCompliance = Math.min(100, Math.round(((diet.meals.length / 5) * 55) + ((macroBalance / 100) * 45)));
 
   return (
     <div className="min-h-screen app-shell px-4 pt-5 md:px-6 safe-bottom">
@@ -99,6 +103,16 @@ export default function Diet() {
           <StatPill label="kcal" value={`${diet.dailyCalories}`} />
           <StatPill label="comidas" value={`${diet.meals.length}`} />
           <StatPill label="promedio" value={`${avgMealCalories}`} />
+        </div>
+
+        <div className="mb-4 rounded-xl border border-[var(--app-border)] bg-black/35 p-3">
+          <div className="mb-2 flex items-center justify-between text-xs text-gray-400">
+            <span>Cumplimiento diario</span>
+            <span>{dailyCompliance}%</span>
+          </div>
+          <div className="h-2 w-full overflow-hidden rounded-full bg-black/45">
+            <div className="h-full rounded-full bg-[var(--app-accent)]" style={{ width: `${dailyCompliance}%` }} />
+          </div>
         </div>
 
         <div className="rounded-xl border border-[var(--app-border)] bg-black/30 p-3 text-xs text-gray-300">
@@ -201,6 +215,28 @@ export default function Diet() {
           <p>Lentejas: {(baseSpecialDish.lentejas.grams * scale).toFixed(0)} g</p>
           <p>Tomate: {(baseSpecialDish.tomate.grams * scale).toFixed(0)} g</p>
           <p>Queso feta: {(baseSpecialDish['queso feta'].grams * scale).toFixed(0)} g</p>
+        </div>
+
+        <div className="mt-5 rounded-xl border border-[var(--app-border)] bg-black/35 p-3">
+          <label className="mb-3 flex items-center justify-between text-sm text-gray-300">
+            Equivalencias rapidas por macros
+            <input
+              type="checkbox"
+              checked={macroQuickMode}
+              onChange={(e) => setMacroQuickMode(e.target.checked)}
+            />
+          </label>
+
+          {macroQuickMode ? (
+            <div className="grid grid-cols-1 gap-2 text-xs text-gray-300 sm:grid-cols-2">
+              <div className="rounded-lg border border-[var(--app-border)] bg-black/30 p-2">+25g proteina: +120g pollo o +1 scoop whey</div>
+              <div className="rounded-lg border border-[var(--app-border)] bg-black/30 p-2">+30g carbos: +45g avena o +130g arroz cocido</div>
+              <div className="rounded-lg border border-[var(--app-border)] bg-black/30 p-2">+10g grasas: +15g frutos secos o +12g aceite de oliva</div>
+              <div className="rounded-lg border border-[var(--app-border)] bg-black/30 p-2">Balance actual: P {Math.round((diet.macros.protein / totalMacros) * 100)}% / C {Math.round((diet.macros.carbs / totalMacros) * 100)}% / G {Math.round((diet.macros.fat / totalMacros) * 100)}%</div>
+            </div>
+          ) : (
+            <p className="text-xs text-gray-500">Activa el switch para ver reemplazos rapidos por macro.</p>
+          )}
         </div>
       </AppCard>
       </motion.div>

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore } from '../store/useAppStore';
 import { Dumbbell, Utensils, Flame, Moon, Activity, Sparkles, Quote, Clock3, Camera } from 'lucide-react';
@@ -6,6 +6,8 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'rec
 import { format, subDays } from 'date-fns';
 import { AppCard, SectionHeader, StatPill } from '../components/ui';
 import { fadeSlideUp, listStagger } from '../lib/motion';
+import { getMondayFirstIndex, mapRoutineByWeekday } from '../lib/routineWeek';
+import { workoutService } from '../services/workoutService';
 
 function FlipMetric({ value, label }: { value: string; label: string }) {
   return (
@@ -28,13 +30,18 @@ function FlipMetric({ value, label }: { value: string; label: string }) {
 }
 
 export default function Home() {
-  const { profile, routine, diet, logs, insights, setTab, motivationPhrase, motivationPhoto, showToast } = useAppStore();
+  const { profile, routine, diet, logs, insights, setTab, motivationPhrase, motivationPhoto, showToast, addLog, authToken } = useAppStore();
+  const [syncState, setSyncState] = useState<'idle' | 'local' | 'syncing' | 'synced' | 'error'>('idle');
 
   const today = new Date().toLocaleDateString('es-ES', { weekday: 'long' });
-  const dayIndex = new Date().getDay();
-  const routineIndex = dayIndex === 0 ? 6 : dayIndex - 1;
-  const todayRoutine = routine?.length > 0 ? routine[routineIndex % routine.length] : null;
+  const routineByDay = useMemo(() => mapRoutineByWeekday(routine), [routine]);
+  const todayRoutine = routineByDay[getMondayFirstIndex(new Date())];
   const todayDateKey = format(new Date(), 'yyyy-MM-dd');
+
+  const parseTargetReps = (value: string) => {
+    const match = String(value).match(/\d+/);
+    return match ? Number(match[0]) : 10;
+  };
 
   const triggerHaptic = () => {
     if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
@@ -90,6 +97,52 @@ export default function Home() {
     const done = todayRoutine.exercises.filter((exercise) => todayExerciseIds.has(exercise.id)).length;
     return Math.round((done / total) * 100);
   }, [todayRoutine, todayExerciseIds]);
+
+  const quickLogSet = async () => {
+    if (!todayRoutine?.exercises?.length) {
+      setTab('workout');
+      return;
+    }
+
+    const pending = todayRoutine.exercises.find((exercise) => !todayExerciseIds.has(exercise.id)) || todayRoutine.exercises[0];
+    const newLog = {
+      date: new Date().toISOString(),
+      exerciseId: pending.id,
+      weight: Number.isFinite(pending.weight) ? Math.max(0, pending.weight) : 0,
+      reps: parseTargetReps(pending.reps),
+    };
+
+    addLog(newLog);
+    setSyncState('local');
+
+    if (!authToken) {
+      showToast({
+        type: 'success',
+        title: 'Serie guardada localmente',
+        message: `${pending.name}: ${newLog.weight}kg x ${newLog.reps}`,
+      });
+      return;
+    }
+
+    setSyncState('syncing');
+    try {
+      await workoutService.addLog(authToken, newLog);
+      setSyncState('synced');
+      showToast({
+        type: 'success',
+        title: 'Quick log sincronizado',
+        message: `${pending.name}: ${newLog.weight}kg x ${newLog.reps}`,
+      });
+    } catch (error) {
+      console.error('Error syncing quick log:', error);
+      setSyncState('error');
+      showToast({
+        type: 'info',
+        title: 'Guardado local, sync pendiente',
+        message: 'No se pudo sincronizar ahora. Tu serie no se pierde.',
+      });
+    }
+  };
 
   const weeklyConsistency = Math.min(Math.round((completedDays / 7) * 100), 100);
   const caloriesTarget = diet?.dailyCalories || 0;
@@ -365,7 +418,7 @@ export default function Home() {
           <motion.button
             whileTap={{ scale: 0.97 }}
             onTapStart={triggerHaptic}
-            onClick={() => setTab('workout')}
+            onClick={() => void quickLogSet()}
             className="interactive-tile tap-target pressable pulse-surface rounded-xl border border-[var(--app-border)] bg-black/35 px-3 py-4 text-xs font-semibold text-white"
           >
             <Dumbbell size={16} className="mx-auto mb-2 app-accent" />
@@ -389,6 +442,16 @@ export default function Home() {
             <Camera size={16} className="mx-auto mb-2 app-accent" />
             Subir progreso 📸
           </motion.button>
+        </div>
+        <div className="mt-3 text-[11px] text-gray-400">
+          Estado sync:{' '}
+          <span className={syncState === 'synced' ? 'text-emerald-400' : syncState === 'error' ? 'text-amber-300' : 'text-gray-300'}>
+            {syncState === 'idle' && 'sin actividad'}
+            {syncState === 'local' && 'guardado local'}
+            {syncState === 'syncing' && 'sincronizando...'}
+            {syncState === 'synced' && 'sincronizado'}
+            {syncState === 'error' && 'error de sincronizacion'}
+          </span>
         </div>
       </AppCard>
       </motion.div>

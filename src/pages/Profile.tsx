@@ -32,6 +32,11 @@ export default function Profile() {
     weight: String(profile?.weight || ''),
     height: String(profile?.height || ''),
   });
+  const [weeklyGoals, setWeeklyGoals] = useState([
+    { id: 'habit-1', label: 'Completar 3 sesiones de fuerza', done: false },
+    { id: 'habit-2', label: 'Dormir 7h al menos 5 dias', done: false },
+    { id: 'habit-3', label: 'Cumplir proteina diaria 5 dias', done: false },
+  ]);
 
   if (!profile) return null;
 
@@ -121,6 +126,13 @@ export default function Profile() {
   const handleMotivationPhraseBlur = async () => {
     await persistProfilePatch({ motivationPhrase });
   };
+
+  const toggleWeeklyGoal = (id: string) => {
+    setWeeklyGoals((prev) => prev.map((goal) => (goal.id === id ? { ...goal, done: !goal.done } : goal)));
+  };
+
+  const completedGoals = weeklyGoals.filter((goal) => goal.done).length;
+  const weeklyGoalProgress = Math.round((completedGoals / weeklyGoals.length) * 100);
 
   return (
     <div className="min-h-screen app-shell px-4 pt-5 md:px-6 safe-bottom">
@@ -330,6 +342,36 @@ export default function Profile() {
             </div>
           </div>
         )}
+      </div>
+
+      <div className="glass-panel border border-[var(--app-border)] rounded-3xl p-6 mb-8">
+        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+          <Target className="app-accent" size={20} />
+          Metas semanales accionables
+        </h3>
+        <div className="mb-3 flex items-center justify-between text-xs text-gray-400">
+          <span>Progreso semanal</span>
+          <span>{completedGoals}/{weeklyGoals.length} metas</span>
+        </div>
+        <div className="mb-4 h-2 w-full overflow-hidden rounded-full bg-black/45">
+          <div className="h-full rounded-full bg-[var(--app-accent)]" style={{ width: `${weeklyGoalProgress}%` }} />
+        </div>
+        <div className="space-y-2">
+          {weeklyGoals.map((goal) => (
+            <button
+              key={goal.id}
+              type="button"
+              onClick={() => toggleWeeklyGoal(goal.id)}
+              className={`tap-target w-full rounded-xl border px-3 py-3 text-left text-sm transition-colors ${
+                goal.done
+                  ? 'border-emerald-400/50 bg-emerald-500/10 text-emerald-300'
+                  : 'border-[var(--app-border)] bg-black/30 text-gray-200'
+              }`}
+            >
+              {goal.done ? '✅' : '⬜'} {goal.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <motion.button

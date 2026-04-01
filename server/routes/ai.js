@@ -8,6 +8,32 @@ import { incrementAiError } from '../utils/metrics.js';
 
 const router = express.Router();
 const aiRateLimiter = createRateLimiter({ windowMs: 10 * 60 * 1000, max: 12, keyPrefix: 'ai' });
+const AI_TIMEOUT_MS = Number(process.env.AI_TIMEOUT_MS || 40000);
+
+function withTimeout(promise, timeoutMs) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      setTimeout(() => reject(new Error(`AI_TIMEOUT_${timeoutMs}`)), timeoutMs);
+    }),
+  ]);
+}
+
+function extractJsonBlock(rawText = '') {
+  const trimmed = String(rawText).trim();
+  if (trimmed.startsWith('{') && trimmed.endsWith('}')) return trimmed;
+
+  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if (fenced?.[1]) return fenced[1].trim();
+
+  const start = trimmed.indexOf('{');
+  const end = trimmed.lastIndexOf('}');
+  if (start >= 0 && end > start) {
+    return trimmed.slice(start, end + 1);
+  }
+
+  return trimmed;
+}
 
 // Initialize Gemini client
 const apiKey = process.env.GEMINI_API_KEY;
@@ -23,7 +49,7 @@ const ai = new GoogleGenAI({ apiKey });
 router.post('/generate-plan', authMiddleware, aiRateLimiter, validateGeneratePlanPayload, async (req, res) => {
   try {
     const profile = req.body;
-    console.log('📋 generate-plan request:', { name: profile.name, goal: profile.goal });
+    logInfo('ai.generate_plan.started', { requestId: req.requestId });
 
     const bmi = profile.weight && profile.height ? (profile.weight / ((profile.height / 100) ** 2)).toFixed(1) : 'N/A';
     const prompt = `Eres un entrenador personal certificado y nutricionista deportivo experto con más de 15 años de experiencia. Crea un plan COMPLETO, DETALLADO y PERSONALIZADO de entrenamiento y nutrición para:
@@ -107,26 +133,35 @@ Responde SOLO con JSON válido (sin markdown, sin bloques de código, sin coment
   }
 }`;
 
-    console.log('🤖 Llamando a Gemini...');
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: prompt,
-    });
+    const response = await withTimeout(
+      ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: prompt,
+      }),
+      AI_TIMEOUT_MS
+    );
 
-    console.log('✅ Respuesta de Gemini recibida');
     try {
-      const jsonText = response.text.trim();
+      const jsonText = extractJsonBlock(response.text);
       const plan = JSON.parse(jsonText);
-      console.log('✅ JSON parseado exitosamente');
+      logInfo('ai.generate_plan.success', { requestId: req.requestId });
       res.json(plan);
     } catch (parseErr) {
       incrementAiError();
-      console.error('❌ Error parseando JSON:', parseErr.message);
-      console.error('Raw response:', response.text?.substring(0, 200));
-      res.status(500).json({ error: 'JSON inválido de Gemini', details: parseErr.message });
+      logError('ai.generate_plan.parse_error', {
+        requestId: req.requestId,
+        message: parseErr.message,
+      });
+      res.status(502).json({ error: 'JSON invalido de Gemini', details: parseErr.message });
     }
   } catch (error) {
     incrementAiError();
+    if (String(error.message || '').startsWith('AI_TIMEOUT_')) {
+      return res.status(504).json({
+        error: 'Timeout al generar el plan',
+        details: `El proveedor IA no respondio en ${Math.floor(AI_TIMEOUT_MS / 1000)}s`,
+      });
+    }
     logError('ai.generate_plan.error', { requestId: req.requestId, message: error.message, stack: error.stack });
     res.status(500).json({ error: 'Error al generar el plan', details: error.message });
   }
@@ -136,7 +171,7 @@ Responde SOLO con JSON válido (sin markdown, sin bloques de código, sin coment
 router.post('/generate-alternative-meal', authMiddleware, aiRateLimiter, validateAlternativeMealPayload, async (req, res) => {
   try {
     const { oldMeal, profile } = req.body;
-    console.log('🍽️ generate-alternative-meal request:', oldMeal.name);
+    logInfo('ai.generate_alternative_meal.started', { requestId: req.requestId });
 
     const prompt = `Eres un nutricionista experto. Genera UNA comida alternativa para:
 - Comida actual: ${oldMeal.name} (${oldMeal.description})
@@ -155,25 +190,35 @@ Responde SOLO con JSON válido (sin markdown, sin comentarios):
   "description": "descripción corta y saludable"
 }`;
 
-    console.log('🤖 Llamando a Gemini...');
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: prompt,
-    });
+    const response = await withTimeout(
+      ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: prompt,
+      }),
+      AI_TIMEOUT_MS
+    );
 
-    console.log('✅ Respuesta de Gemini recibida');
     try {
-      const jsonText = response.text.trim();
+      const jsonText = extractJsonBlock(response.text);
       const meal = JSON.parse(jsonText);
-      console.log('✅ JSON parseado exitosamente');
+      logInfo('ai.generate_alternative_meal.success', { requestId: req.requestId });
       res.json(meal);
     } catch (parseErr) {
       incrementAiError();
-      console.error('❌ Error parseando JSON:', parseErr.message);
-      res.status(500).json({ error: 'JSON inválido de Gemini', details: parseErr.message });
+      logError('ai.generate_alternative_meal.parse_error', {
+        requestId: req.requestId,
+        message: parseErr.message,
+      });
+      res.status(502).json({ error: 'JSON invalido de Gemini', details: parseErr.message });
     }
   } catch (error) {
     incrementAiError();
+    if (String(error.message || '').startsWith('AI_TIMEOUT_')) {
+      return res.status(504).json({
+        error: 'Timeout al generar comida alternativa',
+        details: `El proveedor IA no respondio en ${Math.floor(AI_TIMEOUT_MS / 1000)}s`,
+      });
+    }
     logError('ai.generate_alternative_meal.error', { requestId: req.requestId, message: error.message, stack: error.stack });
     res.status(500).json({ error: 'Error al generar comida alternativa', details: error.message });
   }

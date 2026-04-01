@@ -2,6 +2,17 @@ import { incrementRateLimited } from '../utils/metrics.js';
 
 const buckets = new Map();
 
+function resolveClientIp(req) {
+  const trustProxy = Boolean(req.app?.get('trust proxy'));
+  const forwarded = req.headers['x-forwarded-for'];
+
+  if (trustProxy && typeof forwarded === 'string' && forwarded.trim()) {
+    return forwarded.split(',')[0].trim();
+  }
+
+  return req.ip || req.socket?.remoteAddress || 'unknown';
+}
+
 function pruneExpired(now) {
   for (const [key, value] of buckets.entries()) {
     if (value.resetAt <= now) {
@@ -15,8 +26,9 @@ export function createRateLimiter({ windowMs, max, keyPrefix = 'global' }) {
     const now = Date.now();
     pruneExpired(now);
 
-    const ip = req.ip || req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown';
-    const key = `${keyPrefix}:${ip}`;
+    const ip = resolveClientIp(req);
+    const userSegment = req.user?.id ? `user:${req.user.id}` : 'anon';
+    const key = `${keyPrefix}:${userSegment}:${ip}`;
 
     let bucket = buckets.get(key);
     if (!bucket || bucket.resetAt <= now) {

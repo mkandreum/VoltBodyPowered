@@ -50,6 +50,13 @@ export default function BottomNav() {
               >
                 {isActive && (
                   <motion.span
+                    layoutId="nav-tab-glow"
+                    transition={{ type: 'spring', stiffness: 300, damping: 26 }}
+                    className="tab-switch-glow absolute -inset-2"
+                  />
+                )}
+                {isActive && (
+                  <motion.span
                     layoutId="nav-liquid-indicator"
                     transition={{ type: 'spring', stiffness: 360, damping: 28 }}
                     className="liquid-indicator absolute inset-0"
@@ -74,6 +81,13 @@ export default function BottomNav() {
                 : 'border-[color:var(--app-border)]/80 bg-black/20 text-gray-300 hover:text-white'
             )}
           >
+            {currentTab === 'home' && (
+              <motion.span
+                layoutId="nav-tab-glow"
+                transition={{ type: 'spring', stiffness: 300, damping: 26 }}
+                className="tab-switch-glow absolute -inset-2"
+              />
+            )}
             {currentTab === 'home' && (
               <motion.span
                 layoutId="nav-liquid-indicator"
@@ -104,6 +118,13 @@ export default function BottomNav() {
                   isActive && 'nav-soft-btn-active'
                 )}
               >
+                {isActive && (
+                  <motion.span
+                    layoutId="nav-tab-glow"
+                    transition={{ type: 'spring', stiffness: 300, damping: 26 }}
+                    className="tab-switch-glow absolute -inset-2"
+                  />
+                )}
                 {isActive && (
                   <motion.span
                     layoutId="nav-liquid-indicator"

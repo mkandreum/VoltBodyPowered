@@ -22,6 +22,7 @@ export default function Workout() {
     profile,
     authToken,
     showToast,
+    logs,
   } = useAppStore();
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
   const [weightInput, setWeightInput] = useState<number>(0);
@@ -30,6 +31,7 @@ export default function Workout() {
   const [selectedDayIndex, setSelectedDayIndex] = useState<number>(() => getMondayFirstIndex(new Date()));
   const [isEditingDays, setIsEditingDays] = useState(false);
   const [moveSourceDayIndex, setMoveSourceDayIndex] = useState<number | null>(null);
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'local' | 'syncing' | 'synced' | 'error'>('idle');
 
   const routinesByDay = useMemo(() => mapRoutineByWeekday(routine), [routine]);
   const activeDayIndexes = useMemo(
@@ -44,6 +46,28 @@ export default function Workout() {
     ? exerciseLibrary
     : exerciseLibrary.filter((item) => item.muscleGroup === selectedMuscleGroup);
   const totalTodayExercises = todayRoutine?.exercises?.length || 0;
+  const todayDateKey = new Date().toISOString().slice(0, 10);
+  const todayLogs = useMemo(() => logs.filter((log) => log.date.slice(0, 10) === todayDateKey), [logs, todayDateKey]);
+  const setsByExercise = useMemo(() => {
+    return todayLogs.reduce<Map<string, number>>((acc, log) => {
+      acc.set(log.exerciseId, (acc.get(log.exerciseId) || 0) + 1);
+      return acc;
+    }, new Map());
+  }, [todayLogs]);
+  const plannedSets = useMemo(
+    () => (todayRoutine?.exercises || []).reduce((sum, exercise) => sum + Math.max(1, Number(exercise.sets || 0)), 0),
+    [todayRoutine]
+  );
+  const completedSets = useMemo(
+    () => (todayRoutine?.exercises || []).reduce((sum, exercise) => {
+      const done = setsByExercise.get(exercise.id) || 0;
+      const target = Math.max(1, Number(exercise.sets || 0));
+      return sum + Math.min(done, target);
+    }, 0),
+    [todayRoutine, setsByExercise]
+  );
+  const sessionProgress = plannedSets > 0 ? Math.round((completedSets / plannedSets) * 100) : 0;
+  const etaMinutes = Math.max(0, (plannedSets - completedSets) * 2);
   const todayLabel = new Intl.DateTimeFormat('es-ES', { weekday: 'long' }).format(new Date());
   const isSpecialClassToday =
     Boolean(profile?.weeklySpecialSession?.enabled) &&
@@ -148,12 +172,16 @@ export default function Workout() {
       };
 
       addLog(newLog);
+      setSyncStatus('local');
 
       if (authToken) {
         try {
+          setSyncStatus('syncing');
           await workoutService.addLog(authToken, newLog);
+          setSyncStatus('synced');
         } catch (error) {
           console.error('Error persisting workout log:', error);
+          setSyncStatus('error');
         }
       }
 
@@ -281,6 +309,30 @@ export default function Workout() {
         </button>
       </AppCard>
       </motion.div>
+
+      <AppCard className="mb-6 p-4 glass-panel">
+        <div className="mb-2 flex items-center justify-between text-xs text-gray-400">
+          <span>Checklist de sesion</span>
+          <span>{completedSets}/{plannedSets} series</span>
+        </div>
+        <div className="h-2 w-full overflow-hidden rounded-full bg-black/45">
+          <div className="h-full rounded-full bg-[var(--app-accent)] transition-all" style={{ width: `${sessionProgress}%` }} />
+        </div>
+        <div className="mt-2 flex items-center justify-between text-[11px]">
+          <span className="text-gray-400">Progreso: {sessionProgress}%</span>
+          <span className="text-gray-400">ETA: {etaMinutes} min</span>
+        </div>
+        <div className="mt-2 text-[11px] text-gray-400">
+          Sync:{' '}
+          <span className={syncStatus === 'synced' ? 'text-emerald-400' : syncStatus === 'error' ? 'text-amber-300' : 'text-gray-300'}>
+            {syncStatus === 'idle' && 'sin actividad'}
+            {syncStatus === 'local' && 'guardado local'}
+            {syncStatus === 'syncing' && 'sincronizando...'}
+            {syncStatus === 'synced' && 'sincronizado'}
+            {syncStatus === 'error' && 'error de sincronizacion'}
+          </span>
+        </div>
+      </AppCard>
 
       {isSpecialClassToday && (
         <AppCard className="mb-8 border-[color:var(--app-accent)]/30 bg-[color:var(--app-accent)]/5">

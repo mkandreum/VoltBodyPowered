@@ -143,10 +143,11 @@ export default function Onboarding() {
         completeOnboarding();
       } catch (error) {
         console.error('Error generating plan:', error);
+        const message = error instanceof Error ? error.message : 'Intentalo de nuevo en unos segundos.';
         showToast({
           type: 'error',
           title: 'No se pudo generar tu plan',
-          message: 'Inténtalo de nuevo en unos segundos.',
+          message,
         });
       } finally {
         setLoading(false);

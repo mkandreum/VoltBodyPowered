@@ -1,28 +1,78 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore } from '../store/useAppStore';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Dumbbell, CheckCircle2, Flame } from 'lucide-react';
 import { format, addDays, startOfWeek, isSameDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import clsx from 'clsx';
-import { mapRoutineByWeekday } from '../lib/routineWeek';
+import { getMondayFirstIndex, mapRoutineByWeekday, WEEKDAY_LABELS } from '../lib/routineWeek';
+import { authService } from '../services/authService';
 
 export default function CalendarView() {
-  const { routine, logs, diet } = useAppStore();
+  const { routine, logs, diet, setRoutine, authToken, showToast, setTab } = useAppStore();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [isRescheduling, setIsRescheduling] = useState(false);
 
   const startDate = startOfWeek(currentDate, { weekStartsOn: 1 });
   const weekDays = Array.from({ length: 7 }).map((_, i) => addDays(startDate, i));
 
   // Resolve routine by real weekday and keep non-training days empty.
-  const selectedDayIndex = selectedDate.getDay() === 0 ? 6 : selectedDate.getDay() - 1;
-  const plannedRoutine = mapRoutineByWeekday(routine)[selectedDayIndex];
+  const selectedDayIndex = getMondayFirstIndex(selectedDate);
+  const routinesByDay = useMemo(() => mapRoutineByWeekday(routine), [routine]);
+  const plannedRoutine = routinesByDay[selectedDayIndex];
 
   // Find logs for selected day
   const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
   const dayLogs = logs.filter(log => format(new Date(log.date), 'yyyy-MM-dd') === selectedDateStr);
-  const completedIds = new Set(dayLogs.map((log) => log.exerciseId));
+  const setsByExercise = dayLogs.reduce<Map<string, number>>((acc, log) => {
+    acc.set(log.exerciseId, (acc.get(log.exerciseId) || 0) + 1);
+    return acc;
+  }, new Map());
+
+  const totalSets = plannedRoutine?.exercises?.reduce((acc, exercise) => acc + Math.max(1, Number(exercise.sets || 0)), 0) || 0;
+  const completedSets = plannedRoutine?.exercises?.reduce((acc, exercise) => {
+    const doneSets = setsByExercise.get(exercise.id) || 0;
+    return acc + Math.min(Math.max(1, Number(exercise.sets || 0)), doneSets);
+  }, 0) || 0;
+  const sessionProgress = totalSets > 0 ? Math.round((completedSets / totalSets) * 100) : 0;
+
+  const moveSessionToDay = async (targetIndex: number) => {
+    if (!plannedRoutine) return;
+    if (targetIndex === selectedDayIndex) {
+      showToast({ type: 'info', title: 'Mismo dia seleccionado', message: 'Elige otro dia para mover la sesion.' });
+      return;
+    }
+    if (routinesByDay[targetIndex]) {
+      showToast({ type: 'info', title: 'Conflicto detectado', message: 'Ese dia ya tiene entreno asignado.' });
+      return;
+    }
+
+    const draft = [...routinesByDay];
+    draft[selectedDayIndex] = null;
+    draft[targetIndex] = {
+      ...plannedRoutine,
+      day: WEEKDAY_LABELS[targetIndex].full,
+    };
+    const updatedRoutine = draft.filter(Boolean);
+    setRoutine(updatedRoutine);
+    setIsRescheduling(false);
+
+    if (authToken) {
+      try {
+        await authService.updateProfile(authToken, { routine: updatedRoutine });
+      } catch (error) {
+        console.error('Error syncing moved routine:', error);
+        showToast({ type: 'info', title: 'Cambio local guardado', message: 'No se pudo sincronizar ahora.' });
+      }
+    }
+
+    showToast({
+      type: 'success',
+      title: 'Sesion reprogramada',
+      message: `${WEEKDAY_LABELS[selectedDayIndex].full} -> ${WEEKDAY_LABELS[targetIndex].full}`,
+    });
+  };
 
   const groupedExercises = plannedRoutine?.exercises.reduce<Record<string, typeof plannedRoutine.exercises>>((acc, exercise) => {
     const key = exercise.muscleGroup || 'General';
@@ -121,6 +171,61 @@ export default function CalendarView() {
                 </div>
               </div>
 
+              <div className="mb-4 rounded-xl border border-[var(--app-border)] bg-black/30 p-3">
+                <div className="mb-2 flex items-center justify-between text-xs text-gray-400">
+                  <span>Progreso por series</span>
+                  <span>{completedSets}/{totalSets} series</span>
+                </div>
+                <div className="h-2 w-full overflow-hidden rounded-full bg-black/50">
+                  <div className="h-full rounded-full bg-[var(--app-accent)] transition-all" style={{ width: `${sessionProgress}%` }} />
+                </div>
+              </div>
+
+              <div className="mb-4 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsRescheduling((prev) => !prev)}
+                  className="tap-target rounded-xl border border-[var(--app-border)] bg-black/30 px-3 py-2 text-xs font-semibold text-gray-200 hover:border-[var(--app-accent)]/50"
+                >
+                  {isRescheduling ? 'Cancelar reprogramacion' : 'Reprogramar sesion'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTab('workout')}
+                  className="tap-target rounded-xl border border-[var(--app-border)] bg-black/30 px-3 py-2 text-xs font-semibold text-gray-200 hover:border-[var(--app-accent)]/50"
+                >
+                  Ir a workout
+                </button>
+              </div>
+
+              {isRescheduling && (
+                <div className="mb-4 rounded-xl border border-dashed border-[var(--app-border)] bg-black/25 p-3">
+                  <p className="mb-3 text-xs text-gray-400">Selecciona un dia libre para mover esta sesion.</p>
+                  <div className="grid grid-cols-7 gap-2">
+                    {WEEKDAY_LABELS.map((day, index) => {
+                      const occupied = Boolean(routinesByDay[index]);
+                      const isCurrent = index === selectedDayIndex;
+                      return (
+                        <button
+                          key={day.key}
+                          type="button"
+                          disabled={isCurrent || occupied}
+                          onClick={() => void moveSessionToDay(index)}
+                          className={clsx(
+                            'rounded-lg border px-1 py-2 text-[10px] font-semibold transition-all',
+                            isCurrent && 'cursor-not-allowed border-[var(--app-accent)]/40 bg-[var(--app-accent)]/10 text-[var(--app-accent)]',
+                            occupied && !isCurrent && 'cursor-not-allowed border-[var(--app-border)] bg-black/40 text-gray-500',
+                            !occupied && !isCurrent && 'border-dashed border-emerald-400/40 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20'
+                          )}
+                        >
+                          {day.short}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-4">
                 {groupedExercises && Object.entries(groupedExercises).map(([muscleGroup, exercises]) => (
                   <div key={muscleGroup} className="space-y-2">
@@ -129,7 +234,10 @@ export default function CalendarView() {
                     </div>
 
                     {exercises.map((exercise) => {
-                      const done = completedIds.has(exercise.id);
+                      const targetSets = Math.max(1, Number(exercise.sets || 0));
+                      const doneSets = setsByExercise.get(exercise.id) || 0;
+                      const progress = Math.min(100, Math.round((doneSets / targetSets) * 100));
+                      const done = doneSets >= targetSets;
 
                       return (
                         <div
@@ -138,10 +246,10 @@ export default function CalendarView() {
                         >
                           <div>
                             <p className="text-sm font-semibold text-white">{exercise.name}</p>
-                            <p className="text-[11px] text-gray-400">{exercise.sets} series x {exercise.reps} reps</p>
+                            <p className="text-[11px] text-gray-400">{doneSets}/{targetSets} series · {exercise.reps} reps</p>
                           </div>
                           <span className={done ? 'text-emerald-400 text-xs font-semibold' : 'text-gray-500 text-xs font-semibold'}>
-                            {done ? 'Hecho' : 'Pendiente'}
+                            {done ? 'Hecho' : `${progress}%`}
                           </span>
                         </div>
                       );
