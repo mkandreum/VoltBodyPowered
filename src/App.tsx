@@ -68,7 +68,7 @@ export default function App() {
   };
 
   return (
-    <div className="app-shell min-h-screen text-white overflow-x-hidden">
+    <div className="app-shell min-h-screen text-white overflow-x-hidden safe-bottom">
       <AnimatePresence mode="wait">
         <motion.div
           key={currentTab}
@@ -82,7 +82,7 @@ export default function App() {
         </motion.div>
       </AnimatePresence>
 
-      <div className="fixed top-4 right-4 z-[60] w-[min(92vw,360px)] space-y-2 pointer-events-none">
+      <div className="fixed top-[max(0.8rem,env(safe-area-inset-top))] right-4 z-[60] w-[min(92vw,360px)] space-y-2 pointer-events-none">
         <AnimatePresence>
           {toasts.map((toast) => {
             const isSuccess = toast.type === 'success';
@@ -95,7 +95,7 @@ export default function App() {
                 animate={fadeSlideUp.animate}
                 exit={fadeSlideUp.exit}
                 transition={fadeSlideUp.transition}
-                className="pointer-events-auto rounded-2xl border bg-[var(--app-surface)] border-[var(--app-border)] p-4 shadow-xl"
+                className="pointer-events-auto rounded-2xl border glass-panel border-[var(--app-border)] p-4 shadow-xl"
               >
                 <div className="flex items-start gap-3">
                   {isSuccess && <CheckCircle2 className="text-emerald-400 mt-0.5" size={18} />}

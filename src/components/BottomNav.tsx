@@ -21,8 +21,8 @@ export default function BottomNav() {
   ] as const;
 
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-md">
-      <div className="glass-panel border border-[var(--app-border)] rounded-full p-2 flex justify-between items-center shadow-2xl glow-box">
+    <div className="fixed left-1/2 -translate-x-1/2 z-50 w-[94%] max-w-[460px] bottom-[calc(0.7rem+env(safe-area-inset-bottom))]">
+      <div className="glass-panel border border-[var(--app-border)] rounded-[1.4rem] p-2 flex justify-between items-center shadow-2xl">
         {navItems.map((item, index) => {
           const isCenter = index === 2; // Middle item
           const isActive = currentTab === item.id || (isCenter && currentTab === 'home');
@@ -36,15 +36,15 @@ export default function BottomNav() {
                 else setTab(item.id as any);
               }}
               className={clsx(
-                'relative flex flex-col items-center justify-center w-14 h-14 rounded-full transition-all duration-300',
+                'relative tap-target flex flex-col items-center justify-center w-14 h-14 rounded-2xl transition-all duration-300',
                 isCenter ? 'overflow-visible' : 'pulse-surface',
                 isActive ? 'app-accent' : 'text-gray-400 hover:text-white',
-                isCenter ? 'bg-[color:var(--app-accent)]/10 border border-[color:var(--app-accent)]/30 w-16 h-16 -mt-6 shadow-[0_0_15px_var(--app-accent-dim)]' : ''
+                isCenter ? 'bg-[color:var(--app-accent)]/10 border border-[color:var(--app-accent)]/30 w-16 h-16 -mt-5 shadow-[0_0_15px_var(--app-accent-dim)] rounded-3xl' : ''
               )}
             >
               {isActive && !isCenter && (
                 <motion.div
-                  className="absolute inset-0 bg-[color:var(--app-accent)]/20 rounded-full"
+                  className="absolute inset-0 bg-[color:var(--app-accent)]/16 rounded-2xl"
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
@@ -59,12 +59,12 @@ export default function BottomNav() {
                 )}
               />
               {isCenter && (
-                <span className="absolute -bottom-4 text-[9px] font-bold tracking-widest app-accent uppercase glow-text whitespace-nowrap">
+                <span className="absolute -bottom-4 text-[9px] font-bold tracking-[0.18em] app-accent uppercase whitespace-nowrap">
                   ⚡ VoltBody
                 </span>
               )}
               {!isCenter && isActive && (
-                <span className="absolute -bottom-1 text-[10px] font-semibold app-accent whitespace-nowrap">
+                <span className="absolute -bottom-1 text-[9px] font-semibold app-accent whitespace-nowrap tracking-wide">
                   {item.label}
                 </span>
               )}

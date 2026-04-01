@@ -172,7 +172,7 @@ export default function Onboarding() {
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Tu nombre"
-                className="w-full bg-[#121212] border border-[#262626] rounded-xl p-4 text-white focus:border-[#39ff14] focus:ring-1 focus:ring-[#39ff14] outline-none transition-all"
+                className="input-field"
               />
             </div>
             <div>
@@ -181,7 +181,7 @@ export default function Onboarding() {
                 type="number"
                 value={formData.age || ''}
                 onChange={(e) => setFormData({ ...formData, age: e.target.value === '' ? 0 : Number(e.target.value) })}
-                className="w-full bg-[#121212] border border-[#262626] rounded-xl p-4 text-white focus:border-[#39ff14] focus:ring-1 focus:ring-[#39ff14] outline-none transition-all"
+                className="input-field"
               />
             </div>
             <div>
@@ -191,7 +191,7 @@ export default function Onboarding() {
                   <button
                     key={g}
                     onClick={() => setFormData({ ...formData, gender: g })}
-                    className={`p-4 rounded-xl border transition-all ${
+                    className={`tap-target p-4 rounded-xl border transition-all ${
                       formData.gender === g
                         ? 'border-[var(--app-accent)] bg-[color:var(--app-accent)]/10 text-[var(--app-accent)]'
                         : 'border-[var(--app-border)] app-surface text-gray-400'
@@ -213,7 +213,7 @@ export default function Onboarding() {
                 type="number"
                 value={formData.weight || ''}
                 onChange={(e) => setFormData({ ...formData, weight: e.target.value === '' ? 0 : Number(e.target.value) })}
-                className="w-full bg-[#121212] border border-[#262626] rounded-xl p-4 text-white focus:border-[#39ff14] focus:ring-1 focus:ring-[#39ff14] outline-none transition-all"
+                className="input-field"
               />
             </div>
             <div>
@@ -222,7 +222,7 @@ export default function Onboarding() {
                 type="number"
                 value={formData.height || ''}
                 onChange={(e) => setFormData({ ...formData, height: e.target.value === '' ? 0 : Number(e.target.value) })}
-                className="w-full bg-[#121212] border border-[#262626] rounded-xl p-4 text-white focus:border-[#39ff14] focus:ring-1 focus:ring-[#39ff14] outline-none transition-all"
+                className="input-field"
               />
             </div>
             <div>
@@ -230,7 +230,7 @@ export default function Onboarding() {
               <select
                 value={formData.currentState}
                 onChange={(e) => setFormData({ ...formData, currentState: e.target.value })}
-                className="w-full bg-[#121212] border border-[#262626] rounded-xl p-4 text-white focus:border-[#39ff14] focus:ring-1 focus:ring-[#39ff14] outline-none transition-all appearance-none"
+                className="input-field appearance-none"
               >
                 <option>Principiante (Nunca he entrenado)</option>
                 <option>Intermedio (Entreno a veces)</option>
@@ -252,7 +252,7 @@ export default function Onboarding() {
               <button
                 key={goal}
                 onClick={() => setFormData({ ...formData, goal })}
-                className={`w-full p-4 rounded-xl border text-left transition-all ${
+                className={`tap-target w-full p-4 rounded-xl border text-left transition-all ${
                   formData.goal === goal
                     ? 'border-[var(--app-accent)] bg-[color:var(--app-accent)]/10 text-[var(--app-accent)]'
                     : 'border-[var(--app-border)] app-surface text-gray-400'
@@ -267,7 +267,7 @@ export default function Onboarding() {
                 <button
                   key={direction}
                   onClick={() => setFormData({ ...formData, goalDirection: direction })}
-                  className={`p-4 rounded-xl border transition-all ${
+                  className={`tap-target p-4 rounded-xl border transition-all ${
                     formData.goalDirection === direction
                       ? 'border-[var(--app-accent)] bg-[color:var(--app-accent)]/10 text-[var(--app-accent)]'
                       : 'border-[var(--app-border)] app-surface text-gray-400'
@@ -286,7 +286,7 @@ export default function Onboarding() {
                   min={1}
                   value={formData.goalTargetKg || ''}
                   onChange={(e) => setFormData({ ...formData, goalTargetKg: e.target.value === '' ? 0 : Number(e.target.value) })}
-                  className="w-full bg-[#121212] border border-[#262626] rounded-xl p-4 text-white focus:border-[#39ff14] focus:ring-1 focus:ring-[#39ff14] outline-none transition-all"
+                  className="input-field"
                 />
               </div>
               <div>
@@ -296,7 +296,7 @@ export default function Onboarding() {
                   min={1}
                   value={formData.goalTimelineMonths || ''}
                   onChange={(e) => setFormData({ ...formData, goalTimelineMonths: e.target.value === '' ? 0 : Number(e.target.value) })}
-                  className="w-full bg-[#121212] border border-[#262626] rounded-xl p-4 text-white focus:border-[#39ff14] focus:ring-1 focus:ring-[#39ff14] outline-none transition-all"
+                  className="input-field"
                 />
               </div>
             </div>
@@ -313,7 +313,7 @@ export default function Onboarding() {
                 max={7}
                 value={formData.trainingDaysPerWeek}
                 onChange={(e) => setFormData({ ...formData, trainingDaysPerWeek: Number(e.target.value) })}
-                className="w-full bg-[#121212] border border-[#262626] rounded-xl p-4 text-white focus:border-[#39ff14] focus:ring-1 focus:ring-[#39ff14] outline-none transition-all"
+                className="input-field"
               />
             </div>
             <div>
@@ -324,7 +324,7 @@ export default function Onboarding() {
                 max={180}
                 value={formData.sessionMinutes}
                 onChange={(e) => setFormData({ ...formData, sessionMinutes: Number(e.target.value) })}
-                className="w-full bg-[#121212] border border-[#262626] rounded-xl p-4 text-white focus:border-[#39ff14] focus:ring-1 focus:ring-[#39ff14] outline-none transition-all"
+                className="input-field"
               />
             </div>
             <div className="p-4 rounded-xl border border-[color:var(--app-accent)]/30 bg-[color:var(--app-accent)]/5 text-sm text-[var(--app-accent)]">
@@ -342,7 +342,7 @@ export default function Onboarding() {
                 value={formData.workHours}
                 onChange={(e) => setFormData({ ...formData, workHours: e.target.value })}
                 placeholder="Ej. 09:00 - 17:00"
-                className="w-full bg-[#121212] border border-[#262626] rounded-xl p-4 text-white focus:border-[#39ff14] focus:ring-1 focus:ring-[#39ff14] outline-none transition-all"
+                className="input-field"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -352,7 +352,7 @@ export default function Onboarding() {
                   type="time"
                   value={formData.mealTimes.breakfast}
                   onChange={(e) => setFormData({ ...formData, mealTimes: { ...formData.mealTimes, breakfast: e.target.value } })}
-                  className="w-full bg-[#121212] border border-[#262626] rounded-xl p-3 text-white focus:border-[#39ff14] outline-none"
+                  className="input-field p-3"
                 />
               </div>
               <div>
@@ -361,7 +361,7 @@ export default function Onboarding() {
                   type="time"
                   value={formData.mealTimes.brunch}
                   onChange={(e) => setFormData({ ...formData, mealTimes: { ...formData.mealTimes, brunch: e.target.value } })}
-                  className="w-full bg-[#121212] border border-[#262626] rounded-xl p-3 text-white focus:border-[#39ff14] outline-none"
+                  className="input-field p-3"
                 />
               </div>
               <div>
@@ -370,7 +370,7 @@ export default function Onboarding() {
                   type="time"
                   value={formData.mealTimes.lunch}
                   onChange={(e) => setFormData({ ...formData, mealTimes: { ...formData.mealTimes, lunch: e.target.value } })}
-                  className="w-full bg-[#121212] border border-[#262626] rounded-xl p-3 text-white focus:border-[#39ff14] outline-none"
+                  className="input-field p-3"
                 />
               </div>
               <div>
@@ -379,7 +379,7 @@ export default function Onboarding() {
                   type="time"
                   value={formData.mealTimes.snack}
                   onChange={(e) => setFormData({ ...formData, mealTimes: { ...formData.mealTimes, snack: e.target.value } })}
-                  className="w-full bg-[#121212] border border-[#262626] rounded-xl p-3 text-white focus:border-[#39ff14] outline-none"
+                  className="input-field p-3"
                 />
               </div>
               <div>
@@ -388,7 +388,7 @@ export default function Onboarding() {
                   type="time"
                   value={formData.mealTimes.dinner}
                   onChange={(e) => setFormData({ ...formData, mealTimes: { ...formData.mealTimes, dinner: e.target.value } })}
-                  className="w-full bg-[#121212] border border-[#262626] rounded-xl p-3 text-white focus:border-[#39ff14] outline-none"
+                  className="input-field p-3"
                 />
               </div>
             </div>
@@ -409,7 +409,7 @@ export default function Onboarding() {
                   })
                 }
                 placeholder="Ej: brócoli, espinaca, tomate"
-                className="w-full bg-[#121212] border border-[#262626] rounded-xl p-4 text-white focus:border-[#39ff14] focus:ring-1 focus:ring-[#39ff14] outline-none transition-all"
+                className="input-field"
               />
             </div>
             <div>
@@ -424,7 +424,7 @@ export default function Onboarding() {
                   })
                 }
                 placeholder="Ej: arroz, papa, avena"
-                className="w-full bg-[#121212] border border-[#262626] rounded-xl p-4 text-white focus:border-[#39ff14] focus:ring-1 focus:ring-[#39ff14] outline-none transition-all"
+                className="input-field"
               />
             </div>
             <div>
@@ -439,11 +439,11 @@ export default function Onboarding() {
                   })
                 }
                 placeholder="Ej: pollo, huevo, atún"
-                className="w-full bg-[#121212] border border-[#262626] rounded-xl p-4 text-white focus:border-[#39ff14] focus:ring-1 focus:ring-[#39ff14] outline-none transition-all"
+                className="input-field"
               />
             </div>
 
-            <div className="bg-[#121212] border border-[#262626] rounded-xl p-4 space-y-4">
+            <div className="panel-soft p-4 space-y-4">
               <label className="flex items-center justify-between text-sm text-gray-300">
                 Activar clase especial semanal
                 <input
@@ -476,7 +476,7 @@ export default function Onboarding() {
                       })
                     }
                     placeholder="Actividad (zumba, trote...)"
-                    className="bg-black border border-[#262626] rounded-xl p-3 text-white outline-none focus:border-[#39ff14]"
+                    className="input-field p-3"
                   />
                   <input
                     type="text"
@@ -491,7 +491,7 @@ export default function Onboarding() {
                       })
                     }
                     placeholder="Día"
-                    className="bg-black border border-[#262626] rounded-xl p-3 text-white outline-none focus:border-[#39ff14]"
+                    className="input-field p-3"
                   />
                 </div>
               )}
@@ -509,7 +509,7 @@ export default function Onboarding() {
                   })
                 }
                 placeholder="Ej: arroz, lentejas, tomate, queso feta"
-                className="w-full bg-[#121212] border border-[#262626] rounded-xl p-4 text-white focus:border-[#39ff14] focus:ring-1 focus:ring-[#39ff14] outline-none transition-all"
+                className="input-field"
               />
               <label className="block text-sm text-gray-400 mt-3 mb-2">Calorías objetivo del plato</label>
               <input
@@ -522,7 +522,7 @@ export default function Onboarding() {
                     specialDish: { ...formData.specialDish, targetCalories: Number(e.target.value) },
                   })
                 }
-                className="w-full bg-[#121212] border border-[#262626] rounded-xl p-4 text-white focus:border-[#39ff14] focus:ring-1 focus:ring-[#39ff14] outline-none transition-all"
+                className="input-field"
               />
             </div>
           </div>
@@ -534,7 +534,8 @@ export default function Onboarding() {
 
   if (loading) {
     return (
-      <div className="min-h-screen app-shell flex flex-col items-center justify-center p-6 text-center">
+      <div className="min-h-screen app-shell flex flex-col items-center justify-center p-6 text-center relative overflow-hidden">
+        <div className="absolute -top-24 -left-12 w-60 h-60 rounded-full bg-[color:var(--app-accent)]/15 blur-3xl pointer-events-none" />
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
@@ -551,8 +552,10 @@ export default function Onboarding() {
   }
 
   return (
-    <div className="onboard-theme min-h-screen app-shell flex flex-col p-6">
-      <div className="flex items-center justify-between mb-8 mt-4">
+    <div className="onboard-theme min-h-screen app-shell flex flex-col px-4 py-5 md:px-6 relative overflow-hidden">
+      <div className="absolute -right-20 top-20 w-64 h-64 rounded-full bg-[color:var(--app-accent)]/10 blur-3xl pointer-events-none" />
+      <div className="page-wrap w-full">
+      <div className="flex items-center justify-between mb-8 mt-1">
         <button
           onClick={handleBack}
           className={`pressable p-2 rounded-full app-surface border border-[var(--app-border)] ${currentStep === 0 ? 'opacity-0 pointer-events-none' : ''}`}
@@ -572,7 +575,7 @@ export default function Onboarding() {
         <div className="w-10" /> {/* Spacer */}
       </div>
 
-      <div className="flex-1 glass-panel border border-[var(--app-border)] rounded-3xl p-5">
+      <div className="flex-1 glass-panel border border-[var(--app-border)] rounded-3xl p-5 md:p-6">
         <motion.div
           key={currentStep}
           initial={{ opacity: 0, x: 20 }}
@@ -581,7 +584,7 @@ export default function Onboarding() {
           className="h-full flex flex-col"
         >
           <p className="text-xs uppercase tracking-[0.18em] text-gray-500 mb-2">Setup AI-First</p>
-          <h1 className="brutal-title mb-2 text-white">{steps[currentStep].title}</h1>
+          <h1 className="brutal-title mb-2 headline-gradient">{steps[currentStep].title}</h1>
           <p className="text-gray-400 mb-8">Configura tu plan con precisión para resultados reales.</p>
           
           {renderStepContent()}
@@ -590,11 +593,14 @@ export default function Onboarding() {
 
       <button
         onClick={handleNext}
-        className="pulse-surface pressable w-full bg-[var(--app-accent)] text-black font-bold py-4 rounded-xl mt-8 flex items-center justify-center gap-2 transition-colors glow-box"
+        className="tap-target pulse-surface pressable primary-btn w-full font-bold py-4 rounded-xl mt-8 flex items-center justify-center gap-2 transition-colors"
       >
         {currentStep === steps.length - 1 ? 'Generar Plan' : 'Siguiente'}
         {currentStep < steps.length - 1 && <ChevronRight size={20} />}
       </button>
+      </div>
     </div>
   );
 }
+
+

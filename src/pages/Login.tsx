@@ -135,11 +135,13 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen app-shell flex items-center justify-center p-4">
+    <div className="min-h-screen app-shell flex items-center justify-center p-4 relative overflow-hidden">
+      <div className="absolute -top-36 -left-24 w-72 h-72 rounded-full bg-[color:var(--app-accent)]/15 blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-28 -right-10 w-64 h-64 rounded-full bg-[color:var(--app-accent)]/10 blur-3xl pointer-events-none" />
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md"
+        className="w-full max-w-md relative z-10"
       >
         <div className="text-center mb-8">
           <motion.div
@@ -151,7 +153,7 @@ export default function Login() {
             <Zap className="w-10 h-10 app-accent" />
           </motion.div>
           <p className="text-xs uppercase tracking-[0.2em] text-gray-500 mb-2">⚡ VoltBody OS</p>
-          <h1 className="brutal-title text-white mb-1">🦁 MODO BESTIA</h1>
+          <h1 className="brutal-title mb-1 headline-gradient">🦁 MODO BESTIA</h1>
           <p className="text-gray-400">🤖 Entrena, come y evoluciona con IA.</p>
         </div>
 
@@ -159,7 +161,7 @@ export default function Login() {
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.2 }}
-          className="glass-panel border border-[var(--app-border)] rounded-3xl p-8"
+          className="glass-panel border border-[var(--app-border)] rounded-3xl p-7 md:p-8"
         >
           <div className="flex gap-2 mb-6 bg-black/40 rounded-xl p-1 border border-[var(--app-border)]">
             <button
@@ -196,7 +198,7 @@ export default function Login() {
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full bg-black/35 border border-[var(--app-border)] rounded-xl py-3 pl-11 pr-4 text-white placeholder-gray-500 focus:outline-none focus:border-[var(--app-accent)] transition-colors"
+                    className="input-field py-3 pl-11 pr-4"
                     placeholder="Tu nombre"
                   />
                 </div>
@@ -214,7 +216,7 @@ export default function Login() {
                   required
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full bg-black/35 border border-[var(--app-border)] rounded-xl py-3 pl-11 pr-4 text-white placeholder-gray-500 focus:outline-none focus:border-[var(--app-accent)] transition-colors"
+                  className="input-field py-3 pl-11 pr-4"
                   placeholder="tu@email.com"
                 />
               </div>
@@ -231,7 +233,7 @@ export default function Login() {
                   required
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full bg-black/35 border border-[var(--app-border)] rounded-xl py-3 pl-11 pr-4 text-white placeholder-gray-500 focus:outline-none focus:border-[var(--app-accent)] transition-colors"
+                  className="input-field py-3 pl-11 pr-4"
                   placeholder="••••••••"
                   minLength={6}
                 />
@@ -251,7 +253,7 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="pulse-surface pressable w-full bg-[var(--app-accent)] text-black py-3.5 rounded-xl font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
+              className="pulse-surface pressable primary-btn w-full py-3.5 rounded-xl font-semibold transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>

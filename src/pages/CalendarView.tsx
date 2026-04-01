@@ -23,8 +23,9 @@ export default function CalendarView() {
   const dayLogs = logs.filter(log => format(new Date(log.date), 'yyyy-MM-dd') === selectedDateStr);
 
   return (
-    <div className="min-h-screen app-shell p-6 pb-32">
-      <header className="mb-8 mt-4">
+    <div className="min-h-screen app-shell px-4 pt-5 md:px-6 safe-bottom">
+      <div className="page-wrap">
+      <header className="mb-8 mt-2">
         <h1 className="brutal-title text-white mb-2 flex items-center gap-3">
           <CalendarIcon className="app-accent" size={32} />
           📅 Calendario
@@ -65,7 +66,7 @@ export default function CalendarView() {
                   'aspect-square rounded-xl flex flex-col items-center justify-center relative cursor-pointer transition-all',
                   isSelected ? 'bg-[color:var(--app-accent)]/20 border border-[var(--app-accent)] app-accent glow-box' : 
                   isToday ? 'bg-[var(--app-border)] border border-gray-500 text-white' : 
-                  'bg-black border border-[var(--app-border)] text-gray-400 hover:border-gray-500'
+                  'bg-black/35 border border-[var(--app-border)] text-gray-400 hover:border-gray-500'
                 )}
               >
                 <span className="text-sm font-bold font-mono">{format(date, 'd')}</span>
@@ -114,7 +115,7 @@ export default function CalendarView() {
           )}
 
           {/* Logs */}
-          <div className="app-surface border border-[var(--app-border)] rounded-3xl p-5">
+          <div className="panel-soft rounded-3xl p-5">
             <h3 className="text-sm text-gray-400 font-mono mb-4 flex items-center gap-2">
               <CheckCircle2 size={16} /> ✅ Registro de Entrenamiento
             </h3>
@@ -129,7 +130,7 @@ export default function CalendarView() {
                   });
 
                   return (
-                    <div key={i} className="flex justify-between items-center bg-black p-3 rounded-xl border border-[var(--app-border)]">
+                    <div key={i} className="flex justify-between items-center bg-black/45 p-3 rounded-xl border border-[var(--app-border)]">
                       <span className="text-white font-medium">{exName}</span>
                       <div className="flex gap-3 text-sm font-mono">
                         <span className="text-gray-400">{log.weight}kg</span>
@@ -162,6 +163,7 @@ export default function CalendarView() {
           )}
         </motion.div>
       </AnimatePresence>
+      </div>
     </div>
   );
 }

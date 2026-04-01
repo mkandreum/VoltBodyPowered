@@ -195,16 +195,17 @@ export default function Home() {
   ];
 
   return (
-    <div className="min-h-screen app-shell p-6 pb-32">
-      <header className="flex justify-between items-center mb-6 mt-4">
+    <div className="min-h-screen app-shell px-4 pt-5 md:px-6 safe-bottom">
+      <div className="page-wrap">
+      <header className="flex justify-between items-center mb-7 mt-2">
         <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-gray-500">⚡ VoltBody OS</p>
-          <h1 className="brutal-title text-white leading-none mt-1">
+          <p className="text-xs uppercase tracking-[0.23em] text-gray-500">⚡ VoltBody OS</p>
+          <h1 className="brutal-title text-white leading-none mt-1.5">
             {profile?.name ? `👋 Hola, ${profile.name}` : '🦁 Modo Bestia'}
           </h1>
-          <p className="text-gray-400 capitalize text-sm mt-1">{today} · {routineCompletion}% sesión</p>
+          <p className="text-gray-400 capitalize text-sm mt-2">{today} · {routineCompletion}% sesión</p>
         </div>
-        <div className="w-12 h-12 app-surface rounded-2xl border border-[var(--app-border)] flex items-center justify-center glow-box">
+        <div className="w-12 h-12 panel-soft rounded-2xl flex items-center justify-center">
           <Flame className="app-accent" />
         </div>
       </header>
@@ -233,7 +234,7 @@ export default function Home() {
           <div className="flex items-start justify-between gap-4 mb-5">
             <div>
               <p className="text-xs uppercase tracking-[0.18em] text-gray-400 mb-2">🏆 Hoy conquistas</p>
-              <h2 className="text-3xl font-black text-white leading-none tracking-tight">
+              <h2 className="text-3xl font-black leading-none tracking-tight headline-gradient">
                 {todayRoutine?.focus || 'Recuperación activa'}
               </h2>
               <p className="text-sm text-gray-300 mt-3">
@@ -251,12 +252,12 @@ export default function Home() {
             <FlipMetric value={`${caloriesTarget}`} label="Kcal" />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <motion.button
               onClick={() => setTab('workout')}
               whileTap={{ scale: 0.98 }}
               onTapStart={triggerHaptic}
-              className="pulse-surface pressable rounded-xl bg-[var(--app-accent)] text-black font-bold py-3 px-4 hover:brightness-95 transition-base"
+              className="tap-target pulse-surface pressable primary-btn rounded-xl py-3 px-4 transition-base"
             >
               Empezar sesión ⚡
             </motion.button>
@@ -264,7 +265,7 @@ export default function Home() {
               onClick={() => setTab('diet')}
               whileTap={{ scale: 0.98 }}
               onTapStart={triggerHaptic}
-              className="pulse-surface pressable rounded-xl border border-[var(--app-border)] bg-black/30 text-white font-semibold py-3 px-4 hover:border-[color:var(--app-accent)]/40 transition-base"
+              className="tap-target pulse-surface pressable secondary-btn rounded-xl text-white font-semibold py-3 px-4 hover:border-[color:var(--app-accent)]/40 transition-base"
             >
               Optimizar comida 🍽️
             </motion.button>
@@ -276,7 +277,7 @@ export default function Home() {
         <motion.div {...listStagger(0)} className="bento-primary">
           <AppCard interactive className="h-full p-5 glass-panel">
             <SectionHeader title={bentoCards[0].title} icon={bentoCards[0].icon} />
-            <p className="text-4xl font-black tracking-tight text-white mb-2">{bentoCards[0].value}</p>
+            <p className="text-4xl font-black tracking-tight headline-gradient mb-2">{bentoCards[0].value}</p>
             <p className="text-sm text-gray-400 mb-4">{bentoCards[0].subtitle}</p>
             <div className="h-24 w-full">
               <ResponsiveContainer width="100%" height="100%">
@@ -357,12 +358,12 @@ export default function Home() {
 
       <AppCard className="mb-8 p-5 glass-panel">
         <SectionHeader title="⚡ Acciones rápidas" subtitle="Un toque y listo" />
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <motion.button
             whileTap={{ scale: 0.97 }}
             onTapStart={triggerHaptic}
             onClick={() => setTab('workout')}
-            className="pressable pulse-surface rounded-xl border border-[var(--app-border)] bg-black/35 px-3 py-4 text-xs font-semibold text-white"
+            className="interactive-tile tap-target pressable pulse-surface rounded-xl border border-[var(--app-border)] bg-black/35 px-3 py-4 text-xs font-semibold text-white"
           >
             <Dumbbell size={16} className="mx-auto mb-2 app-accent" />
             Registrar serie 📝
@@ -371,7 +372,7 @@ export default function Home() {
             whileTap={{ scale: 0.97 }}
             onTapStart={triggerHaptic}
             onClick={() => setTab('diet')}
-            className="pressable pulse-surface rounded-xl border border-[var(--app-border)] bg-black/35 px-3 py-4 text-xs font-semibold text-white"
+            className="interactive-tile tap-target pressable pulse-surface rounded-xl border border-[var(--app-border)] bg-black/35 px-3 py-4 text-xs font-semibold text-white"
           >
             <Utensils size={16} className="mx-auto mb-2 app-accent" />
             Swap meal 🔄
@@ -380,7 +381,7 @@ export default function Home() {
             whileTap={{ scale: 0.97 }}
             onTapStart={triggerHaptic}
             onClick={() => setTab('profile')}
-            className="pressable pulse-surface rounded-xl border border-[var(--app-border)] bg-black/35 px-3 py-4 text-xs font-semibold text-white"
+            className="interactive-tile tap-target pressable pulse-surface rounded-xl border border-[var(--app-border)] bg-black/35 px-3 py-4 text-xs font-semibold text-white"
           >
             <Camera size={16} className="mx-auto mb-2 app-accent" />
             Subir progreso 📸
@@ -405,6 +406,7 @@ export default function Home() {
           </div>
         </div>
       </AppCard>
+      </div>
     </div>
   );
 }

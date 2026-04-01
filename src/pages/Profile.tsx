@@ -122,15 +122,16 @@ export default function Profile() {
   };
 
   return (
-    <div className="min-h-screen app-shell p-6 pb-32">
-      <header className="mb-8 mt-4 flex justify-between items-center">
+    <div className="min-h-screen app-shell px-4 pt-5 md:px-6 safe-bottom">
+      <div className="page-wrap">
+      <header className="mb-8 mt-2 flex justify-between items-center">
         <h1 className="brutal-title text-white flex items-center gap-3">
           <User className="app-accent" size={32} />
           👤 Perfil
         </h1>
         <button 
           onClick={() => isEditing ? handleSaveProfile() : setIsEditing(true)}
-          className="pressable p-2 app-surface border border-[var(--app-border)] rounded-full hover:border-[color:var(--app-accent)]/50 transition-colors"
+          className="tap-target pressable p-2 app-surface border border-[var(--app-border)] rounded-full hover:border-[color:var(--app-accent)]/50 transition-colors"
         >
           {isEditing ? <Check className="app-accent" /> : <Edit2 className="text-gray-400 hover:text-white transition-colors" />}
         </button>
@@ -151,7 +152,7 @@ export default function Profile() {
           </div>
           <button 
             onClick={() => fileInputRef.current?.click()}
-            className="pressable absolute bottom-0 right-0 bg-[var(--app-accent)] p-2 rounded-full text-black hover:brightness-95 transition-colors"
+            className="tap-target pressable absolute bottom-0 right-0 bg-[var(--app-accent)] p-2 rounded-full text-black hover:brightness-95 transition-colors"
           >
             <Camera size={16} />
           </button>
@@ -165,12 +166,12 @@ export default function Profile() {
         </div>
         
         <div>
-          <h2 className="text-2xl font-bold text-white mb-1">{profile.name || 'Usuario Volt'}</h2>
+          <h2 className="text-2xl font-bold mb-1 headline-gradient">{profile.name || 'Usuario Volt'}</h2>
           <p className="app-accent font-mono text-sm glow-text">{profile.goal}</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
         <div className="app-surface border border-[var(--app-border)] rounded-3xl p-5 flex items-center gap-4">
           <Scale className="app-accent" size={24} />
           <div>
@@ -180,7 +181,7 @@ export default function Profile() {
                 type="number" 
                 value={editData.weight} 
                   onChange={(e) => setEditData({...editData, weight: e.target.value})}
-                className="w-16 bg-black border border-[var(--app-accent)] rounded px-2 text-white font-bold"
+                className="w-20 input-field rounded-lg px-2 py-1 text-sm font-bold"
               />
             ) : (
               <p className="text-lg font-bold text-white">{profile.weight} kg</p>
@@ -196,7 +197,7 @@ export default function Profile() {
                 type="number" 
                 value={editData.height} 
                   onChange={(e) => setEditData({...editData, height: e.target.value})}
-                className="w-16 bg-black border border-[var(--app-accent)] rounded px-2 text-white font-bold"
+                className="w-20 input-field rounded-lg px-2 py-1 text-sm font-bold"
               />
             ) : (
               <p className="text-lg font-bold text-white">{profile.height} cm</p>
@@ -227,7 +228,7 @@ export default function Profile() {
           </h3>
           <button 
             onClick={() => progressInputRef.current?.click()}
-            className="pressable p-2 bg-[var(--app-border)] rounded-full text-white hover:text-[var(--app-accent)] transition-colors"
+            className="tap-target pressable p-2 bg-[var(--app-border)] rounded-full text-white hover:text-[var(--app-accent)] transition-colors"
           >
             <Plus size={16} />
           </button>
@@ -256,7 +257,7 @@ export default function Profile() {
         )}
       </div>
 
-      <div className="app-surface border border-[var(--app-border)] rounded-3xl p-6 mb-8">
+      <div className="panel-soft rounded-3xl p-6 mb-8">
         <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
           <Target className="app-accent" size={20} />
           Disponibilidad 📆
@@ -264,7 +265,7 @@ export default function Profile() {
         <p className="text-gray-400 font-mono">{profile.schedule}</p>
       </div>
 
-      <div className="app-surface border border-[var(--app-border)] rounded-3xl p-6 mb-8">
+      <div className="panel-soft rounded-3xl p-6 mb-8">
         <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
           <Palette className="app-accent" size={20} />
           Tema Visual 🎨
@@ -278,7 +279,7 @@ export default function Profile() {
             <button
               key={option.id}
               onClick={() => handleThemeChange(option.id as 'aguamarina-negro' | 'verde-negro' | 'ocaso-negro')}
-              className={`text-left px-4 py-3 rounded-xl border transition-all ${
+              className={`tap-target text-left px-4 py-3 rounded-xl border transition-all ${
                 theme === option.id
                   ? 'border-[var(--app-accent)] bg-[color:var(--app-accent)]/10 text-[var(--app-accent)]'
                   : 'border-[var(--app-border)] text-gray-300'
@@ -300,13 +301,13 @@ export default function Profile() {
           value={motivationPhrase}
           onChange={(e) => setMotivationPhrase(e.target.value)}
           onBlur={handleMotivationPhraseBlur}
-          className="w-full bg-black border border-[var(--app-border)] rounded-xl py-3 px-4 text-white mb-4 focus:border-[var(--app-accent)] outline-none"
+          className="input-field mb-4"
           placeholder="Escribe tu frase motivacional"
         />
 
         <button
           onClick={() => motivationInputRef.current?.click()}
-          className="pressable w-full mb-4 bg-[var(--app-border)] text-white py-3 rounded-xl hover:text-[var(--app-accent)] transition-colors"
+          className="tap-target pressable secondary-btn w-full mb-4 text-white py-3 rounded-xl hover:text-[var(--app-accent)] transition-colors"
         >
           Subir foto motivacional 📷
         </button>
@@ -330,11 +331,12 @@ export default function Profile() {
 
       <button
         onClick={logout}
-        className="w-full bg-red-500/10 border border-red-500/30 text-red-500 font-bold py-4 rounded-xl flex items-center justify-center gap-2 hover:bg-red-500/20 transition-colors"
+        className="tap-target w-full danger-btn font-bold py-4 rounded-xl flex items-center justify-center gap-2 hover:bg-red-500/20 transition-colors"
       >
         <LogOut size={20} />
         🚪 Cerrar Sesión
       </button>
+      </div>
     </div>
   );
 }

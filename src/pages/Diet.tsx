@@ -72,9 +72,10 @@ export default function Diet() {
   const avgMealCalories = Math.round(diet.dailyCalories / Math.max(1, diet.meals.length));
 
   return (
-    <div className="min-h-screen app-shell p-6 pb-32">
-      <header className="mb-8 mt-4">
-        <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
+    <div className="min-h-screen app-shell px-4 pt-5 md:px-6 safe-bottom">
+      <div className="page-wrap">
+      <header className="mb-8 mt-2">
+        <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3 tracking-tight">
           <Utensils className="app-accent" size={32} />
           🍽️ Tu Dieta
         </h1>
@@ -85,7 +86,7 @@ export default function Diet() {
         <div className="flex items-start justify-between gap-4 mb-4">
           <div>
             <p className="text-xs uppercase tracking-[0.18em] text-gray-400 mb-2">📊 Resumen Nutricional</p>
-            <h2 className="text-3xl font-black text-white leading-none tracking-tight">🍏 Hoy comes para rendir</h2>
+            <h2 className="text-3xl font-black leading-none tracking-tight headline-gradient">🍏 Hoy comes para rendir</h2>
             <p className="text-sm text-gray-300 mt-2">
               {diet.meals.length} comidas planificadas con foco en energía estable y recuperación.
             </p>
@@ -104,18 +105,18 @@ export default function Diet() {
         </div>
       </AppCard>
 
-      <div className="grid grid-cols-3 gap-4 mb-8">
-        <AppCard className="p-4 flex flex-col items-center justify-center text-center">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
+        <AppCard className="p-4 flex flex-col items-center justify-center text-center glass-panel">
           <Beef className="text-[#ff3939] mb-2" size={24} />
           <span className="text-xl font-bold text-white">{diet.macros.protein}g</span>
           <span className="text-xs text-gray-500 font-mono">Proteína</span>
         </AppCard>
-        <AppCard className="p-4 flex flex-col items-center justify-center text-center">
+        <AppCard className="p-4 flex flex-col items-center justify-center text-center glass-panel">
           <Wheat className="text-[#ffb839] mb-2" size={24} />
           <span className="text-xl font-bold text-white">{diet.macros.carbs}g</span>
           <span className="text-xs text-gray-500 font-mono">Carbos</span>
         </AppCard>
-        <AppCard className="p-4 flex flex-col items-center justify-center text-center">
+        <AppCard className="p-4 flex flex-col items-center justify-center text-center glass-panel">
           <Droplet className="text-[#39a6ff] mb-2" size={24} />
           <span className="text-xl font-bold text-white">{diet.macros.fat}g</span>
           <span className="text-xs text-gray-500 font-mono">Grasas</span>
@@ -127,7 +128,7 @@ export default function Diet() {
           <motion.div
             key={meal.id}
             {...listStagger(index)}
-            className="app-surface border border-[var(--app-border)] rounded-3xl p-5 relative overflow-hidden group hover:border-[color:var(--app-accent)]/50 transition-colors"
+            className="panel-soft interactive-tile rounded-3xl p-5 relative overflow-hidden group hover:border-[color:var(--app-accent)]/50 transition-colors"
           >
             <div className="absolute top-0 right-0 w-32 h-32 bg-[color:var(--app-accent)]/5 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-[color:var(--app-accent)]/10 transition-colors" />
             
@@ -144,7 +145,7 @@ export default function Diet() {
                 <button
                   onClick={() => handleSwap(meal)}
                   disabled={loadingMealId === meal.id}
-                  className="pressable pulse-surface p-2 bg-[var(--app-border)] rounded-full text-gray-400 hover:text-[var(--app-accent)] transition-colors disabled:opacity-50"
+                  className="tap-target pressable pulse-surface p-2 bg-[var(--app-border)] rounded-full text-gray-400 hover:text-[var(--app-accent)] transition-colors disabled:opacity-50"
                   title="Cambiar comida"
                 >
                   <RefreshCw size={16} className={loadingMealId === meal.id ? 'animate-spin' : ''} />
@@ -168,7 +169,7 @@ export default function Diet() {
       </div>
 
       {profile?.foodPreferences && (
-        <AppCard className="mt-8">
+        <AppCard className="mt-8 glass-panel">
           <SectionHeader title="🥘 Preferencias para tu dieta" />
           <div className="space-y-2 text-sm text-gray-300">
             <p><span className="text-gray-500">Verduras:</span> {profile.foodPreferences.vegetables.join(', ') || 'No definidas'}</p>
@@ -189,7 +190,7 @@ export default function Diet() {
           max={900}
           value={specialDishTarget}
           onChange={(e) => setSpecialDishTarget(Number(e.target.value) || 390)}
-          className="w-full bg-black border border-[var(--app-border)] rounded-xl p-3 text-white mb-4 outline-none focus:border-[var(--app-accent)]"
+          className="input-field mb-4"
         />
 
         <div className="space-y-2 text-sm text-gray-300">
@@ -199,6 +200,7 @@ export default function Diet() {
           <p>Queso feta: {(baseSpecialDish['queso feta'].grams * scale).toFixed(0)} g</p>
         </div>
       </AppCard>
+      </div>
     </div>
   );
 }

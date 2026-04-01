@@ -71,9 +71,10 @@ export default function Workout() {
   };
 
   return (
-    <div className="min-h-screen app-shell p-6 pb-32">
-      <header className="mb-8 mt-4">
-        <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
+    <div className="min-h-screen app-shell px-4 pt-5 md:px-6 safe-bottom">
+      <div className="page-wrap">
+      <header className="mb-8 mt-2">
+        <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3 tracking-tight">
           <Dumbbell className="app-accent" size={32} />
           💪 Rutina de Hoy
         </h1>
@@ -84,7 +85,7 @@ export default function Workout() {
         <div className="flex items-start justify-between gap-4 mb-4">
           <div>
             <p className="text-xs uppercase tracking-[0.18em] text-gray-400 mb-2">🎯 Sesión Prioritaria</p>
-            <h2 className="text-3xl font-black text-white leading-none tracking-tight">
+            <h2 className="text-3xl font-black leading-none tracking-tight headline-gradient">
               {todayRoutine?.focus || 'Crea tu sesión personalizada'}
             </h2>
             <p className="text-sm text-gray-300 mt-2">
@@ -118,7 +119,7 @@ export default function Workout() {
               message: `Enfócate en ${todayRoutine.focus}.`,
             });
           }}
-          className="pressable pulse-surface w-full rounded-xl bg-[var(--app-accent)] text-black font-bold py-3 px-4 hover:brightness-95 transition-base"
+          className="tap-target pressable pulse-surface primary-btn w-full rounded-xl font-bold py-3 px-4 transition-base"
         >
           Empezar sesión 🚀
         </button>
@@ -142,7 +143,7 @@ export default function Workout() {
             key={exercise.id}
             {...listStagger(index)}
             onClick={() => setSelectedExercise(exercise)}
-            className="app-surface border border-[var(--app-border)] rounded-3xl p-5 flex items-center gap-4 cursor-pointer hover:border-[color:var(--app-accent)]/50 transition-colors group"
+            className="panel-soft interactive-tile rounded-3xl p-5 flex items-center gap-4 cursor-pointer hover:border-[color:var(--app-accent)]/50 transition-colors group"
           >
             <div className="w-16 h-16 rounded-2xl overflow-hidden bg-black flex-shrink-0 relative">
               <img 
@@ -179,7 +180,7 @@ export default function Workout() {
         </AppCard>
       )}
 
-      <AppCard className="mt-8">
+      <AppCard className="mt-8 glass-panel">
         <SectionHeader title="🏋️ Arma tu Entrenamiento" />
 
         <div className="flex flex-wrap gap-2 mb-4">
@@ -187,7 +188,7 @@ export default function Workout() {
             <button
               key={group}
               onClick={() => setSelectedMuscleGroup(group)}
-              className={`px-3 py-1.5 text-xs rounded-full border transition-colors ${
+              className={`tap-target px-3 py-1.5 text-xs rounded-full border transition-colors ${
                 selectedMuscleGroup === group
                   ? 'border-[color:var(--app-accent)] bg-[color:var(--app-accent)]/10 text-[var(--app-accent)]'
                   : 'border-[var(--app-border)] text-gray-400'
@@ -203,7 +204,7 @@ export default function Workout() {
             const alreadyAdded = customWorkout.some((item) => item.id === exercise.id);
 
             return (
-              <div key={exercise.id} className="flex items-center justify-between bg-black border border-[var(--app-border)] rounded-xl p-3">
+              <div key={exercise.id} className="flex items-center justify-between bg-black/45 border border-[var(--app-border)] rounded-xl p-3">
                 <div>
                   <p className="text-sm text-white font-medium">{exercise.name}</p>
                   <p className="text-xs text-gray-500">{exercise.muscleGroup} • {exercise.defaultSets}x{exercise.defaultReps}</p>
@@ -222,11 +223,11 @@ export default function Workout() {
       </AppCard>
 
       {customWorkout.length > 0 && (
-        <AppCard className="mt-6">
+        <AppCard className="mt-6 glass-panel">
           <SectionHeader title={`📋 Tu Rutina Personal (${customWorkout.length})`} />
           <div className="space-y-2">
             {customWorkout.map((exercise) => (
-              <div key={exercise.id} className="flex items-center justify-between bg-black border border-[var(--app-border)] rounded-xl p-3">
+              <div key={exercise.id} className="flex items-center justify-between bg-black/45 border border-[var(--app-border)] rounded-xl p-3">
                 <div>
                   <p className="text-sm text-white">{exercise.name}</p>
                   <p className="text-xs text-gray-500">{exercise.muscleGroup}</p>
@@ -292,7 +293,7 @@ export default function Workout() {
                       type="number"
                       value={weightInput || ''}
                       onChange={(e) => setWeightInput(Number(e.target.value))}
-                      className="w-full bg-black border border-[var(--app-border)] rounded-2xl p-4 text-white text-2xl font-bold text-center focus:border-[var(--app-accent)] focus:ring-1 focus:ring-[var(--app-accent)] outline-none transition-all"
+                      className="w-full input-field rounded-2xl p-4 text-2xl font-bold text-center"
                       placeholder="0"
                     />
                   </div>
@@ -302,7 +303,7 @@ export default function Workout() {
                       type="number"
                       value={repsInput || ''}
                       onChange={(e) => setRepsInput(Number(e.target.value))}
-                      className="w-full bg-black border border-[var(--app-border)] rounded-2xl p-4 text-white text-2xl font-bold text-center focus:border-[var(--app-accent)] focus:ring-1 focus:ring-[var(--app-accent)] outline-none transition-all"
+                      className="w-full input-field rounded-2xl p-4 text-2xl font-bold text-center"
                       placeholder="0"
                     />
                   </div>
@@ -311,7 +312,7 @@ export default function Workout() {
                 <button
                   onClick={handleLog}
                   disabled={!weightInput || !repsInput}
-                  className="w-full bg-[var(--app-accent)] text-black font-bold py-4 rounded-xl flex items-center justify-center gap-2 hover:brightness-95 transition-colors disabled:opacity-50 disabled:cursor-not-allowed glow-box"
+                  className="w-full tap-target primary-btn font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Guardar Serie 💾
                 </button>
@@ -320,6 +321,7 @@ export default function Workout() {
           </motion.div>
         )}
       </AnimatePresence>
+      </div>
     </div>
   );
 }
