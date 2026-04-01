@@ -5,6 +5,7 @@ import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Dumbbell, CheckCir
 import { format, addDays, startOfWeek, isSameDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import clsx from 'clsx';
+import { mapRoutineByWeekday } from '../lib/routineWeek';
 
 export default function CalendarView() {
   const { routine, logs, diet } = useAppStore();
@@ -14,13 +15,14 @@ export default function CalendarView() {
   const startDate = startOfWeek(currentDate, { weekStartsOn: 1 });
   const weekDays = Array.from({ length: 7 }).map((_, i) => addDays(startDate, i));
 
-  // Find routine for selected day (simplified: mapping day index 0-6 to routine items)
+  // Resolve routine by real weekday and keep non-training days empty.
   const selectedDayIndex = selectedDate.getDay() === 0 ? 6 : selectedDate.getDay() - 1;
-  const plannedRoutine = routine[selectedDayIndex % routine.length];
+  const plannedRoutine = mapRoutineByWeekday(routine)[selectedDayIndex];
 
   // Find logs for selected day
   const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
   const dayLogs = logs.filter(log => format(new Date(log.date), 'yyyy-MM-dd') === selectedDateStr);
+  const completedIds = new Set(dayLogs.map((log) => log.exerciseId));
 
   return (
     <div className="min-h-screen app-shell px-4 pt-5 md:px-6 safe-bottom">
@@ -97,12 +99,12 @@ export default function CalendarView() {
           </div>
 
           {/* Planned Routine */}
-          {plannedRoutine && (
+          {plannedRoutine ? (
             <div className="glass-panel border border-[var(--app-border)] rounded-3xl p-5">
               <h3 className="text-sm text-gray-400 font-mono mb-4 flex items-center gap-2">
                 <Dumbbell size={16} /> 🏋️ Rutina Planificada
               </h3>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4 mb-4">
                 <div className="w-12 h-12 rounded-full bg-black border border-[color:var(--app-accent)]/30 flex items-center justify-center">
                   <Dumbbell className="app-accent" size={20} />
                 </div>
@@ -111,6 +113,34 @@ export default function CalendarView() {
                   <p className="text-sm text-gray-400">{plannedRoutine.exercises.length} ejercicios</p>
                 </div>
               </div>
+
+              <div className="space-y-2">
+                {plannedRoutine.exercises.map((exercise) => {
+                  const done = completedIds.has(exercise.id);
+
+                  return (
+                    <div
+                      key={exercise.id}
+                      className="flex items-center justify-between rounded-xl border border-[var(--app-border)] bg-black/35 px-3 py-2"
+                    >
+                      <div>
+                        <p className="text-sm font-semibold text-white">{exercise.name}</p>
+                        <p className="text-[11px] text-gray-400">{exercise.sets} series x {exercise.reps} reps</p>
+                      </div>
+                      <span className={done ? 'text-emerald-400 text-xs font-semibold' : 'text-gray-500 text-xs font-semibold'}>
+                        {done ? 'Hecho' : 'Pendiente'}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="glass-panel border border-[var(--app-border)] rounded-3xl p-5">
+              <h3 className="text-sm text-gray-400 font-mono mb-2 flex items-center gap-2">
+                <Dumbbell size={16} /> 🏋️ Rutina Planificada
+              </h3>
+              <p className="text-sm text-gray-500">Este dia no tienes entrenamiento programado.</p>
             </div>
           )}
 

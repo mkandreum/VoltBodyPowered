@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore, Exercise } from '../store/useAppStore';
 import { ChevronLeft, Play, CheckCircle2, Dumbbell, PlusCircle, Trash2, Star, CalendarClock, Flame } from 'lucide-react';
 import { workoutService } from '../services/workoutService';
 import { AppCard, SectionHeader, StatPill } from '../components/ui';
 import { listStagger } from '../lib/motion';
+import { WEEKDAY_LABELS, getMondayFirstIndex, mapRoutineByWeekday } from '../lib/routineWeek';
 
 export default function Workout() {
   const {
@@ -22,11 +23,16 @@ export default function Workout() {
   const [weightInput, setWeightInput] = useState<number>(0);
   const [repsInput, setRepsInput] = useState<number>(0);
   const [selectedMuscleGroup, setSelectedMuscleGroup] = useState<string>('Todos');
+  const [selectedDayIndex, setSelectedDayIndex] = useState<number>(() => getMondayFirstIndex(new Date()));
 
-  // Map current day to routine index (Mon=0...Sun=6)
-  const dayIndex = new Date().getDay();
-  const routineIndex = dayIndex === 0 ? 6 : dayIndex - 1;
-  const todayRoutine = routine?.length > 0 ? routine[routineIndex % routine.length] : undefined;
+  const routinesByDay = useMemo(() => mapRoutineByWeekday(routine), [routine]);
+  const activeDayIndexes = useMemo(
+    () => routinesByDay.map((entry, index) => (entry ? index : -1)).filter((index) => index >= 0),
+    [routinesByDay]
+  );
+
+  const selectedRoutine = routinesByDay[selectedDayIndex] || undefined;
+  const todayRoutine = selectedRoutine;
   const muscleGroups = ['Todos', ...Array.from(new Set(exerciseLibrary.map((item) => item.muscleGroup)))];
   const filteredLibrary = selectedMuscleGroup === 'Todos'
     ? exerciseLibrary
@@ -36,6 +42,18 @@ export default function Workout() {
   const isSpecialClassToday =
     Boolean(profile?.weeklySpecialSession?.enabled) &&
     profile?.weeklySpecialSession?.day?.toLowerCase() === todayLabel.toLowerCase();
+
+  useEffect(() => {
+    if (routinesByDay[selectedDayIndex]) return;
+    const todayIndex = getMondayFirstIndex(new Date());
+    if (routinesByDay[todayIndex]) {
+      setSelectedDayIndex(todayIndex);
+      return;
+    }
+    if (activeDayIndexes.length > 0) {
+      setSelectedDayIndex(activeDayIndexes[0]);
+    }
+  }, [selectedDayIndex, routinesByDay, activeDayIndexes]);
 
   const handleLog = async () => {
     if (selectedExercise && weightInput > 0 && repsInput > 0) {
@@ -80,6 +98,37 @@ export default function Workout() {
         </h1>
         <p className="app-accent font-mono text-sm glow-text">{todayRoutine?.focus || 'Hoy toca activar el cuerpo'}</p>
       </header>
+
+      <AppCard className="mb-5 p-4 glass-panel">
+        <SectionHeader
+          title="Semana de entrenamiento"
+          subtitle="Selecciona un dia. Los dias sin plan quedan bloqueados."
+        />
+        <div className="grid grid-cols-7 gap-2">
+          {WEEKDAY_LABELS.map((day, index) => {
+            const hasRoutine = Boolean(routinesByDay[index]);
+            const isSelected = selectedDayIndex === index;
+
+            return (
+              <button
+                key={day.key}
+                type="button"
+                onClick={() => hasRoutine && setSelectedDayIndex(index)}
+                disabled={!hasRoutine}
+                className={[
+                  'tap-target rounded-xl border px-1 py-2 text-center text-[11px] font-semibold transition-all',
+                  hasRoutine ? 'pressable cursor-pointer' : 'cursor-not-allowed opacity-45',
+                  isSelected
+                    ? 'border-[var(--app-accent)] bg-[color:var(--app-accent)]/18 text-[var(--app-accent)]'
+                    : 'border-[var(--app-border)] bg-black/30 text-gray-300',
+                ].join(' ')}
+              >
+                {day.short}
+              </button>
+            );
+          })}
+        </div>
+      </AppCard>
 
       <AppCard accent interactive className="mb-8 p-6 glass-panel">
         <div className="flex items-start justify-between gap-4 mb-4">
