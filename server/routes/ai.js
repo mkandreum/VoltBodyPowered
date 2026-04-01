@@ -8,8 +8,6 @@ import { incrementAiError } from '../utils/metrics.js';
 
 const router = express.Router();
 const aiRateLimiter = createRateLimiter({ windowMs: 10 * 60 * 1000, max: 12, keyPrefix: 'ai' });
-const AI_TIMEOUT_MS = Number(process.env.AI_TIMEOUT_MS || 15000);
-const REPORT_TIMEOUT_MS = Number(process.env.REPORT_TIMEOUT_MS || 45000);
 
 function fallbackRoutine(profile) {
   const days = ['Lunes', 'Miercoles', 'Viernes'];
@@ -92,15 +90,6 @@ function fallbackProgressReport(logs = []) {
   };
 }
 
-function withTimeout(promise, timeoutMs) {
-  return Promise.race([
-    promise,
-    new Promise((_, reject) => {
-      setTimeout(() => reject(new Error(`AI_TIMEOUT_${timeoutMs}`)), timeoutMs);
-    }),
-  ]);
-}
-
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -114,19 +103,16 @@ function isProviderUnavailableError(error) {
   );
 }
 
-async function generateContentWithRetry({ model, prompt, requestId, eventBase, timeoutMs = AI_TIMEOUT_MS }) {
+async function generateContentWithRetry({ model, prompt, requestId, eventBase }) {
   const maxAttempts = 2;
   let lastError = null;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
-      return await withTimeout(
-        ai.models.generateContent({
-          model,
-          contents: prompt,
-        }),
-        timeoutMs
-      );
+      return await ai.models.generateContent({
+        model,
+        contents: prompt,
+      });
     } catch (error) {
       lastError = error;
 
@@ -278,15 +264,6 @@ Responde SOLO con JSON válido (sin markdown, sin bloques de código, sin coment
       res.status(502).json({ error: 'JSON invalido de Gemini', details: parseErr.message });
     }
   } catch (error) {
-    if (String(error.message || '').startsWith('AI_TIMEOUT_')) {
-      logInfo('ai.generate_plan.timeout_fallback', { requestId: req.requestId, timeoutMs: AI_TIMEOUT_MS });
-      return res.json({
-        ...fallbackPlan(req.body || {}),
-        fallback: true,
-        details: `Plan de respaldo generado por timeout (${Math.floor(AI_TIMEOUT_MS / 1000)}s).`,
-      });
-    }
-
     if (isProviderUnavailableError(error)) {
       logInfo('ai.generate_plan.provider_busy_fallback', { requestId: req.requestId });
       return res.json({
@@ -350,13 +327,6 @@ Responde SOLO con JSON válido (sin markdown, sin comentarios):
       res.status(502).json({ error: 'JSON invalido de Gemini', details: parseErr.message });
     }
   } catch (error) {
-    if (String(error.message || '').startsWith('AI_TIMEOUT_')) {
-      return res.json({
-        ...req.body.oldMeal,
-        description: `${req.body.oldMeal.description} (fallback rapido generado por timeout)`,
-      });
-    }
-
     if (isProviderUnavailableError(error)) {
       logInfo('ai.generate_alternative_meal.provider_busy_fallback', { requestId: req.requestId });
       return res.json({
@@ -468,7 +438,6 @@ Reglas:
       prompt,
       requestId: req.requestId,
       eventBase: 'ai.generate_progress_report',
-      timeoutMs: REPORT_TIMEOUT_MS,
     });
 
     try {
@@ -485,11 +454,6 @@ Reglas:
       res.status(502).json({ error: 'JSON invalido de Gemini', details: parseErr.message });
     }
   } catch (error) {
-    if (String(error.message || '').startsWith('AI_TIMEOUT_')) {
-      logInfo('ai.generate_progress_report.timeout_fallback', { requestId: req.requestId, timeoutMs: REPORT_TIMEOUT_MS });
-      return res.json(fallbackProgressReport(req.body?.logs || []));
-    }
-
     if (isProviderUnavailableError(error)) {
       logInfo('ai.generate_progress_report.provider_busy_fallback', { requestId: req.requestId });
       return res.json(fallbackProgressReport(req.body?.logs || []));
