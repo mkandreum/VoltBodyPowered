@@ -100,6 +100,24 @@ export function validateAlternativeMealPayload(req, res, next) {
   next();
 }
 
+export function validateProgressReportPayload(req, res, next) {
+  const { profile, logs } = req.body || {};
+
+  if (!profile || typeof profile !== 'object' || !isNonEmptyString(profile.goal)) {
+    return badRequest(res, 'profile with goal is required');
+  }
+
+  if (!Array.isArray(logs)) {
+    return badRequest(res, 'logs must be an array');
+  }
+
+  if (logs.length > 5000) {
+    return badRequest(res, 'logs array is too large');
+  }
+
+  next();
+}
+
 export function validateWorkoutLogPayload(req, res, next) {
   const { date, exerciseId, weight, reps } = req.body || {};
 

@@ -2,7 +2,7 @@ import express from 'express';
 import { GoogleGenAI } from '@google/genai';
 import { authMiddleware } from '../middleware/auth.js';
 import { createRateLimiter } from '../middleware/rateLimit.js';
-import { validateGeneratePlanPayload, validateAlternativeMealPayload } from '../middleware/validators.js';
+import { validateGeneratePlanPayload, validateAlternativeMealPayload, validateProgressReportPayload } from '../middleware/validators.js';
 import { logError, logInfo } from '../utils/logger.js';
 import { incrementAiError } from '../utils/metrics.js';
 
@@ -221,6 +221,92 @@ Responde SOLO con JSON válido (sin markdown, sin comentarios):
     }
     logError('ai.generate_alternative_meal.error', { requestId: req.requestId, message: error.message, stack: error.stack });
     res.status(500).json({ error: 'Error al generar comida alternativa', details: error.message });
+  }
+});
+
+// POST /api/ai/generate-progress-report
+router.post('/generate-progress-report', authMiddleware, aiRateLimiter, validateProgressReportPayload, async (req, res) => {
+  try {
+    const { profile, logs = [], routine = [], diet = null, progressPhotos = [] } = req.body;
+    logInfo('ai.generate_progress_report.started', { requestId: req.requestId });
+
+    const uniqueLogDays = new Set(logs.map((item) => String(item.date || '').slice(0, 10))).size;
+    const totalSessions = Number(uniqueLogDays || 0);
+
+    const prompt = `Eres un coach de fitness y recomposicion corporal. Analiza progreso real y da feedback accionable en ESPANOL.
+
+DATOS DEL USUARIO:
+- Nombre: ${profile?.name || 'Usuario'}
+- Objetivo: ${profile?.goal || 'No definido'}
+- Edad: ${profile?.age || 'N/A'}
+- Peso actual: ${profile?.weight || 'N/A'}
+- Altura: ${profile?.height || 'N/A'}
+- Nivel: ${profile?.currentState || 'N/A'}
+- Dias entreno/semana objetivo: ${profile?.trainingDaysPerWeek || 'N/A'}
+- Duracion sesion objetivo: ${profile?.sessionMinutes || 'N/A'}
+
+DATOS HISTORICOS:
+- Registros de entrenamiento (sets): ${logs.length}
+- Dias activos con entrenamiento: ${totalSessions}
+- Dias de rutina configurados: ${Array.isArray(routine) ? routine.length : 0}
+- Comidas del plan actual: ${diet?.meals?.length || 0}
+- Fotos de progreso: ${Array.isArray(progressPhotos) ? progressPhotos.length : 0}
+
+LOGS RECIENTES (max 200):
+${JSON.stringify(logs.slice(-200))}
+
+RUTINA RESUMIDA:
+${JSON.stringify(routine)}
+
+Responde SOLO JSON valido con este formato exacto:
+{
+  "overallScore": number,
+  "progressPercent": number,
+  "consistencyPercent": number,
+  "nutritionPercent": number,
+  "trainingExecutionPercent": number,
+  "weeksToVisibleChange": number,
+  "summary": "string breve y motivador",
+  "improvements": ["string", "string", "string"],
+  "nextActions": ["string", "string", "string"]
+}
+
+Reglas:
+- Todos los porcentajes entre 0 y 100.
+- weeksToVisibleChange minimo 1 y maximo 52.
+- Basate en los datos reales entregados, no inventes metricas externas.`;
+
+    const response = await withTimeout(
+      ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: prompt,
+      }),
+      AI_TIMEOUT_MS
+    );
+
+    try {
+      const jsonText = extractJsonBlock(response.text);
+      const report = JSON.parse(jsonText);
+      logInfo('ai.generate_progress_report.success', { requestId: req.requestId });
+      res.json(report);
+    } catch (parseErr) {
+      incrementAiError();
+      logError('ai.generate_progress_report.parse_error', {
+        requestId: req.requestId,
+        message: parseErr.message,
+      });
+      res.status(502).json({ error: 'JSON invalido de Gemini', details: parseErr.message });
+    }
+  } catch (error) {
+    incrementAiError();
+    if (String(error.message || '').startsWith('AI_TIMEOUT_')) {
+      return res.status(504).json({
+        error: 'Timeout al generar informe',
+        details: `El proveedor IA no respondio en ${Math.floor(AI_TIMEOUT_MS / 1000)}s`,
+      });
+    }
+    logError('ai.generate_progress_report.error', { requestId: req.requestId, message: error.message, stack: error.stack });
+    res.status(500).json({ error: 'Error al generar informe', details: error.message });
   }
 });
 

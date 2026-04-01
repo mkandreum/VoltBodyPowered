@@ -13,6 +13,7 @@ type NavItem = {
 
 export default function BottomNav() {
   const { currentTab, setTab } = useAppStore();
+  const smoothTabTransition = { type: 'tween' as const, duration: 0.14, ease: [0.22, 1, 0.36, 1] as const };
 
   const triggerHaptic = () => {
     if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
@@ -29,7 +30,7 @@ export default function BottomNav() {
 
   return (
     <div className="fixed left-1/2 -translate-x-1/2 z-50 w-[96%] max-w-[520px] bottom-[calc(0.65rem+env(safe-area-inset-bottom))]">
-      <div className="ios-pill-nav glass-panel border border-[color:var(--app-border)]/70 rounded-full p-2 shadow-2xl">
+      <div className="ios-pill-nav glass-panel border border-[color:var(--app-border)]/70 rounded-full p-2.5 shadow-2xl">
         <div className="grid grid-cols-[1fr_1fr_auto_1fr_1fr] gap-2 items-center">
           {navItems.slice(0, 2).map((item) => {
             const isActive = currentTab === item.id;
@@ -51,14 +52,14 @@ export default function BottomNav() {
                 {isActive && (
                   <motion.span
                     layoutId="nav-tab-glow"
-                    transition={{ type: 'spring', stiffness: 300, damping: 26 }}
+                    transition={smoothTabTransition}
                     className="tab-switch-glow absolute -inset-2"
                   />
                 )}
                 {isActive && (
                   <motion.span
                     layoutId="nav-liquid-indicator"
-                    transition={{ type: 'spring', stiffness: 360, damping: 28 }}
+                    transition={smoothTabTransition}
                     className="liquid-indicator absolute inset-0"
                   />
                 )}
@@ -75,7 +76,7 @@ export default function BottomNav() {
               setTab('home');
             }}
             className={clsx(
-              'relative overflow-hidden tap-target px-2 min-w-[120px] h-11 rounded-full border transition-all text-center',
+              'relative overflow-hidden tap-target px-2 min-w-[124px] h-12 rounded-full border transition-all text-center',
               currentTab === 'home'
                 ? 'border-[color:var(--app-accent)]/60 bg-[color:var(--app-accent)]/10 app-accent'
                 : 'border-[color:var(--app-border)]/80 bg-black/20 text-gray-300 hover:text-white'
@@ -84,14 +85,14 @@ export default function BottomNav() {
             {currentTab === 'home' && (
               <motion.span
                 layoutId="nav-tab-glow"
-                transition={{ type: 'spring', stiffness: 300, damping: 26 }}
+                transition={smoothTabTransition}
                 className="tab-switch-glow absolute -inset-2"
               />
             )}
             {currentTab === 'home' && (
               <motion.span
                 layoutId="nav-liquid-indicator"
-                transition={{ type: 'spring', stiffness: 360, damping: 28 }}
+                transition={smoothTabTransition}
                 className="liquid-indicator absolute inset-0"
               />
             )}
@@ -121,14 +122,14 @@ export default function BottomNav() {
                 {isActive && (
                   <motion.span
                     layoutId="nav-tab-glow"
-                    transition={{ type: 'spring', stiffness: 300, damping: 26 }}
+                    transition={smoothTabTransition}
                     className="tab-switch-glow absolute -inset-2"
                   />
                 )}
                 {isActive && (
                   <motion.span
                     layoutId="nav-liquid-indicator"
-                    transition={{ type: 'spring', stiffness: 360, damping: 28 }}
+                    transition={smoothTabTransition}
                     className="liquid-indicator absolute inset-0"
                   />
                 )}

@@ -27,9 +27,9 @@
   --app-glass-border: color-mix(in srgb, var(--app-border) 68%, white 10%);
   --app-grid-line: color-mix(in srgb, var(--app-border) 60%, transparent);
 
-  --motion-fast: 120ms;
-  --motion-base: 220ms;
-  --motion-expressive: 360ms;
+  --motion-fast: 96ms;
+  --motion-base: 168ms;
+  --motion-expressive: 288ms;
 
   --touch-target-min: 44px;
   --font-display: "Barlow Condensed", "Sora", var(--font-sans);
@@ -203,6 +203,8 @@ body[data-theme="ocaso-negro"] {
   transition: transform var(--motion-fast) cubic-bezier(0.22, 1, 0.36, 1),
     filter var(--motion-fast),
     box-shadow var(--motion-fast);
+  will-change: transform;
+  backface-visibility: hidden;
 }
 
 button,
@@ -279,6 +281,8 @@ button:active {
 
 .interactive-tile {
   transition: transform var(--motion-fast), border-color var(--motion-fast), background-color var(--motion-fast);
+  will-change: transform;
+  backface-visibility: hidden;
 }
 
 .interactive-tile:hover {
@@ -307,15 +311,19 @@ button:active {
 
 .bento-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 
 .bento-primary {
-  grid-column: span 4 / span 4;
+  grid-column: span 2 / span 2;
 }
 
-@media (min-width: 420px) {
+@media (min-width: 768px) {
+  .bento-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
   .bento-primary {
     grid-column: span 2 / span 2;
     grid-row: span 2 / span 2;
@@ -427,8 +435,8 @@ button:active {
 }
 
 .nav-soft-btn {
-  height: 44px;
-  min-width: 44px;
+  height: 48px;
+  min-width: 48px;
   border-radius: 9999px;
   border: 1px solid color-mix(in srgb, var(--app-border) 86%, white 4%);
   background: color-mix(in srgb, var(--app-surface) 78%, black 22%);
@@ -437,6 +445,8 @@ button:active {
   align-items: center;
   justify-content: center;
   gap: 0;
+  will-change: transform;
+  backface-visibility: hidden;
 }
 
 .nav-soft-btn svg {
@@ -456,11 +466,14 @@ button:active {
 
 .ios-pill-nav {
   position: relative;
-  backdrop-filter: blur(26px) saturate(1.22);
+  backdrop-filter: blur(18px) saturate(1.16);
   background: color-mix(in srgb, var(--app-surface) 66%, transparent);
   box-shadow:
     0 18px 45px rgba(0, 0, 0, 0.45),
     0 0 0 1px color-mix(in srgb, var(--app-accent) 22%, transparent);
+  will-change: transform;
+  backface-visibility: hidden;
+  contain: layout paint;
 }
 
 .ios-pill-nav:active::after {
@@ -483,16 +496,18 @@ button:active {
     radial-gradient(circle at 22% 32%, color-mix(in srgb, var(--app-accent) 38%, transparent), transparent 58%),
     linear-gradient(140deg, color-mix(in srgb, var(--app-accent) 22%, transparent), color-mix(in srgb, var(--app-accent) 10%, transparent));
   filter: blur(0.2px);
-  animation: liquid-shift 2.4s ease-in-out infinite;
+  animation: liquid-shift 1.8s linear infinite;
   z-index: 0;
+  will-change: transform, opacity;
 }
 
 .tab-switch-glow {
   border-radius: 9999px;
   background: radial-gradient(circle, color-mix(in srgb, var(--app-accent) 32%, transparent) 0%, transparent 68%);
-  filter: blur(8px);
-  opacity: 0.8;
+  filter: blur(5px);
+  opacity: 0.72;
   z-index: 0;
+  will-change: transform, opacity;
 }
 
 .nav-soft-btn > svg,
@@ -583,7 +598,7 @@ button:active {
   }
 
   .glass-panel {
-    backdrop-filter: blur(14px);
+    backdrop-filter: blur(10px);
   }
 
   .brutal-title {

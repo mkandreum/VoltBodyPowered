@@ -40,6 +40,10 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [toasts, dismissToast]);
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentTab]);
+
   // Show login if not authenticated
   if (!isAuthenticated) {
     return <Login />;

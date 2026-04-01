@@ -75,6 +75,24 @@ export default function Diet() {
   const macroBalance = Math.round((diet.macros.protein * 4 + diet.macros.carbs * 4 + diet.macros.fat * 9) / Math.max(1, diet.dailyCalories) * 100);
   const dailyCompliance = Math.min(100, Math.round(((diet.meals.length / 5) * 55) + ((macroBalance / 100) * 45)));
 
+  const mealEmoji = (meal: Meal) => {
+    const time = String(meal.time || '').toLowerCase();
+    const name = String(meal.name || '').toLowerCase();
+
+    if (time.includes('07') || time.includes('08') || time.includes('09') || name.includes('desay')) return '🥣';
+    if (time.includes('11') || name.includes('almuer')) return '🍎';
+    if (time.includes('13') || time.includes('14') || time.includes('15') || name.includes('comida')) return '🍽️';
+    if (time.includes('17') || time.includes('18') || name.includes('meri')) return '🥜';
+    if (time.includes('20') || time.includes('21') || time.includes('22') || name.includes('cena')) return '🌙';
+    return '🍴';
+  };
+
+  const withMealEmoji = (meal: Meal) => {
+    const base = String(meal.name || '').trim();
+    if (/^[\p{Extended_Pictographic}\u2600-\u27BF]/u.test(base)) return base;
+    return `${mealEmoji(meal)} ${base}`;
+  };
+
   return (
     <div className="min-h-screen app-shell px-4 pt-5 md:px-6 safe-bottom">
       <div className="page-wrap">
@@ -148,16 +166,9 @@ export default function Diet() {
           >
             <div className="absolute top-0 right-0 w-32 h-32 bg-[color:var(--app-accent)]/5 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-[color:var(--app-accent)]/10 transition-colors" />
             
-            <div className="flex justify-between items-start mb-4 relative z-10">
-              <div>
-                <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                  {meal.name}
-                  <span className="text-xs font-mono bg-[var(--app-border)] text-gray-300 px-2 py-1 rounded-full">
-                    {meal.time}
-                  </span>
-                </h3>
-              </div>
-              <div className="flex items-center gap-3">
+            <div className="mb-4 relative z-10">
+              <div className="flex items-start justify-between gap-3">
+                <h3 className="text-lg font-bold text-white leading-tight pr-2">{withMealEmoji(meal)}</h3>
                 <button
                   onClick={() => handleSwap(meal)}
                   disabled={loadingMealId === meal.id}
@@ -166,6 +177,12 @@ export default function Diet() {
                 >
                   <RefreshCw size={16} className={loadingMealId === meal.id ? 'animate-spin' : ''} />
                 </button>
+              </div>
+
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <span className="text-xs font-mono bg-[var(--app-border)] text-gray-300 px-2 py-1 rounded-full whitespace-nowrap">
+                  {meal.time}
+                </span>
                 <div className="flex items-center gap-1 app-accent font-mono font-bold glow-text">
                   <Flame size={16} />
                   {meal.calories}

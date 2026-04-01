@@ -10,6 +10,18 @@ type RequestOptions = {
   timeoutMs?: number;
 };
 
+export type ProgressReport = {
+  overallScore: number;
+  progressPercent: number;
+  consistencyPercent: number;
+  nutritionPercent: number;
+  trainingExecutionPercent: number;
+  weeksToVisibleChange: number;
+  summary: string;
+  improvements: string[];
+  nextActions: string[];
+};
+
 async function fetchWithTimeout(url: string, options: RequestOptions = {}) {
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), options.timeoutMs ?? AI_TIMEOUT_MS);
@@ -77,6 +89,27 @@ export async function generateAlternativeMeal(oldMeal: Meal, profile: any): Prom
     headers: getAuthHeaders(),
     body: JSON.stringify({ oldMeal, profile }),
     timeoutMs: 30000,
+  });
+
+  if (!response.ok) {
+    throw new Error(await extractErrorMessage(response));
+  }
+
+  return response.json();
+}
+
+export async function generateProgressReport(payload: {
+  profile: unknown;
+  logs: unknown[];
+  routine: unknown[];
+  diet: unknown;
+  progressPhotos: unknown[];
+}): Promise<ProgressReport> {
+  const response = await fetchWithTimeout(`${API_URL}/ai/generate-progress-report`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+    timeoutMs: 45000,
   });
 
   if (!response.ok) {

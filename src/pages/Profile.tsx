@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { useAppStore } from '../store/useAppStore';
 import { authService } from '../services/authService';
 import { workoutService } from '../services/workoutService';
+import { generateProgressReport, ProgressReport } from '../services/geminiService';
 import { User, LogOut, Activity, Target, Clock, Scale, Ruler, Camera, Plus, Edit2, Check, Palette, Quote } from 'lucide-react';
 import { listStagger } from '../lib/motion';
 
@@ -23,6 +24,9 @@ export default function Profile() {
     setMotivationPhoto,
     authToken,
     showToast,
+    logs,
+    routine,
+    diet,
   } = useAppStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const progressInputRef = useRef<HTMLInputElement>(null);
@@ -37,6 +41,8 @@ export default function Profile() {
     { id: 'habit-2', label: 'Dormir 7h al menos 5 dias', done: false },
     { id: 'habit-3', label: 'Cumplir proteina diaria 5 dias', done: false },
   ]);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [report, setReport] = useState<ProgressReport | null>(null);
 
   if (!profile) return null;
 
@@ -133,6 +139,34 @@ export default function Profile() {
 
   const completedGoals = weeklyGoals.filter((goal) => goal.done).length;
   const weeklyGoalProgress = Math.round((completedGoals / weeklyGoals.length) * 100);
+
+  const handleGenerateReport = async () => {
+    setReportLoading(true);
+    try {
+      const response = await generateProgressReport({
+        profile,
+        logs,
+        routine,
+        diet,
+        progressPhotos,
+      });
+      setReport(response);
+      showToast({
+        type: 'success',
+        title: 'Informe generado',
+        message: 'Revisa tu estado actual y los siguientes pasos recomendados.',
+      });
+    } catch (error) {
+      console.error('Error generating progress report:', error);
+      showToast({
+        type: 'error',
+        title: 'No se pudo generar el informe',
+        message: error instanceof Error ? error.message : 'Intentalo de nuevo en unos segundos.',
+      });
+    } finally {
+      setReportLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen app-shell px-4 pt-5 md:px-6 safe-bottom">
@@ -372,6 +406,71 @@ export default function Profile() {
             </button>
           ))}
         </div>
+      </div>
+
+      <div className="glass-panel border border-[var(--app-border)] rounded-3xl p-6 mb-8">
+        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+          <Activity className="app-accent" size={20} />
+          Informe IA de progreso
+        </h3>
+
+        <p className="text-sm text-gray-400 mb-4">
+          Analiza tus historicos (entrenos, rutina, dieta y fotos) y te dice como vas, porcentaje de avance y cuanto te falta para verte mejor.
+        </p>
+
+        <button
+          type="button"
+          onClick={() => void handleGenerateReport()}
+          disabled={reportLoading}
+          className="tap-target pressable primary-btn w-full rounded-xl py-3 px-4 font-bold disabled:opacity-60"
+        >
+          {reportLoading ? 'Generando informe...' : 'Generar informe con IA'}
+        </button>
+
+        {report && (
+          <div className="mt-5 space-y-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="rounded-xl border border-[var(--app-border)] bg-black/35 p-3">
+                <p className="text-[10px] uppercase tracking-wider text-gray-500">Score total</p>
+                <p className="text-xl font-black text-white">{report.overallScore}%</p>
+              </div>
+              <div className="rounded-xl border border-[var(--app-border)] bg-black/35 p-3">
+                <p className="text-[10px] uppercase tracking-wider text-gray-500">Progreso</p>
+                <p className="text-xl font-black text-white">{report.progressPercent}%</p>
+              </div>
+              <div className="rounded-xl border border-[var(--app-border)] bg-black/35 p-3">
+                <p className="text-[10px] uppercase tracking-wider text-gray-500">Consistencia</p>
+                <p className="text-xl font-black text-white">{report.consistencyPercent}%</p>
+              </div>
+              <div className="rounded-xl border border-[var(--app-border)] bg-black/35 p-3">
+                <p className="text-[10px] uppercase tracking-wider text-gray-500">Te falta</p>
+                <p className="text-xl font-black text-white">{report.weeksToVisibleChange} sem</p>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-[var(--app-border)] bg-black/30 p-3">
+              <p className="text-sm text-gray-200">{report.summary}</p>
+            </div>
+
+            <div className="rounded-xl border border-[var(--app-border)] bg-black/30 p-3">
+              <p className="mb-2 text-xs uppercase tracking-wider text-gray-500">Que puedes mejorar</p>
+              <ul className="space-y-1 text-sm text-gray-300">
+                {report.improvements?.map((item, index) => (
+                  <li key={`imp-${index}`}>• {item}</li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="rounded-xl border border-[var(--app-border)] bg-black/30 p-3">
+              <p className="mb-2 text-xs uppercase tracking-wider text-gray-500">Siguientes pasos</p>
+              <ul className="space-y-1 text-sm text-gray-300">
+                {report.nextActions?.map((item, index) => (
+                  <li key={`next-${index}`}>• {item}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
       </div>
 
       <motion.button
