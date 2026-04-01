@@ -336,6 +336,7 @@ export default function Home() {
         </motion.button>
       </AppCard>
 
+      <motion.div {...listStagger(2)}>
       <AppCard className="mb-8 p-5 glass-panel">
         <SectionHeader title="📅 Timeline del día" icon={Clock3} />
         <div className="space-y-3">
@@ -355,7 +356,9 @@ export default function Home() {
           ))}
         </div>
       </AppCard>
+      </motion.div>
 
+      <motion.div {...listStagger(3)}>
       <AppCard className="mb-8 p-5 glass-panel">
         <SectionHeader title="⚡ Acciones rápidas" subtitle="Un toque y listo" />
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -388,6 +391,7 @@ export default function Home() {
           </motion.button>
         </div>
       </AppCard>
+      </motion.div>
 
       <AppCard className="mb-4 p-0 overflow-hidden glass-panel" accent>
         <div className="relative min-h-[170px]">

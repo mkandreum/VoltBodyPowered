@@ -4,6 +4,7 @@ import { useAppStore } from '../store/useAppStore';
 import { authService } from '../services/authService';
 import { workoutService } from '../services/workoutService';
 import { User, LogOut, Activity, Target, Clock, Scale, Ruler, Camera, Plus, Edit2, Check, Palette, Quote } from 'lucide-react';
+import { listStagger } from '../lib/motion';
 
 export default function Profile() {
   const {
@@ -137,6 +138,7 @@ export default function Profile() {
         </button>
       </header>
 
+      <motion.div {...listStagger(0)}>
       <div className="glass-panel border border-[var(--app-border)] rounded-3xl p-6 mb-8 flex items-center gap-6 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-32 h-32 bg-[color:var(--app-accent)]/10 rounded-full blur-3xl -mr-16 -mt-16" />
         
@@ -170,8 +172,9 @@ export default function Profile() {
           <p className="app-accent font-mono text-sm glow-text">{profile.goal}</p>
         </div>
       </div>
+      </motion.div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+      <motion.div {...listStagger(1)} className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
         <div className="app-surface border border-[var(--app-border)] rounded-3xl p-5 flex items-center gap-4">
           <Scale className="app-accent" size={24} />
           <div>
@@ -218,7 +221,7 @@ export default function Profile() {
             <p className="text-lg font-bold text-white">{profile.age} años</p>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       <div className="glass-panel border border-[var(--app-border)] rounded-3xl p-6 mb-8">
         <div className="flex justify-between items-center mb-4">
@@ -257,13 +260,13 @@ export default function Profile() {
         )}
       </div>
 
-      <div className="panel-soft rounded-3xl p-6 mb-8">
+      <motion.div {...listStagger(2)} className="panel-soft rounded-3xl p-6 mb-8">
         <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
           <Target className="app-accent" size={20} />
           Disponibilidad 📆
         </h3>
         <p className="text-gray-400 font-mono">{profile.schedule}</p>
-      </div>
+      </motion.div>
 
       <div className="panel-soft rounded-3xl p-6 mb-8">
         <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
@@ -329,13 +332,14 @@ export default function Profile() {
         )}
       </div>
 
-      <button
+      <motion.button
+        {...listStagger(3)}
         onClick={logout}
         className="tap-target w-full danger-btn font-bold py-4 rounded-xl flex items-center justify-center gap-2 hover:bg-red-500/20 transition-colors"
       >
         <LogOut size={20} />
         🚪 Cerrar Sesión
-      </button>
+      </motion.button>
       </div>
     </div>
   );

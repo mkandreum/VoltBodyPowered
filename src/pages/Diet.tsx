@@ -82,6 +82,7 @@ export default function Diet() {
         <p className="text-gray-400 font-mono text-sm">Objetivo diario: {diet.dailyCalories} kcal</p>
       </header>
 
+      <motion.div {...listStagger(0)}>
       <AppCard accent interactive className="mb-8 p-6 glass-panel">
         <div className="flex items-start justify-between gap-4 mb-4">
           <div>
@@ -104,6 +105,7 @@ export default function Diet() {
           💡 Tip: si entrenas intenso hoy, prioriza proteína + carbohidrato en la comida post-entreno.
         </div>
       </AppCard>
+      </motion.div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
         <AppCard className="p-4 flex flex-col items-center justify-center text-center glass-panel">
@@ -179,6 +181,7 @@ export default function Diet() {
         </AppCard>
       )}
 
+      <motion.div {...listStagger(1)}>
       <AppCard className="mt-6" accent>
         <SectionHeader title="🍲 Plato Especial Ajustable" />
         <p className="text-sm text-gray-400 mb-4">Base: arroz + lentejas + tomate + queso feta</p>
@@ -200,6 +203,7 @@ export default function Diet() {
           <p>Queso feta: {(baseSpecialDish['queso feta'].grams * scale).toFixed(0)} g</p>
         </div>
       </AppCard>
+      </motion.div>
       </div>
     </div>
   );

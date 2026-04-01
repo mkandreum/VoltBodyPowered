@@ -29,7 +29,7 @@ export default function BottomNav() {
 
   return (
     <div className="fixed left-1/2 -translate-x-1/2 z-50 w-[96%] max-w-[520px] bottom-[calc(0.65rem+env(safe-area-inset-bottom))]">
-      <div className="glass-panel border border-[color:var(--app-border)]/85 rounded-[1.35rem] p-2.5 shadow-2xl">
+      <div className="ios-pill-nav glass-panel border border-[color:var(--app-border)]/70 rounded-full p-2 shadow-2xl">
         <div className="grid grid-cols-[1fr_1fr_auto_1fr_1fr] gap-2 items-center">
           {navItems.slice(0, 2).map((item) => {
             const isActive = currentTab === item.id;
@@ -42,13 +42,20 @@ export default function BottomNav() {
                   triggerHaptic();
                   setTab(item.id);
                 }}
+                aria-label={item.label}
                 className={clsx(
-                  'tap-target pressable pulse-surface nav-soft-btn',
+                  'relative overflow-hidden tap-target pressable pulse-surface nav-soft-btn',
                   isActive && 'nav-soft-btn-active'
                 )}
               >
+                {isActive && (
+                  <motion.span
+                    layoutId="nav-liquid-indicator"
+                    transition={{ type: 'spring', stiffness: 360, damping: 28 }}
+                    className="liquid-indicator absolute inset-0"
+                  />
+                )}
                 <item.icon size={18} className={clsx('transition-transform', isActive && 'scale-110')} />
-                <span className="text-[10px] font-semibold tracking-wide">{item.label}</span>
               </button>
             );
           })}
@@ -61,12 +68,19 @@ export default function BottomNav() {
               setTab('home');
             }}
             className={clsx(
-              'tap-target px-2 min-w-[120px] h-11 rounded-xl border transition-all text-center',
+              'relative overflow-hidden tap-target px-2 min-w-[120px] h-11 rounded-full border transition-all text-center',
               currentTab === 'home'
                 ? 'border-[color:var(--app-accent)]/60 bg-[color:var(--app-accent)]/10 app-accent'
                 : 'border-[color:var(--app-border)]/80 bg-black/20 text-gray-300 hover:text-white'
             )}
           >
+            {currentTab === 'home' && (
+              <motion.span
+                layoutId="nav-liquid-indicator"
+                transition={{ type: 'spring', stiffness: 360, damping: 28 }}
+                className="liquid-indicator absolute inset-0"
+              />
+            )}
             <span className="inline-flex items-center gap-1 text-[11px] font-black tracking-[0.18em] uppercase">
               <Zap size={12} />
               VoltBody
@@ -84,13 +98,20 @@ export default function BottomNav() {
                   triggerHaptic();
                   setTab(item.id);
                 }}
+                aria-label={item.label}
                 className={clsx(
-                  'tap-target pressable pulse-surface nav-soft-btn',
+                  'relative overflow-hidden tap-target pressable pulse-surface nav-soft-btn',
                   isActive && 'nav-soft-btn-active'
                 )}
               >
+                {isActive && (
+                  <motion.span
+                    layoutId="nav-liquid-indicator"
+                    transition={{ type: 'spring', stiffness: 360, damping: 28 }}
+                    className="liquid-indicator absolute inset-0"
+                  />
+                )}
                 <item.icon size={18} className={clsx('transition-transform', isActive && 'scale-110')} />
-                <span className="text-[10px] font-semibold tracking-wide">{item.label}</span>
               </button>
             );
           })}

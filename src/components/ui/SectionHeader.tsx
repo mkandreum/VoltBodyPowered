@@ -12,7 +12,7 @@ export default function SectionHeader({ title, subtitle, icon: Icon, right }: Se
   return (
     <div className="flex items-center justify-between mb-4 gap-3">
       <div>
-        <h2 className="text-xl font-bold text-white flex items-center gap-2 tracking-tight">
+        <h2 className="gym-heading text-xl font-bold text-white flex items-center gap-2 tracking-tight">
           {Icon && <Icon size={19} className="text-[var(--app-accent)]" />}
           {title}
         </h2>
