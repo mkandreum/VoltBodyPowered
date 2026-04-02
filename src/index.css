@@ -13,6 +13,7 @@
 }
 
 :root {
+  color-scheme: dark;
   --app-accent: #39ff14;
   --app-accent-dim: rgba(57, 255, 20, 0.2);
   --app-bg: #050505;
