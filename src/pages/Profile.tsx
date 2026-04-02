@@ -169,7 +169,7 @@ export default function Profile() {
   };
 
   return (
-    <div className="min-h-screen app-shell px-4 pt-5 md:px-6 safe-bottom">
+    <div className="min-h-screen app-shell px-4 safe-top md:px-6 safe-bottom">
       <div className="page-wrap">
       <header className="mb-8 mt-2 flex justify-between items-center">
         <h1 className="brutal-title text-white flex items-center gap-3">
