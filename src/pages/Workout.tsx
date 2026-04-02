@@ -200,7 +200,7 @@ export default function Workout() {
   };
 
   return (
-    <div className="min-h-screen app-shell px-4 pt-5 md:px-6 safe-bottom">
+    <div className="min-h-screen app-shell px-4 safe-top md:px-6 safe-bottom">
       <div className="page-wrap">
       <header className="mb-8 mt-2">
         <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3 tracking-tight">

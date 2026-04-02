@@ -248,7 +248,7 @@ export default function Home() {
   ];
 
   return (
-    <div className="min-h-screen app-shell px-4 pt-5 md:px-6 safe-bottom">
+    <div className="min-h-screen app-shell px-4 safe-top md:px-6 safe-bottom">
       <div className="page-wrap">
       <header className="flex justify-between items-center mb-7 mt-2">
         <div>
