@@ -54,8 +54,8 @@ export default function CalendarView() {
       ...plannedRoutine,
       day: WEEKDAY_LABELS[targetIndex].full,
     };
-    const updatedRoutine = draft.filter((d): d is typeof d & object => Boolean(d));
-    setRoutine(updatedRoutine as WorkoutDay[]);
+    const updatedRoutine = draft.filter((d): d is WorkoutDay => d !== null);
+    setRoutine(updatedRoutine);
     setIsRescheduling(false);
 
     if (authToken) {

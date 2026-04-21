@@ -8,6 +8,7 @@ import { AppCard, SectionHeader, StatPill } from '../components/ui';
 import { listStagger, slideUpSheet, checkBounce, successBurst, completionGlow, tapPulse, timelineStagger } from '../lib/motion';
 import { WEEKDAY_LABELS, getMondayFirstIndex, mapRoutineByWeekday } from '../lib/routineWeek';
 import { format } from 'date-fns';
+import WeightCalculator from '../components/WeightCalculator';
 
 const WEEKDAY_FULL = ['Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado', 'Domingo'] as const;
 
@@ -230,6 +231,7 @@ export default function Workout() {
                 setIsEditingDays((prev) => !prev);
                 setMoveSourceDayIndex(null);
               }}
+              aria-label={isEditingDays ? 'Cancelar edición de días' : 'Editar días de entrenamiento'}
               className="tap-target neuro-raised px-3 py-2 text-[11px] font-semibold text-gray-300 transition-all hover:text-white"
             >
               {isEditingDays ? 'Cancelar' : 'Editar dias de entreno'}
@@ -524,28 +526,43 @@ export default function Workout() {
               </button>
             </div>
 
-            <div className="flex-1 p-6 flex flex-col">
+            <div className="flex-1 p-6 flex flex-col overflow-y-auto">
               <h2 className="text-3xl font-bold text-white mb-2">{selectedExercise.name}</h2>
-              <div className="flex gap-4 mb-8">
+              <div className="flex gap-4 mb-6">
                 <span className="neuro-inset px-4 py-2 rounded-full text-sm app-accent font-mono glow-box">
                   {selectedExercise.muscleGroup}
                 </span>
                 <span className="neuro-inset px-4 py-2 rounded-full text-sm text-gray-300 font-mono">
                   {selectedExercise.sets} x {selectedExercise.reps}
                 </span>
+                {selectedExercise.weight > 0 && (
+                  <span className="neuro-inset px-4 py-2 rounded-full text-sm text-gray-300 font-mono">
+                    Meta: <span className="app-accent font-bold">{selectedExercise.weight} kg</span>
+                  </span>
+                )}
               </div>
 
               <div className="neuro-raised rounded-3xl p-6 mb-8">
-                <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+                <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
                   <CheckCircle2 className="app-accent" />
                   Registrar Series ✏️
                 </h3>
+
+                {/* Smart Weight Calculator */}
+                <WeightCalculator
+                  exerciseId={selectedExercise.id}
+                  exerciseName={selectedExercise.name}
+                  targetWeight={selectedExercise.weight}
+                  userBodyweight={profile?.weight}
+                  onWeightChange={(w) => setWeightInput(w)}
+                />
                 
                 <div className="grid grid-cols-3 gap-3 mb-6">
                   <div>
                     <label className="block text-sm text-gray-400 mb-2 font-mono">Peso (kg)</label>
                     <input
                       type="number"
+                      inputMode="decimal"
                       value={weightInput || ''}
                       onChange={(e) => setWeightInput(Number(e.target.value))}
                       className="w-full input-field rounded-2xl p-4 text-2xl font-bold text-center"
@@ -556,6 +573,7 @@ export default function Workout() {
                     <label className="block text-sm text-gray-400 mb-2 font-mono">Reps</label>
                     <input
                       type="number"
+                      inputMode="numeric"
                       value={repsInput || ''}
                       onChange={(e) => setRepsInput(Number(e.target.value))}
                       className="w-full input-field rounded-2xl p-4 text-2xl font-bold text-center"
@@ -566,6 +584,7 @@ export default function Workout() {
                     <label className="block text-sm text-gray-400 mb-2 font-mono">Series</label>
                     <input
                       type="number"
+                      inputMode="numeric"
                       min={1}
                       max={10}
                       value={setsInput || ''}
