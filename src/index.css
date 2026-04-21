@@ -600,7 +600,7 @@ button:active {
 
 .ios-pill-nav {
   position: relative;
-  background: var(--neuro-surface);
+  background: rgba(20, 20, 26, 0.95); /* Menos transparente */
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   border: 1px solid var(--app-border);
