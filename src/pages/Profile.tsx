@@ -1,11 +1,11 @@
 import { useState, useRef, useMemo } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore } from '../store/useAppStore';
 import { authService } from '../services/authService';
 import { workoutService } from '../services/workoutService';
 import { generateProgressReport, ProgressReport } from '../services/geminiService';
 import { User, LogOut, Activity, Target, Clock, Scale, Ruler, Camera, Plus, Edit2, Check, Palette, Quote, TrendingUp } from 'lucide-react';
-import { listStagger } from '../lib/motion';
+import { listStagger, checkBounce, tapPulse, numberRoll } from '../lib/motion';
 import { format, subWeeks, startOfWeek } from 'date-fns';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
@@ -31,6 +31,8 @@ export default function Profile() {
     diet,
     weightLogs,
     addWeightLog,
+    weeklyGoals,
+    toggleWeeklyGoal,
   } = useAppStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const progressInputRef = useRef<HTMLInputElement>(null);
@@ -40,16 +42,9 @@ export default function Profile() {
     weight: String(profile?.weight || ''),
     height: String(profile?.height || ''),
   });
-  const [weeklyGoals, setWeeklyGoals] = useState([
-    { id: 'habit-1', label: 'Completar 3 sesiones de fuerza', done: false },
-    { id: 'habit-2', label: 'Dormir 7h al menos 5 dias', done: false },
-    { id: 'habit-3', label: 'Cumplir proteina diaria 5 dias', done: false },
-  ]);
   const [reportLoading, setReportLoading] = useState(false);
   const [report, setReport] = useState<ProgressReport | null>(null);
   const [weightInput, setWeightInput] = useState<string>('');
-
-  if (!profile) return null;
 
   const todayDateKey = format(new Date(), 'yyyy-MM-dd');
   const currentWeekStart = format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd');
@@ -67,6 +62,8 @@ export default function Profile() {
       return { week: `S${i + 1}`, peso: logByWeekStart.get(weekStart) ?? null };
     });
   }, [weightLogs]);
+
+  if (!profile) return null;
 
   const handleLogWeight = () => {
     const val = Number(weightInput);
@@ -161,10 +158,6 @@ export default function Profile() {
 
   const handleMotivationPhraseBlur = async () => {
     await persistProfilePatch({ motivationPhrase });
-  };
-
-  const toggleWeeklyGoal = (id: string) => {
-    setWeeklyGoals((prev) => prev.map((goal) => (goal.id === id ? { ...goal, done: !goal.done } : goal)));
   };
 
   const completedGoals = weeklyGoals.filter((goal) => goal.done).length;
@@ -396,12 +389,29 @@ export default function Profile() {
 
         {weightLogs.length > 0 && (
           <div className="mt-4 space-y-1 max-h-32 overflow-y-auto">
-            {[...weightLogs].reverse().slice(0, 6).map((l) => (
-              <div key={l.date} className="flex items-center justify-between neuro-inset px-3 py-1.5 rounded-lg">
-                <span className="text-xs text-gray-400 font-mono">{l.date}</span>
-                <span className="text-sm font-bold text-[var(--app-accent)]">{l.weight} kg</span>
-              </div>
-            ))}
+            <AnimatePresence initial={false}>
+              {[...weightLogs].reverse().slice(0, 6).map((l, idx) => (
+                <motion.div
+                  key={l.date}
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  transition={{ delay: idx * 0.04, duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                  className="flex items-center justify-between neuro-inset px-3 py-1.5 rounded-lg"
+                >
+                  <span className="text-xs text-gray-400 font-mono">{l.date}</span>
+                  <AnimatePresence mode="wait">
+                    <motion.span
+                      key={l.weight}
+                      {...numberRoll}
+                      className="text-sm font-bold text-[var(--app-accent)]"
+                    >
+                      {l.weight} kg
+                    </motion.span>
+                  </AnimatePresence>
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
         )}
       </div>
@@ -425,8 +435,10 @@ export default function Profile() {
             { id: 'verde-negro', label: '💚 Verde - Negro' },
             { id: 'ocaso-negro', label: '🌅 Ocaso - Negro' },
           ].map((option) => (
-            <button
+            <motion.button
               key={option.id}
+              whileTap={{ scale: 0.97 }}
+              transition={{ duration: 0.14, ease: [0.34, 1.2, 0.64, 1] }}
               onClick={() => handleThemeChange(option.id as 'aguamarina-negro' | 'verde-negro' | 'ocaso-negro')}
               className={`tap-target text-left px-4 py-3 rounded-xl border transition-all ${
                 theme === option.id
@@ -435,7 +447,7 @@ export default function Profile() {
               }`}
             >
               {option.label}
-            </button>
+            </motion.button>
           ))}
         </div>
       </div>
@@ -491,20 +503,36 @@ export default function Profile() {
           <div className="neuro-progress-fill" style={{ width: `${weeklyGoalProgress}%` }} />
         </div>
         <div className="space-y-2">
-          {weeklyGoals.map((goal) => (
-            <button
+          {weeklyGoals.map((goal, idx) => {
+            const staggerProps = listStagger(idx);
+            return (
+            <motion.button
               key={goal.id}
               type="button"
               onClick={() => toggleWeeklyGoal(goal.id)}
+              initial={staggerProps.initial}
+              animate={staggerProps.animate}
+              whileTap={{ scale: 0.97 }}
+              transition={{ ...staggerProps.transition, type: 'spring', bounce: 0.3 }}
               className={`tap-target w-full rounded-xl border px-3 py-3 text-left text-sm transition-all ${
                 goal.done
                   ? 'border-emerald-400/50 bg-emerald-500/10 text-emerald-300 shadow-[inset_2px_2px_5px_var(--neuro-shadow-dark)]'
                   : 'neuro-raised text-gray-200'
               }`}
             >
-              {goal.done ? '✅' : '⬜'} {goal.label}
-            </button>
-          ))}
+              <span className="inline-flex items-center gap-2">
+                <AnimatePresence mode="wait" initial={false}>
+                  {goal.done ? (
+                    <motion.span key="done" {...checkBounce}>✅</motion.span>
+                  ) : (
+                    <motion.span key="undone" {...checkBounce}>⬜</motion.span>
+                  )}
+                </AnimatePresence>
+                {goal.label}
+              </span>
+            </motion.button>
+            );
+          })}
         </div>
       </div>
 

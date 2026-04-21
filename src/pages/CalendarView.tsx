@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { useAppStore } from '../store/useAppStore';
+import { useAppStore, WorkoutDay, Exercise } from '../store/useAppStore';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Dumbbell, CheckCircle2, Flame } from 'lucide-react';
 import { format, addDays, startOfWeek, isSameDay } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -54,8 +54,8 @@ export default function CalendarView() {
       ...plannedRoutine,
       day: WEEKDAY_LABELS[targetIndex].full,
     };
-    const updatedRoutine = draft.filter(Boolean);
-    setRoutine(updatedRoutine);
+    const updatedRoutine = draft.filter((d): d is typeof d & object => Boolean(d));
+    setRoutine(updatedRoutine as WorkoutDay[]);
     setIsRescheduling(false);
 
     if (authToken) {
@@ -227,7 +227,7 @@ export default function CalendarView() {
               )}
 
               <div className="space-y-4">
-                {groupedExercises && Object.entries(groupedExercises).map(([muscleGroup, exercises]) => (
+                {groupedExercises && (Object.entries(groupedExercises) as [string, Exercise[]][]).map(([muscleGroup, exercises]) => (
                   <div key={muscleGroup} className="space-y-2">
                     <div className="inline-flex items-center rounded-full border border-[var(--app-border)] bg-black/30 px-3 py-1">
                       <span className="text-[11px] uppercase tracking-wider text-gray-300">{muscleGroup}</span>

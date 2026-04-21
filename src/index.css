@@ -496,9 +496,18 @@ button:active {
   background: var(--app-accent);
   color: #050505;
   border: none;
+  overflow: hidden;
   box-shadow:
     4px 4px 14px color-mix(in srgb, var(--app-accent) 40%, var(--neuro-shadow-dark)),
     -2px -2px 8px color-mix(in srgb, var(--app-accent) 18%, transparent);
+  transition: box-shadow var(--motion-fast), transform var(--motion-fast);
+}
+
+.primary-btn:active {
+  transform: scale(0.97);
+  box-shadow:
+    2px 2px 8px color-mix(in srgb, var(--app-accent) 30%, var(--neuro-shadow-dark)),
+    -1px -1px 4px color-mix(in srgb, var(--app-accent) 12%, transparent);
 }
 
 .primary-btn:hover {
@@ -512,12 +521,15 @@ button:active {
   border: 1px solid color-mix(in srgb, var(--neuro-shadow-light) 70%, transparent);
   background: var(--neuro-surface);
   color: #fff;
+  overflow: hidden;
   box-shadow:
     4px 4px 12px var(--neuro-shadow-dark),
     -2px -2px 8px var(--neuro-shadow-light);
+  transition: transform var(--motion-fast), box-shadow var(--motion-fast);
 }
 
 .secondary-btn:active {
+  transform: scale(0.97);
   box-shadow:
     inset 3px 3px 8px var(--neuro-shadow-dark),
     inset -2px -2px 6px var(--neuro-shadow-light);
@@ -528,12 +540,15 @@ button:active {
   border: 1px solid rgba(244, 63, 94, 0.35);
   background: var(--neuro-surface);
   color: #fecdd3;
+  overflow: hidden;
   box-shadow:
     4px 4px 12px var(--neuro-shadow-dark),
     -2px -2px 8px var(--neuro-shadow-light);
+  transition: transform var(--motion-fast), box-shadow var(--motion-fast);
 }
 
 .danger-btn:active {
+  transform: scale(0.97);
   box-shadow:
     inset 3px 3px 8px var(--neuro-shadow-dark),
     inset -2px -2px 6px var(--neuro-shadow-light);
@@ -756,6 +771,119 @@ button:active {
   border-radius: 9999px;
   background: var(--app-accent);
   box-shadow: 0 0 8px color-mix(in srgb, var(--app-accent) 50%, transparent);
-  transition: width var(--motion-expressive) cubic-bezier(0.22, 1, 0.36, 1);
+  transition: width 0.32s cubic-bezier(0.34, 1.1, 0.64, 1);
+}
+
+/* ─── Premium Animation Keyframes ──────────────────────────── */
+
+/* Checkbox bounce-in */
+@keyframes check-bounce {
+  0%   { transform: scale(0.4); opacity: 0; }
+  55%  { transform: scale(1.18); opacity: 1; }
+  75%  { transform: scale(0.93); }
+  90%  { transform: scale(1.04); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Success burst ripple */
+@keyframes success-burst {
+  0%   { transform: scale(1); }
+  20%  { transform: scale(1.1); }
+  45%  { transform: scale(0.96); }
+  70%  { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+
+/* Glow pulse for exercise completion */
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 0px color-mix(in srgb, var(--app-accent) 0%, transparent); }
+  50%       { box-shadow: 0 0 18px color-mix(in srgb, var(--app-accent) 55%, transparent),
+                          0 0 36px color-mix(in srgb, var(--app-accent) 22%, transparent); }
+}
+
+/* Number counter roll */
+@keyframes number-roll-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Ripple expand for tap feedback */
+@keyframes ripple-expand {
+  0%   { transform: scale(0); opacity: 0.6; }
+  100% { transform: scale(2.8); opacity: 0; }
+}
+
+/* Shimmer sweep for loading state */
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+/* Fade float in for new list items */
+@keyframes fade-float-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Animation Utility Classes ─────────────────────────────── */
+
+/** Animate checkbox icon when toggled */
+.anim-check-bounce {
+  animation: check-bounce 0.38s cubic-bezier(0.34, 1.2, 0.64, 1) both;
+}
+
+/** Scale burst on save/complete */
+.anim-success-burst {
+  animation: success-burst 0.46s cubic-bezier(0.2, 0.9, 0.4, 1.1) both;
+}
+
+/** Pulsing glow — exercise completed */
+.anim-glow-pulse {
+  animation: glow-pulse 1.6s ease-in-out 2;
+}
+
+/** Haptic-style micro-bounce on tap (fallback for no haptics) */
+.anim-tap-haptic {
+  transition: transform 0.14s cubic-bezier(0.34, 1.2, 0.64, 1);
+}
+.anim-tap-haptic:active {
+  transform: scale(0.96);
+}
+
+/** New list item entry */
+.anim-fade-float-in {
+  animation: fade-float-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/** Loading shimmer skeleton */
+.anim-shimmer {
+  background: linear-gradient(90deg,
+    var(--neuro-surface) 25%,
+    color-mix(in srgb, var(--neuro-shadow-light) 80%, var(--app-accent) 8%) 50%,
+    var(--neuro-surface) 75%);
+  background-size: 400% 100%;
+  animation: shimmer 1.5s linear infinite;
+}
+
+/** Ripple container — position:relative required on parent */
+.ripple-host {
+  position: relative;
+  overflow: hidden;
+}
+
+.ripple-host::after {
+  content: '';
+  position: absolute;
+  inset: 50% 50%;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--app-accent) 28%, transparent);
+  pointer-events: none;
+  transform: scale(0);
+  opacity: 0;
+}
+
+.ripple-host:active::after {
+  inset: 0;
+  animation: ripple-expand 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 

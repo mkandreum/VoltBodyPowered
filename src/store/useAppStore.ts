@@ -106,6 +106,12 @@ export type ExerciseLibraryEntry = {
   defaultReps: string;
 };
 
+export type WeeklyGoal = {
+  id: string;
+  label: string;
+  done: boolean;
+};
+
 export type AppToast = {
   id: string;
   type: 'success' | 'error' | 'info';
@@ -138,7 +144,8 @@ interface AppState {
   weightLogs: WeightLog[];
   // Maps date (YYYY-MM-DD) -> array of eaten meal IDs
   mealEatenRecord: Record<string, string[]>;
-  
+  weeklyGoals: WeeklyGoal[];
+
   // Auth actions
   setAuthToken: (token: string | null) => void;
   setUser: (user: { id: string; email: string; name: string | null } | null) => void;
@@ -167,6 +174,7 @@ interface AppState {
   clearToasts: () => void;
   addWeightLog: (log: WeightLog) => void;
   toggleMealEaten: (mealId: string, date: string) => void;
+  toggleWeeklyGoal: (id: string) => void;
   completeOnboarding: () => void;
   resetApp: () => void;
 }
@@ -224,6 +232,11 @@ export const useAppStore = create<AppState>()(
       toasts: [],
       weightLogs: [],
       mealEatenRecord: {},
+      weeklyGoals: [
+        { id: 'habit-1', label: 'Completar 3 sesiones de fuerza', done: false },
+        { id: 'habit-2', label: 'Dormir 7h al menos 5 dias', done: false },
+        { id: 'habit-3', label: 'Cumplir proteina diaria 5 dias', done: false },
+      ],
 
       // Auth actions
       setAuthToken: (token) => set({ authToken: token, isAuthenticated: !!token }),
@@ -246,6 +259,11 @@ export const useAppStore = create<AppState>()(
         toasts: [],
         weightLogs: [],
         mealEatenRecord: {},
+        weeklyGoals: [
+          { id: 'habit-1', label: 'Completar 3 sesiones de fuerza', done: false },
+          { id: 'habit-2', label: 'Dormir 7h al menos 5 dias', done: false },
+          { id: 'habit-3', label: 'Cumplir proteina diaria 5 dias', done: false },
+        ],
       }),
 
       // Profile actions
@@ -324,6 +342,10 @@ export const useAppStore = create<AppState>()(
             : [...existing, mealId];
           return { mealEatenRecord: { ...state.mealEatenRecord, [date]: updated } };
         }),
+      toggleWeeklyGoal: (id) =>
+        set((state) => ({
+          weeklyGoals: state.weeklyGoals.map((g) => (g.id === id ? { ...g, done: !g.done } : g)),
+        })),
       completeOnboarding: () => set({ isOnboarded: true }),
       resetApp: () => set({
         isOnboarded: false,
@@ -340,6 +362,11 @@ export const useAppStore = create<AppState>()(
         toasts: [],
         weightLogs: [],
         mealEatenRecord: {},
+        weeklyGoals: [
+          { id: 'habit-1', label: 'Completar 3 sesiones de fuerza', done: false },
+          { id: 'habit-2', label: 'Dormir 7h al menos 5 dias', done: false },
+          { id: 'habit-3', label: 'Cumplir proteina diaria 5 dias', done: false },
+        ],
       }),
     }),
     {

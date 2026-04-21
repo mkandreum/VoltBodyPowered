@@ -5,7 +5,7 @@ import { Dumbbell, Utensils, Flame, Moon, Activity, Sparkles, Quote, Clock3, Cam
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { format, subDays } from 'date-fns';
 import { AppCard, SectionHeader, StatPill } from '../components/ui';
-import { fadeSlideUp, listStagger } from '../lib/motion';
+import { fadeSlideUp, listStagger, timelineStagger, checkBounce } from '../lib/motion';
 import { getMondayFirstIndex, mapRoutineByWeekday } from '../lib/routineWeek';
 import { workoutService } from '../services/workoutService';
 
@@ -27,6 +27,12 @@ function FlipMetric({ value, label }: { value: string; label: string }) {
       <p className="text-[10px] uppercase tracking-wider text-gray-400">{label}</p>
     </div>
   );
+}
+
+/** Parse HH:MM time string to integer hour. Defined outside component to avoid recreation on every render. */
+function parseMealHour(time: string): number {
+  const match = String(time || '').match(/^(\d{1,2}):/);
+  return match ? parseInt(match[1], 10) : -1;
 }
 
 export default function Home() {
@@ -226,11 +232,6 @@ export default function Home() {
 
   const eatenTodayMeals = mealEatenRecord[todayDateKey] ?? [];
 
-  const parseMealHour = (time: string): number => {
-    const match = String(time || '').match(/^(\d{1,2}):/);
-    return match ? parseInt(match[1], 10) : -1;
-  };
-
   const isBreakfastEaten = useMemo(() => {
     if (!diet?.meals) return false;
     return diet.meals.some((m) => {
@@ -427,15 +428,43 @@ export default function Home() {
           {timelineItems.map((item, index) => (
             <motion.div
               key={`${item.time}-${item.title}`}
-              {...listStagger(index)}
-              className="flex items-center gap-3 neuro-inset p-3 rounded-xl"
+              {...timelineStagger(index)}
+              className={`flex items-center gap-3 neuro-inset p-3 rounded-xl transition-all ${
+                item.done ? 'border border-[color:var(--app-accent)]/20' : ''
+              }`}
             >
-              <div className={`timeline-dot ${item.done ? 'done' : ''}`} />
+              <AnimatePresence mode="wait" initial={false}>
+                {item.done ? (
+                  <motion.div key="done-dot" {...checkBounce} className="timeline-dot done" />
+                ) : (
+                  <motion.div key="pending-dot" initial={{ opacity: 1 }} animate={{ opacity: 1 }} className="timeline-dot" />
+                )}
+              </AnimatePresence>
               <div className="min-w-[54px] text-xs font-mono text-gray-400">{item.time}</div>
               <p className="text-sm text-white flex-1">{item.title}</p>
-              <span className={`text-[10px] font-semibold uppercase tracking-wider ${item.done ? 'text-emerald-400' : 'text-gray-500'}`}>
-                {item.done ? 'Hecho' : 'Pendiente'}
-              </span>
+              <AnimatePresence mode="wait" initial={false}>
+                {item.done ? (
+                  <motion.span
+                    key="done-label"
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    transition={{ duration: 0.2, ease: [0.34, 1.2, 0.64, 1] }}
+                    className="text-[10px] font-semibold uppercase tracking-wider text-emerald-400"
+                  >
+                    Hecho ✓
+                  </motion.span>
+                ) : (
+                  <motion.span
+                    key="pending-label"
+                    initial={{ opacity: 1 }}
+                    animate={{ opacity: 1 }}
+                    className="text-[10px] font-semibold uppercase tracking-wider text-gray-500"
+                  >
+                    Pendiente
+                  </motion.span>
+                )}
+              </AnimatePresence>
             </motion.div>
           ))}
         </div>
@@ -450,7 +479,7 @@ export default function Home() {
             whileTap={{ scale: 0.97 }}
             onTapStart={triggerHaptic}
             onClick={() => void quickLogSet()}
-            className="interactive-tile tap-target pressable pulse-surface neuro-raised px-3 py-4 text-xs font-semibold text-white"
+            className="interactive-tile tap-target pressable pulse-surface neuro-raised ripple-host px-3 py-4 text-xs font-semibold text-white"
           >
             <Dumbbell size={16} className="mx-auto mb-2 app-accent" />
             Registrar serie 📝
@@ -459,7 +488,7 @@ export default function Home() {
             whileTap={{ scale: 0.97 }}
             onTapStart={triggerHaptic}
             onClick={() => setTab('diet')}
-            className="interactive-tile tap-target pressable pulse-surface neuro-raised px-3 py-4 text-xs font-semibold text-white"
+            className="interactive-tile tap-target pressable pulse-surface neuro-raised ripple-host px-3 py-4 text-xs font-semibold text-white"
           >
             <Utensils size={16} className="mx-auto mb-2 app-accent" />
             Swap meal 🔄
@@ -468,7 +497,7 @@ export default function Home() {
             whileTap={{ scale: 0.97 }}
             onTapStart={triggerHaptic}
             onClick={() => setTab('profile')}
-            className="interactive-tile tap-target pressable pulse-surface neuro-raised px-3 py-4 text-xs font-semibold text-white"
+            className="interactive-tile tap-target pressable pulse-surface neuro-raised ripple-host px-3 py-4 text-xs font-semibold text-white"
           >
             <Camera size={16} className="mx-auto mb-2 app-accent" />
             Subir progreso 📸

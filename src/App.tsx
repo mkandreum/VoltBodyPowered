@@ -9,9 +9,8 @@ import CalendarView from './pages/CalendarView';
 import Profile from './pages/Profile';
 import BottomNav from './components/BottomNav';
 import { AnimatePresence, motion } from 'motion/react';
-import { pageTransition } from './lib/motion';
+import { pageTransition, fadeSlideUp } from './lib/motion';
 import { CheckCircle2, AlertCircle, Info } from 'lucide-react';
-import { fadeSlideUp } from './lib/motion';
 
 export default function App() {
   const { isAuthenticated, isOnboarded, currentTab, theme, toasts, dismissToast } = useAppStore();
@@ -40,12 +39,14 @@ export default function App() {
 
   useEffect(() => {
     if (toasts.length === 0) return;
+    const id = toasts[0].id;
+    // Only restart the timer when the *first* toast changes, not when more are added.
+    // dismissToast is stable (Zustand action) so it doesn't need to be a dep.
     const timer = setTimeout(() => {
-      dismissToast(toasts[0].id);
+      dismissToast(id);
     }, 2800);
-
     return () => clearTimeout(timer);
-  }, [toasts, dismissToast]);
+  }, [toasts[0]?.id, dismissToast]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });

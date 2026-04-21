@@ -5,8 +5,9 @@ import { ChevronLeft, Play, CheckCircle2, Dumbbell, PlusCircle, Trash2, Star, Ca
 import { workoutService } from '../services/workoutService';
 import { authService } from '../services/authService';
 import { AppCard, SectionHeader, StatPill } from '../components/ui';
-import { listStagger } from '../lib/motion';
+import { listStagger, slideUpSheet, checkBounce, successBurst, completionGlow, tapPulse, timelineStagger } from '../lib/motion';
 import { WEEKDAY_LABELS, getMondayFirstIndex, mapRoutineByWeekday } from '../lib/routineWeek';
+import { format } from 'date-fns';
 
 const WEEKDAY_FULL = ['Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado', 'Domingo'] as const;
 
@@ -47,7 +48,7 @@ export default function Workout() {
     ? exerciseLibrary
     : exerciseLibrary.filter((item) => item.muscleGroup === selectedMuscleGroup);
   const totalTodayExercises = todayRoutine?.exercises?.length || 0;
-  const todayDateKey = new Date().toISOString().slice(0, 10);
+  const todayDateKey = format(new Date(), 'yyyy-MM-dd');
   const todayLogs = useMemo(() => logs.filter((log) => log.date.slice(0, 10) === todayDateKey), [logs, todayDateKey]);
   const setsByExercise = useMemo(() => {
     return todayLogs.reduce<Map<string, number>>((acc, log) => {
@@ -359,10 +360,11 @@ export default function Workout() {
           <motion.div
             key={exercise.id}
             {...listStagger(index)}
+            whileTap={{ scale: 0.985 }}
             onClick={() => setSelectedExercise(exercise)}
-            className={`panel-soft interactive-tile rounded-3xl p-5 flex items-center gap-4 cursor-pointer transition-colors group ${
+            className={`panel-soft interactive-tile rounded-3xl p-5 flex items-center gap-4 cursor-pointer transition-all group ripple-host ${
               isCompleted
-                ? 'border-[color:var(--app-accent)]/60 bg-[color:var(--app-accent)]/5'
+                ? 'border-[color:var(--app-accent)]/60 bg-[color:var(--app-accent)]/5 anim-glow-pulse'
                 : 'hover:border-[color:var(--app-accent)]/50'
             }`}
           >
@@ -375,10 +377,17 @@ export default function Workout() {
                 referrerPolicy="no-referrer" 
               />
               <div className="absolute inset-0 flex items-center justify-center bg-black/40 group-hover:bg-transparent transition-colors">
-                {isCompleted
-                  ? <CheckCircle2 className="text-[var(--app-accent)]" size={22} />
-                  : <Play className="app-accent opacity-80" size={20} />
-                }
+                <AnimatePresence mode="wait" initial={false}>
+                  {isCompleted ? (
+                    <motion.span key="done" {...checkBounce}>
+                      <CheckCircle2 className="text-[var(--app-accent)]" size={22} />
+                    </motion.span>
+                  ) : (
+                    <motion.span key="play" initial={{ opacity: 0.8 }} animate={{ opacity: 0.8 }}>
+                      <Play className="app-accent opacity-80" size={20} />
+                    </motion.span>
+                  )}
+                </AnimatePresence>
               </div>
             </div>
             <div className="flex-1">
@@ -387,15 +396,30 @@ export default function Workout() {
                 {exercise.sets} sets x {exercise.reps} reps
               </p>
               {completedCount > 0 && (
-                <p className="text-xs font-mono mt-0.5 text-[var(--app-accent)]">
-                  {isCompleted ? '✅ Completado' : `${completedCount}/${targetSets} series`}
-                </p>
+                <AnimatePresence>
+                  <motion.p
+                    key={`${exercise.id}-count`}
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                    className="text-xs font-mono mt-0.5 text-[var(--app-accent)]"
+                  >
+                    {isCompleted ? '✅ Completado' : `${completedCount}/${targetSets} series`}
+                  </motion.p>
+                </AnimatePresence>
               )}
             </div>
-            {isCompleted
-              ? <CheckCircle2 className="text-[var(--app-accent)]" size={20} />
-              : <ChevronLeft className="text-gray-600 rotate-180 group-hover:text-[var(--app-accent)] transition-colors" />
-            }
+            <AnimatePresence mode="wait" initial={false}>
+              {isCompleted ? (
+                <motion.span key="done-icon" {...completionGlow}>
+                  <CheckCircle2 className="text-[var(--app-accent)]" size={20} />
+                </motion.span>
+              ) : (
+                <motion.span key="chevron" initial={{ opacity: 1 }} animate={{ opacity: 1 }}>
+                  <ChevronLeft className="text-gray-600 rotate-180 group-hover:text-[var(--app-accent)] transition-colors" />
+                </motion.span>
+              )}
+            </AnimatePresence>
           </motion.div>
           );
         })}
@@ -480,9 +504,7 @@ export default function Workout() {
       <AnimatePresence>
         {selectedExercise && (
           <motion.div
-            initial={{ opacity: 0, y: '100%' }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: '100%' }}
+            {...slideUpSheet}
             className="fixed inset-0 z-50 bg-[#050505] flex flex-col"
           >
             <div className="relative h-1/3 bg-black">
@@ -554,13 +576,15 @@ export default function Workout() {
                   </div>
                 </div>
 
-                <button
+                <motion.button
                   onClick={handleLog}
                   disabled={!weightInput || !repsInput}
-                  className="w-full tap-target primary-btn font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  whileTap={!weightInput || !repsInput ? {} : { scale: [1, 1.06, 0.97, 1.02, 1] }}
+                  transition={{ duration: 0.45, ease: [0.2, 0.9, 0.4, 1.1] }}
+                  className="w-full tap-target primary-btn ripple-host font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {setsInput > 1 ? `Guardar ${setsInput} series 💾` : 'Guardar Serie 💾'}
-                </button>
+                </motion.button>
               </div>
             </div>
           </motion.div>

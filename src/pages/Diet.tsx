@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore, Meal } from '../store/useAppStore';
 import { Utensils, Flame, Droplet, Beef, Wheat, RefreshCw, Sparkles, CheckCircle2, Circle } from 'lucide-react';
 import { generateAlternativeMeal } from '../services/geminiService';
 import { authService } from '../services/authService';
 import { AppCard, SectionHeader, StatPill } from '../components/ui';
-import { listStagger } from '../lib/motion';
+import { listStagger, checkBounce, tapPulse } from '../lib/motion';
 import { format } from 'date-fns';
 
 export default function Diet() {
@@ -169,7 +169,8 @@ export default function Diet() {
           <motion.div
             key={meal.id}
             {...listStagger(index)}
-            className={`panel-soft interactive-tile rounded-3xl p-5 relative overflow-hidden group transition-colors ${
+            whileTap={{ scale: 0.99 }}
+            className={`panel-soft interactive-tile rounded-3xl p-5 relative overflow-hidden group transition-all ${
               isEaten
                 ? 'border-[color:var(--app-accent)]/50 bg-[color:var(--app-accent)]/5'
                 : 'hover:border-[color:var(--app-accent)]/50'
@@ -180,17 +181,26 @@ export default function Diet() {
             <div className="mb-4 relative z-10">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3 flex-1 min-w-0">
-                  <button
+                  <motion.button
                     type="button"
                     onClick={() => toggleMealEaten(meal.id, todayDateKey)}
                     aria-label={isEaten ? 'Marcar como no comida' : 'Marcar como comida'}
+                    whileTap={{ scale: 0.88 }}
+                    transition={{ duration: 0.18, ease: [0.34, 1.2, 0.64, 1] }}
                     className="tap-target flex-shrink-0 mt-0.5 text-gray-500 hover:text-[var(--app-accent)] transition-colors"
                   >
-                    {isEaten
-                      ? <CheckCircle2 size={20} className="text-[var(--app-accent)]" />
-                      : <Circle size={20} />
-                    }
-                  </button>
+                    <AnimatePresence mode="wait" initial={false}>
+                      {isEaten ? (
+                        <motion.span key="checked" {...checkBounce}>
+                          <CheckCircle2 size={20} className="text-[var(--app-accent)]" />
+                        </motion.span>
+                      ) : (
+                        <motion.span key="unchecked" initial={{ scale: 1 }} animate={{ scale: 1 }}>
+                          <Circle size={20} />
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+                  </motion.button>
                   <h3 className={`text-lg font-bold leading-tight ${isEaten ? 'line-through text-gray-400' : 'text-white'}`}>
                     {withMealEmoji(meal)}
                   </h3>
