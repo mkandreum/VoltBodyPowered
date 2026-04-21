@@ -33,7 +33,7 @@ export default defineConfig(() => {
           cleanupOutdatedCaches: true,
           skipWaiting: true,
           clientsClaim: true,
-          exclude: [/\.map$/, /manifest\.webmanifest$/, /index\.html/],
+          globIgnores: ['**/index.html', '**/manifest.webmanifest', '**/*.map'],
           runtimeCaching: [
             {
               urlPattern: /index\.html/,
