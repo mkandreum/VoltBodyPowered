@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore, WorkoutDay, Exercise } from '../store/useAppStore';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Dumbbell, CheckCircle2, Flame } from 'lucide-react';
-import { format, addDays, startOfWeek, isSameDay } from 'date-fns';
+import { format, addDays, startOfWeek, isSameDay, isValid } from 'date-fns';
 import { es } from 'date-fns/locale';
 import clsx from 'clsx';
 import { getMondayFirstIndex, mapRoutineByWeekday, WEEKDAY_LABELS } from '../lib/routineWeek';
@@ -24,7 +24,10 @@ export default function CalendarView() {
 
   // Find logs for selected day
   const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
-  const dayLogs = logs.filter(log => format(new Date(log.date), 'yyyy-MM-dd') === selectedDateStr);
+  const dayLogs = logs.filter(log => {
+    const d = new Date(log.date);
+    return isValid(d) && format(d, 'yyyy-MM-dd') === selectedDateStr;
+  });
   const setsByExercise = dayLogs.reduce<Map<string, number>>((acc, log) => {
     acc.set(log.exerciseId, (acc.get(log.exerciseId) || 0) + 1);
     return acc;
@@ -94,13 +97,13 @@ export default function CalendarView() {
 
       <div className="glass-panel border border-[var(--app-border)] rounded-3xl p-6 mb-8">
         <div className="flex justify-between items-center mb-6">
-          <button onClick={() => setCurrentDate(addDays(currentDate, -7))} className="pressable p-2 text-gray-400 hover:text-white transition-colors">
+          <button onClick={() => setCurrentDate(addDays(currentDate, -7))} className="tap-target pressable p-2 text-gray-400 hover:text-white transition-colors">
             <ChevronLeft />
           </button>
           <span className="text-lg font-bold text-white capitalize">
             {format(currentDate, 'MMMM yyyy', { locale: es })}
           </span>
-          <button onClick={() => setCurrentDate(addDays(currentDate, 7))} className="pressable p-2 text-gray-400 hover:text-white transition-colors">
+          <button onClick={() => setCurrentDate(addDays(currentDate, 7))} className="tap-target pressable p-2 text-gray-400 hover:text-white transition-colors">
             <ChevronRight />
           </button>
         </div>

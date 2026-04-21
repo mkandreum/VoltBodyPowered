@@ -145,7 +145,8 @@ export default function Profile() {
 
     showToast({
       type: 'success',
-      title: 'Cambios guardados ✅',
+      title: authToken ? 'Cambios guardados ✅' : 'Guardado localmente 💾',
+      message: authToken ? undefined : 'Inicia sesión para sincronizar con el servidor.',
     });
 
     setIsEditing(false);
@@ -161,7 +162,7 @@ export default function Profile() {
   };
 
   const completedGoals = weeklyGoals.filter((goal) => goal.done).length;
-  const weeklyGoalProgress = Math.round((completedGoals / weeklyGoals.length) * 100);
+  const weeklyGoalProgress = Math.round((completedGoals / Math.max(1, weeklyGoals.length)) * 100);
 
   const handleGenerateReport = async () => {
     setReportLoading(true);
@@ -172,7 +173,7 @@ export default function Profile() {
         routine,
         diet,
         progressPhotos: progressPhotos.map((p) => ({ date: p.date })),
-      });
+      }, authToken);
       setReport(response);
       showToast({
         type: 'success',

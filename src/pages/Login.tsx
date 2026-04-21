@@ -93,7 +93,7 @@ export default function Login() {
                 day: 'Sábado',
                 durationMinutes: 60,
               },
-              avatarConfig: profile.avatarConfig,
+              avatarConfig: profile.avatarConfig ?? { muscleMass: 0.5, bodyFat: 0.5 },
             });
             setRoutine(profile.routine);
             setDiet(profile.diet);

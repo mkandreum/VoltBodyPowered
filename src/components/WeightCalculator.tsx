@@ -132,11 +132,9 @@ export default function WeightCalculator({
     if (total > 0) {
       onWeightChange(total);
     }
-  // `onWeightChange` is intentionally excluded: it is an inline arrow defined
-  // in Workout.tsx on every render. Including it would cause an infinite loop
-  // because each call to onWeightChange (setWeightInput) triggers a Workout
-  // re-render which creates a new onWeightChange reference.
-  // The effect is safe to re-run only when `total` changes.
+  // `onWeightChange` is excluded from deps here because the caller (Workout.tsx)
+  // stabilises it with useCallback(() => setWeightInput(w), []).
+  // The stable reference means this effect correctly re-runs only when `total` changes.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [total]);
 

@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore, Exercise, WorkoutDay } from '../store/useAppStore';
 import { ChevronLeft, Play, CheckCircle2, Dumbbell, PlusCircle, Trash2, Star, CalendarClock, Flame } from 'lucide-react';
@@ -10,7 +10,7 @@ import { WEEKDAY_LABELS, getMondayFirstIndex, mapRoutineByWeekday } from '../lib
 import { format } from 'date-fns';
 import WeightCalculator from '../components/WeightCalculator';
 
-const WEEKDAY_FULL = ['Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado', 'Domingo'] as const;
+
 
 export default function Workout() {
   const {
@@ -35,6 +35,9 @@ export default function Workout() {
   const [isEditingDays, setIsEditingDays] = useState(false);
   const [moveSourceDayIndex, setMoveSourceDayIndex] = useState<number | null>(null);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'local' | 'syncing' | 'synced' | 'error'>('idle');
+
+  // Stable callback passed to WeightCalculator — avoids stale-closure issue with onWeightChange
+  const handleCalculatorWeightChange = useCallback((w: number) => setWeightInput(w), []);
 
   const routinesByDay = useMemo(() => mapRoutineByWeekday(routine), [routine]);
   const activeDayIndexes = useMemo(
@@ -96,7 +99,7 @@ export default function Workout() {
     draft[sourceIndex] = null;
     draft[targetIndex] = {
       ...sourceRoutine,
-      day: WEEKDAY_FULL[targetIndex],
+      day: WEEKDAY_LABELS[targetIndex].full,
     };
 
     const updatedRoutine = draft.filter(Boolean) as WorkoutDay[];
@@ -121,7 +124,7 @@ export default function Workout() {
     showToast({
       type: 'success',
       title: 'Dias de entreno actualizados',
-      message: `${WEEKDAY_FULL[sourceIndex]} movido a ${WEEKDAY_FULL[targetIndex]}.`,
+      message: `${WEEKDAY_LABELS[sourceIndex].full} movido a ${WEEKDAY_LABELS[targetIndex].full}.`,
     });
   };
 
@@ -554,7 +557,7 @@ export default function Workout() {
                   exerciseName={selectedExercise.name}
                   targetWeight={selectedExercise.weight}
                   userBodyweight={profile?.weight}
-                  onWeightChange={(w) => setWeightInput(w)}
+                  onWeightChange={handleCalculatorWeightChange}
                 />
                 
                 <div className="grid grid-cols-3 gap-3 mb-6">

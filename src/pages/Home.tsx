@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore } from '../store/useAppStore';
 import { Dumbbell, Utensils, Flame, Moon, Activity, Sparkles, Quote, Clock3, Camera } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { format, subDays } from 'date-fns';
+import { format, subDays, isValid } from 'date-fns';
 import { AppCard, SectionHeader, StatPill } from '../components/ui';
 import { fadeSlideUp, listStagger, timelineStagger, checkBounce } from '../lib/motion';
 import { getMondayFirstIndex, mapRoutineByWeekday } from '../lib/routineWeek';
@@ -56,14 +56,22 @@ export default function Home() {
   };
 
   const completedDays = useMemo(() => {
-    const uniqueDates = new Set(logs.map((log) => format(new Date(log.date), 'yyyy-MM-dd')));
+    const uniqueDates = new Set(
+      logs
+        .filter((log) => isValid(new Date(log.date)))
+        .map((log) => format(new Date(log.date), 'yyyy-MM-dd'))
+    );
     return uniqueDates.size;
   }, [logs]);
 
   const currentStreak = useMemo(() => {
     if (logs.length === 0) return 0;
 
-    const dateSet = new Set(logs.map((log) => format(new Date(log.date), 'yyyy-MM-dd')));
+    const dateSet = new Set(
+      logs
+        .filter((log) => isValid(new Date(log.date)))
+        .map((log) => format(new Date(log.date), 'yyyy-MM-dd'))
+    );
     let streak = 0;
     let cursor = new Date();
 
@@ -408,13 +416,7 @@ export default function Home() {
         <motion.button
           whileTap={{ scale: 0.98 }}
           onTapStart={triggerHaptic}
-          onClick={() => {
-            showToast({
-              type: 'info',
-              title: 'Sugerencia activada',
-              message: aiCoachCopy.subtitle,
-            });
-          }}
+          onClick={() => setTab('workout')}
           className="pressable pulse-surface rounded-xl border border-[var(--app-accent)]/40 px-4 py-3 text-sm font-bold text-white"
         >
           {aiCoachCopy.cta}

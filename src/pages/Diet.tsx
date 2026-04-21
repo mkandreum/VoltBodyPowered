@@ -23,7 +23,7 @@ export default function Diet() {
     if (!profile) return;
     setLoadingMealId(meal.id);
     try {
-      const newMeal = await generateAlternativeMeal(meal, profile);
+      const newMeal = await generateAlternativeMeal(meal, profile, authToken);
       const updatedDiet = {
         ...diet,
         meals: diet.meals.map((item) => (item.id === meal.id ? newMeal : item)),
@@ -146,17 +146,17 @@ export default function Diet() {
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
         <AppCard className="p-4 flex flex-col items-center justify-center text-center glass-panel">
-          <Beef className="text-[#ff3939] mb-2" size={24} />
+          <Beef className="text-red-400 mb-2" size={24} />
           <span className="text-xl font-bold text-white">{diet.macros.protein}g</span>
           <span className="text-xs text-gray-500 font-mono">Proteína</span>
         </AppCard>
         <AppCard className="p-4 flex flex-col items-center justify-center text-center glass-panel">
-          <Wheat className="text-[#ffb839] mb-2" size={24} />
+          <Wheat className="text-amber-400 mb-2" size={24} />
           <span className="text-xl font-bold text-white">{diet.macros.carbs}g</span>
           <span className="text-xs text-gray-500 font-mono">Carbos</span>
         </AppCard>
         <AppCard className="p-4 flex flex-col items-center justify-center text-center glass-panel">
-          <Droplet className="text-[#39a6ff] mb-2" size={24} />
+          <Droplet className="text-sky-400 mb-2" size={24} />
           <span className="text-xl font-bold text-white">{diet.macros.fat}g</span>
           <span className="text-xs text-gray-500 font-mono">Grasas</span>
         </AppCard>

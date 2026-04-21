@@ -32,8 +32,9 @@ export const authService = {
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to login');
+      let msg = 'Failed to login';
+      try { const e = await response.json(); msg = e.error || msg; } catch { /* non-JSON body */ }
+      throw new Error(msg);
     }
 
     return response.json();
@@ -49,8 +50,9 @@ export const authService = {
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to register');
+      let msg = 'Failed to register';
+      try { const e = await response.json(); msg = e.error || msg; } catch { /* non-JSON body */ }
+      throw new Error(msg);
     }
 
     return response.json();
