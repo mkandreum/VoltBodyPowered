@@ -39,8 +39,6 @@ services:
       JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-in-production}
       GEMINI_API_KEY: ${GEMINI_API_KEY}
       APP_URL: ${APP_URL:-http://localhost:3000}
-      EXERCISEDB_API_KEY: ${EXERCISEDB_API_KEY}
-      EXERCISEDB_HOST: ${EXERCISEDB_HOST:-exercisedb.p.rapidapi.com}
     depends_on:
       db:
         condition: service_healthy

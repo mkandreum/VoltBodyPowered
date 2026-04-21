@@ -155,9 +155,9 @@ if (!apiKey) {
 
 const ai = new GoogleGenAI({ apiKey });
 
-// ExerciseDB config
-const EXERCISEDB_API_KEY = process.env.EXERCISEDB_API_KEY || '';
-const EXERCISEDB_HOST = process.env.EXERCISEDB_HOST || 'exercisedb.p.rapidapi.com';
+// ExerciseDB free open-source API — no API key required
+// Docs: https://oss.exercisedb.dev
+const EXERCISEDB_BASE = 'https://oss.exercisedb.dev/api/v1';
 
 /**
  * Translates a Spanish exercise name to an English search term
@@ -203,30 +203,25 @@ function toEnglishSearchTerm(nameEs = '') {
 }
 
 /**
- * Enriches an array of exercises with GIF URLs from ExerciseDB.
+ * Enriches an array of exercises with GIF URLs from the free ExerciseDB API.
  * Only fills gifUrl when it is empty ('') — never overwrites existing URLs.
+ * No API key required.
  */
 async function enrichExercisesWithGifs(exercises = []) {
-  if (!EXERCISEDB_API_KEY) {
-    logInfo('ai.enrich_gifs.skipped_no_key');
-    return exercises;
-  }
-
   return Promise.all(
     exercises.map(async (ex) => {
       if (ex.gifUrl) return ex; // already has a GIF, skip
       try {
         const searchTerm = encodeURIComponent(toEnglishSearchTerm(ex.name));
-        const url = `https://${EXERCISEDB_HOST}/exercises/name/${searchTerm}?limit=1&offset=0`;
+        const url = `${EXERCISEDB_BASE}/exercises/search?name=${searchTerm}&limit=1`;
         const resp = await fetch(url, {
-          headers: {
-            'x-rapidapi-key': EXERCISEDB_API_KEY,
-            'x-rapidapi-host': EXERCISEDB_HOST,
-          },
+          headers: { 'Accept': 'application/json' },
         });
         if (!resp.ok) return ex;
         const data = await resp.json();
-        const gifUrl = Array.isArray(data) && data[0]?.gifUrl ? data[0].gifUrl : '';
+        // Response is { data: [...] } or directly an array
+        const list = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : []);
+        const gifUrl = list[0]?.gifUrl || '';
         return { ...ex, gifUrl };
       } catch {
         return ex; // silently degrade — no GIF is better than a crash
