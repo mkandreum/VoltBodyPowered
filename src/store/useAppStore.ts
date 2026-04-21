@@ -313,7 +313,8 @@ export const useAppStore = create<AppState>()(
       clearToasts: () => set({ toasts: [] }),
       addWeightLog: (log) =>
         set((state) => ({
-          weightLogs: [...state.weightLogs.filter((l) => l.date !== log.date), log],
+          weightLogs: [...state.weightLogs.filter((l) => l.date !== log.date), log]
+            .sort((a, b) => a.date.localeCompare(b.date)),
         })),
       toggleMealEaten: (mealId, date) =>
         set((state) => {

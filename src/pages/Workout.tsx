@@ -229,7 +229,7 @@ export default function Workout() {
                 setIsEditingDays((prev) => !prev);
                 setMoveSourceDayIndex(null);
               }}
-              className="tap-target rounded-xl border border-[var(--app-border)] bg-black/30 px-3 py-2 text-[11px] font-semibold text-gray-300 transition-colors hover:border-[var(--app-accent)]/50 hover:text-white"
+              className="tap-target neuro-raised px-3 py-2 text-[11px] font-semibold text-gray-300 transition-all hover:text-white"
             >
               {isEditingDays ? 'Cancelar' : 'Editar dias de entreno'}
             </button>
@@ -254,8 +254,8 @@ export default function Workout() {
                   isEditingDays && !hasRoutine ? 'cursor-pointer opacity-75' : '',
                   isEditingDays && isMoveSource ? 'border-amber-400 bg-amber-500/20 text-amber-200' : '',
                   isSelected
-                    ? 'border-[var(--app-accent)] bg-[color:var(--app-accent)]/18 text-[var(--app-accent)]'
-                    : 'border-[var(--app-border)] bg-black/30 text-gray-300',
+                    ? 'border-[color:var(--app-accent)]/60 text-[var(--app-accent)] shadow-[inset_2px_2px_6px_var(--neuro-shadow-dark),0_0_10px_color-mix(in_srgb,var(--app-accent)_18%,transparent)]'
+                    : 'border-[color:var(--neuro-shadow-light)]/50 text-gray-300 shadow-[3px_3px_8px_var(--neuro-shadow-dark),-2px_-2px_6px_var(--neuro-shadow-light)]',
                   isEditingDays && !hasRoutine ? 'border-dashed' : '',
                 ].join(' ')}
               >
@@ -318,8 +318,8 @@ export default function Workout() {
           <span>Checklist de sesion</span>
           <span>{completedSets}/{plannedSets} series</span>
         </div>
-        <div className="h-2 w-full overflow-hidden rounded-full bg-black/45">
-          <div className="h-full rounded-full bg-[var(--app-accent)] transition-all" style={{ width: `${sessionProgress}%` }} />
+        <div className="h-2.5 w-full neuro-progress-track">
+          <div className="neuro-progress-fill" style={{ width: `${sessionProgress}%` }} />
         </div>
         <div className="mt-2 flex items-center justify-between text-[11px]">
           <span className="text-gray-400">Progreso: {sessionProgress}%</span>
@@ -424,7 +424,7 @@ export default function Workout() {
               className={`tap-target px-3 py-1.5 text-xs rounded-full border transition-colors ${
                 selectedMuscleGroup === group
                   ? 'border-[color:var(--app-accent)] bg-[color:var(--app-accent)]/10 text-[var(--app-accent)]'
-                  : 'border-[var(--app-border)] text-gray-400'
+                  : 'border-[color:var(--neuro-shadow-light)]/50 text-gray-400 shadow-[3px_3px_8px_var(--neuro-shadow-dark),-1px_-1px_5px_var(--neuro-shadow-light)]'
               }`}
             >
               {group}
@@ -437,7 +437,7 @@ export default function Workout() {
             const alreadyAdded = customWorkout.some((item) => item.id === exercise.id);
 
             return (
-              <div key={exercise.id} className="flex items-center justify-between bg-black/45 border border-[var(--app-border)] rounded-xl p-3">
+              <div key={exercise.id} className="flex items-center justify-between neuro-inset p-3">
                 <div>
                   <p className="text-sm text-white font-medium">{exercise.name}</p>
                   <p className="text-xs text-gray-500">{exercise.muscleGroup} • {exercise.defaultSets}x{exercise.defaultReps}</p>
@@ -445,7 +445,7 @@ export default function Workout() {
                 <button
                   onClick={() => addToCustomWorkout(exercise)}
                   disabled={alreadyAdded}
-                  className="p-2 rounded-full bg-[var(--app-border)] text-gray-300 hover:text-[var(--app-accent)] disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="p-2 rounded-full neuro-raised text-gray-300 hover:text-[var(--app-accent)] disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <PlusCircle size={16} />
                 </button>
@@ -460,14 +460,14 @@ export default function Workout() {
           <SectionHeader title={`📋 Tu Rutina Personal (${customWorkout.length})`} />
           <div className="space-y-2">
             {customWorkout.map((exercise) => (
-              <div key={exercise.id} className="flex items-center justify-between bg-black/45 border border-[var(--app-border)] rounded-xl p-3">
+              <div key={exercise.id} className="flex items-center justify-between neuro-inset p-3">
                 <div>
                   <p className="text-sm text-white">{exercise.name}</p>
                   <p className="text-xs text-gray-500">{exercise.muscleGroup}</p>
                 </div>
                 <button
                   onClick={() => removeFromCustomWorkout(exercise.id)}
-                  className="p-2 rounded-full bg-[var(--app-border)] text-gray-300 hover:text-red-400"
+                  className="p-2 rounded-full neuro-raised text-gray-300 hover:text-red-400"
                 >
                   <Trash2 size={16} />
                 </button>
@@ -505,15 +505,15 @@ export default function Workout() {
             <div className="flex-1 p-6 flex flex-col">
               <h2 className="text-3xl font-bold text-white mb-2">{selectedExercise.name}</h2>
               <div className="flex gap-4 mb-8">
-                <span className="app-surface border border-[var(--app-border)] px-4 py-2 rounded-full text-sm app-accent font-mono glow-box">
+                <span className="neuro-inset px-4 py-2 rounded-full text-sm app-accent font-mono glow-box">
                   {selectedExercise.muscleGroup}
                 </span>
-                <span className="app-surface border border-[var(--app-border)] px-4 py-2 rounded-full text-sm text-gray-300 font-mono">
+                <span className="neuro-inset px-4 py-2 rounded-full text-sm text-gray-300 font-mono">
                   {selectedExercise.sets} x {selectedExercise.reps}
                 </span>
               </div>
 
-              <div className="app-surface border border-[var(--app-border)] rounded-3xl p-6 mb-8">
+              <div className="neuro-raised rounded-3xl p-6 mb-8">
                 <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
                   <CheckCircle2 className="app-accent" />
                   Registrar Series ✏️

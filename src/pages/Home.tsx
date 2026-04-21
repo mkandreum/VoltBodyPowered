@@ -11,7 +11,7 @@ import { workoutService } from '../services/workoutService';
 
 function FlipMetric({ value, label }: { value: string; label: string }) {
   return (
-    <div className="rounded-2xl border border-[var(--app-border)] bg-black/35 px-3 py-2">
+    <div className="neuro-inset px-3 py-2">
       <AnimatePresence mode="wait">
         <motion.p
           key={value}
@@ -226,12 +226,17 @@ export default function Home() {
 
   const eatenTodayMeals = mealEatenRecord[todayDateKey] ?? [];
 
+  const parseMealHour = (time: string): number => {
+    const match = String(time || '').match(/^(\d{1,2}):/);
+    return match ? parseInt(match[1], 10) : -1;
+  };
+
   const isBreakfastEaten = useMemo(() => {
     if (!diet?.meals) return false;
     return diet.meals.some((m) => {
-      const t = String(m.time || '').toLowerCase();
+      const hour = parseMealHour(m.time);
       const n = String(m.name || '').toLowerCase();
-      const isBreakfast = t.includes('07') || t.includes('08') || t.includes('09') || n.includes('desay');
+      const isBreakfast = (hour >= 6 && hour <= 10) || n.includes('desay');
       return isBreakfast && eatenTodayMeals.includes(m.id);
     });
   }, [diet?.meals, eatenTodayMeals]);
@@ -239,9 +244,9 @@ export default function Home() {
   const isLunchEaten = useMemo(() => {
     if (!diet?.meals) return false;
     return diet.meals.some((m) => {
-      const t = String(m.time || '').toLowerCase();
+      const hour = parseMealHour(m.time);
       const n = String(m.name || '').toLowerCase();
-      const isLunch = t.includes('13') || t.includes('14') || t.includes('15') || n.includes('comida');
+      const isLunch = (hour >= 12 && hour <= 16) || n.includes('comida');
       return isLunch && eatenTodayMeals.includes(m.id);
     });
   }, [diet?.meals, eatenTodayMeals]);
@@ -423,7 +428,7 @@ export default function Home() {
             <motion.div
               key={`${item.time}-${item.title}`}
               {...listStagger(index)}
-              className="flex items-center gap-3 rounded-xl border border-[var(--app-border)] bg-black/35 p-3"
+              className="flex items-center gap-3 neuro-inset p-3 rounded-xl"
             >
               <div className={`timeline-dot ${item.done ? 'done' : ''}`} />
               <div className="min-w-[54px] text-xs font-mono text-gray-400">{item.time}</div>
@@ -445,7 +450,7 @@ export default function Home() {
             whileTap={{ scale: 0.97 }}
             onTapStart={triggerHaptic}
             onClick={() => void quickLogSet()}
-            className="interactive-tile tap-target pressable pulse-surface rounded-xl border border-[var(--app-border)] bg-black/35 px-3 py-4 text-xs font-semibold text-white"
+            className="interactive-tile tap-target pressable pulse-surface neuro-raised px-3 py-4 text-xs font-semibold text-white"
           >
             <Dumbbell size={16} className="mx-auto mb-2 app-accent" />
             Registrar serie 📝
@@ -454,7 +459,7 @@ export default function Home() {
             whileTap={{ scale: 0.97 }}
             onTapStart={triggerHaptic}
             onClick={() => setTab('diet')}
-            className="interactive-tile tap-target pressable pulse-surface rounded-xl border border-[var(--app-border)] bg-black/35 px-3 py-4 text-xs font-semibold text-white"
+            className="interactive-tile tap-target pressable pulse-surface neuro-raised px-3 py-4 text-xs font-semibold text-white"
           >
             <Utensils size={16} className="mx-auto mb-2 app-accent" />
             Swap meal 🔄
@@ -463,7 +468,7 @@ export default function Home() {
             whileTap={{ scale: 0.97 }}
             onTapStart={triggerHaptic}
             onClick={() => setTab('profile')}
-            className="interactive-tile tap-target pressable pulse-surface rounded-xl border border-[var(--app-border)] bg-black/35 px-3 py-4 text-xs font-semibold text-white"
+            className="interactive-tile tap-target pressable pulse-surface neuro-raised px-3 py-4 text-xs font-semibold text-white"
           >
             <Camera size={16} className="mx-auto mb-2 app-accent" />
             Subir progreso 📸

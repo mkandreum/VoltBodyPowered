@@ -30,7 +30,7 @@ export default function BottomNav() {
 
   return (
     <div className="fixed left-1/2 -translate-x-1/2 z-50 w-[96%] max-w-[520px] bottom-[calc(0.65rem+env(safe-area-inset-bottom))]">
-      <div className="ios-pill-nav glass-panel border border-[color:var(--app-border)]/70 rounded-full p-2.5 shadow-2xl">
+      <div className="ios-pill-nav border border-[color:var(--neuro-shadow-light)]/50 rounded-full p-2.5">
         <div className="grid grid-cols-[1fr_1fr_auto_1fr_1fr] gap-2 items-center">
           {navItems.slice(0, 2).map((item) => {
             const isActive = currentTab === item.id;
@@ -78,8 +78,8 @@ export default function BottomNav() {
             className={clsx(
               'relative overflow-hidden tap-target px-2 min-w-[124px] h-12 rounded-full border transition-all text-center',
               currentTab === 'home'
-                ? 'border-[color:var(--app-accent)]/60 bg-[color:var(--app-accent)]/10 app-accent'
-                : 'border-[color:var(--app-border)]/80 bg-black/20 text-gray-300 hover:text-white'
+                ? 'border-[color:var(--app-accent)]/55 app-accent shadow-[inset_3px_3px_8px_var(--neuro-shadow-dark),inset_-2px_-2px_6px_var(--neuro-shadow-light),0_0_14px_color-mix(in_srgb,var(--app-accent)_22%,transparent)]'
+                : 'border-[color:var(--neuro-shadow-light)]/60 text-gray-300 hover:text-white shadow-[4px_4px_12px_var(--neuro-shadow-dark),-2px_-2px_8px_var(--neuro-shadow-light)]'
             )}
           >
             {currentTab === 'home' && (

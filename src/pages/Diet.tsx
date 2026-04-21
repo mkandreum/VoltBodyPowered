@@ -125,20 +125,20 @@ export default function Diet() {
         <div className="grid grid-cols-3 gap-2 mb-4">
           <StatPill label="kcal" value={`${diet.dailyCalories}`} />
           <StatPill label="comidas" value={`${diet.meals.length}`} />
-          <StatPill label="comidas hoy" value={`${eatenCount}/${diet.meals.length}`} />
+          <StatPill label="completadas" value={`${eatenCount}/${diet.meals.length}`} />
         </div>
 
-        <div className="mb-4 rounded-xl border border-[var(--app-border)] bg-black/35 p-3">
+        <div className="mb-4 neuro-inset p-3">
           <div className="mb-2 flex items-center justify-between text-xs text-gray-400">
             <span>Cumplimiento diario</span>
             <span>{dailyCompliance}%</span>
           </div>
-          <div className="h-2 w-full overflow-hidden rounded-full bg-black/45">
-            <div className="h-full rounded-full bg-[var(--app-accent)]" style={{ width: `${dailyCompliance}%` }} />
+          <div className="h-2.5 w-full neuro-progress-track">
+            <div className="neuro-progress-fill" style={{ width: `${dailyCompliance}%` }} />
           </div>
         </div>
 
-        <div className="rounded-xl border border-[var(--app-border)] bg-black/30 p-3 text-xs text-gray-300">
+        <div className="neuro-inset p-3 text-xs text-gray-300">
           💡 Tip: si entrenas intenso hoy, prioriza proteína + carbohidrato en la comida post-entreno.
         </div>
       </AppCard>
@@ -198,7 +198,7 @@ export default function Diet() {
                 <button
                   onClick={() => handleSwap(meal)}
                   disabled={loadingMealId === meal.id}
-                  className="tap-target pressable pulse-surface p-2 bg-[var(--app-border)] rounded-full text-gray-400 hover:text-[var(--app-accent)] transition-colors disabled:opacity-50 flex-shrink-0"
+                  className="tap-target pressable pulse-surface p-2 neuro-raised rounded-full text-gray-400 hover:text-[var(--app-accent)] transition-colors disabled:opacity-50 flex-shrink-0"
                   title="Cambiar comida"
                 >
                   <RefreshCw size={16} className={loadingMealId === meal.id ? 'animate-spin' : ''} />
@@ -261,7 +261,7 @@ export default function Diet() {
           <p>Queso feta: {(baseSpecialDish['queso feta'].grams * scale).toFixed(0)} g</p>
         </div>
 
-        <div className="mt-5 rounded-xl border border-[var(--app-border)] bg-black/35 p-3">
+        <div className="mt-5 neuro-inset p-3">
           <label className="mb-3 flex items-center justify-between text-sm text-gray-300">
             Equivalencias rapidas por macros
             <input
@@ -273,10 +273,10 @@ export default function Diet() {
 
           {macroQuickMode ? (
             <div className="grid grid-cols-1 gap-2 text-xs text-gray-300 sm:grid-cols-2">
-              <div className="rounded-lg border border-[var(--app-border)] bg-black/30 p-2">+25g proteina: +120g pollo o +1 scoop whey</div>
-              <div className="rounded-lg border border-[var(--app-border)] bg-black/30 p-2">+30g carbos: +45g avena o +130g arroz cocido</div>
-              <div className="rounded-lg border border-[var(--app-border)] bg-black/30 p-2">+10g grasas: +15g frutos secos o +12g aceite de oliva</div>
-              <div className="rounded-lg border border-[var(--app-border)] bg-black/30 p-2">Balance actual: P {Math.round((diet.macros.protein / totalMacros) * 100)}% / C {Math.round((diet.macros.carbs / totalMacros) * 100)}% / G {Math.round((diet.macros.fat / totalMacros) * 100)}%</div>
+              <div className="neuro-inset p-2">+25g proteina: +120g pollo o +1 scoop whey</div>
+              <div className="neuro-inset p-2">+30g carbos: +45g avena o +130g arroz cocido</div>
+              <div className="neuro-inset p-2">+10g grasas: +15g frutos secos o +12g aceite de oliva</div>
+              <div className="neuro-inset p-2">Balance actual: P {Math.round((diet.macros.protein / totalMacros) * 100)}% / C {Math.round((diet.macros.carbs / totalMacros) * 100)}% / G {Math.round((diet.macros.fat / totalMacros) * 100)}%</div>
             </div>
           ) : (
             <p className="text-xs text-gray-500">Activa el switch para ver reemplazos rapidos por macro.</p>

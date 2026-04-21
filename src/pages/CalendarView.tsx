@@ -176,8 +176,8 @@ export default function CalendarView() {
                   <span>Progreso por series</span>
                   <span>{completedSets}/{totalSets} series</span>
                 </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-black/50">
-                  <div className="h-full rounded-full bg-[var(--app-accent)] transition-all" style={{ width: `${sessionProgress}%` }} />
+                <div className="h-2.5 w-full neuro-progress-track">
+                  <div className="neuro-progress-fill" style={{ width: `${sessionProgress}%` }} />
                 </div>
               </div>
 
