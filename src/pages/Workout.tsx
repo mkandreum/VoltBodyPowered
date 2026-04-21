@@ -1,14 +1,16 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore, Exercise, WorkoutDay } from '../store/useAppStore';
 import { ChevronLeft, Play, CheckCircle2, Dumbbell, PlusCircle, Trash2, Star, CalendarClock, Flame } from 'lucide-react';
 import { workoutService } from '../services/workoutService';
 import { authService } from '../services/authService';
 import { AppCard, SectionHeader, StatPill } from '../components/ui';
-import { listStagger } from '../lib/motion';
+import { listStagger, slideUpSheet, checkBounce, successBurst, completionGlow, tapPulse, timelineStagger } from '../lib/motion';
 import { WEEKDAY_LABELS, getMondayFirstIndex, mapRoutineByWeekday } from '../lib/routineWeek';
+import { format } from 'date-fns';
+import WeightCalculator from '../components/WeightCalculator';
 
-const WEEKDAY_FULL = ['Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado', 'Domingo'] as const;
+
 
 export default function Workout() {
   const {
@@ -27,11 +29,15 @@ export default function Workout() {
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
   const [weightInput, setWeightInput] = useState<number>(0);
   const [repsInput, setRepsInput] = useState<number>(0);
+  const [setsInput, setSetsInput] = useState<number>(1);
   const [selectedMuscleGroup, setSelectedMuscleGroup] = useState<string>('Todos');
   const [selectedDayIndex, setSelectedDayIndex] = useState<number>(() => getMondayFirstIndex(new Date()));
   const [isEditingDays, setIsEditingDays] = useState(false);
   const [moveSourceDayIndex, setMoveSourceDayIndex] = useState<number | null>(null);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'local' | 'syncing' | 'synced' | 'error'>('idle');
+
+  // Stable callback passed to WeightCalculator — avoids stale-closure issue with onWeightChange
+  const handleCalculatorWeightChange = useCallback((w: number) => setWeightInput(w), []);
 
   const routinesByDay = useMemo(() => mapRoutineByWeekday(routine), [routine]);
   const activeDayIndexes = useMemo(
@@ -46,7 +52,7 @@ export default function Workout() {
     ? exerciseLibrary
     : exerciseLibrary.filter((item) => item.muscleGroup === selectedMuscleGroup);
   const totalTodayExercises = todayRoutine?.exercises?.length || 0;
-  const todayDateKey = new Date().toISOString().slice(0, 10);
+  const todayDateKey = format(new Date(), 'yyyy-MM-dd');
   const todayLogs = useMemo(() => logs.filter((log) => log.date.slice(0, 10) === todayDateKey), [logs, todayDateKey]);
   const setsByExercise = useMemo(() => {
     return todayLogs.reduce<Map<string, number>>((acc, log) => {
@@ -93,7 +99,7 @@ export default function Workout() {
     draft[sourceIndex] = null;
     draft[targetIndex] = {
       ...sourceRoutine,
-      day: WEEKDAY_FULL[targetIndex],
+      day: WEEKDAY_LABELS[targetIndex].full,
     };
 
     const updatedRoutine = draft.filter(Boolean) as WorkoutDay[];
@@ -118,7 +124,7 @@ export default function Workout() {
     showToast({
       type: 'success',
       title: 'Dias de entreno actualizados',
-      message: `${WEEKDAY_FULL[sourceIndex]} movido a ${WEEKDAY_FULL[targetIndex]}.`,
+      message: `${WEEKDAY_LABELS[sourceIndex].full} movido a ${WEEKDAY_LABELS[targetIndex].full}.`,
     });
   };
 
@@ -164,20 +170,21 @@ export default function Workout() {
 
   const handleLog = async () => {
     if (selectedExercise && weightInput > 0 && repsInput > 0) {
-      const newLog = {
+      const count = Math.max(1, setsInput);
+      const newLogs = Array.from({ length: count }, () => ({
         date: new Date().toISOString(),
         exerciseId: selectedExercise.id,
         weight: weightInput,
         reps: repsInput,
-      };
+      }));
 
-      addLog(newLog);
+      newLogs.forEach((log) => addLog(log));
       setSyncStatus('local');
 
       if (authToken) {
         try {
           setSyncStatus('syncing');
-          await workoutService.addLog(authToken, newLog);
+          await Promise.all(newLogs.map((log) => workoutService.addLog(authToken, log)));
           setSyncStatus('synced');
         } catch (error) {
           console.error('Error persisting workout log:', error);
@@ -187,11 +194,12 @@ export default function Workout() {
 
       showToast({
         type: 'success',
-        title: 'Serie guardada 💪',
+        title: count > 1 ? `${count} series guardadas 💪` : 'Serie guardada 💪',
         message: `${weightInput}kg x ${repsInput} reps`,
       });
       setWeightInput(0);
       setRepsInput(0);
+      setSetsInput(1);
     }
   };
 
@@ -226,7 +234,8 @@ export default function Workout() {
                 setIsEditingDays((prev) => !prev);
                 setMoveSourceDayIndex(null);
               }}
-              className="tap-target rounded-xl border border-[var(--app-border)] bg-black/30 px-3 py-2 text-[11px] font-semibold text-gray-300 transition-colors hover:border-[var(--app-accent)]/50 hover:text-white"
+              aria-label={isEditingDays ? 'Cancelar edición de días' : 'Editar días de entrenamiento'}
+              className="tap-target neuro-raised px-3 py-2 text-[11px] font-semibold text-gray-300 transition-all hover:text-white"
             >
               {isEditingDays ? 'Cancelar' : 'Editar dias de entreno'}
             </button>
@@ -251,8 +260,8 @@ export default function Workout() {
                   isEditingDays && !hasRoutine ? 'cursor-pointer opacity-75' : '',
                   isEditingDays && isMoveSource ? 'border-amber-400 bg-amber-500/20 text-amber-200' : '',
                   isSelected
-                    ? 'border-[var(--app-accent)] bg-[color:var(--app-accent)]/18 text-[var(--app-accent)]'
-                    : 'border-[var(--app-border)] bg-black/30 text-gray-300',
+                    ? 'border-[color:var(--app-accent)]/60 text-[var(--app-accent)] shadow-[inset_2px_2px_6px_var(--neuro-shadow-dark),0_0_10px_color-mix(in_srgb,var(--app-accent)_18%,transparent)]'
+                    : 'border-[color:var(--neuro-shadow-light)]/50 text-gray-300 shadow-[3px_3px_8px_var(--neuro-shadow-dark),-2px_-2px_6px_var(--neuro-shadow-light)]',
                   isEditingDays && !hasRoutine ? 'border-dashed' : '',
                 ].join(' ')}
               >
@@ -315,8 +324,8 @@ export default function Workout() {
           <span>Checklist de sesion</span>
           <span>{completedSets}/{plannedSets} series</span>
         </div>
-        <div className="h-2 w-full overflow-hidden rounded-full bg-black/45">
-          <div className="h-full rounded-full bg-[var(--app-accent)] transition-all" style={{ width: `${sessionProgress}%` }} />
+        <div className="h-2.5 w-full neuro-progress-track">
+          <div className="neuro-progress-fill" style={{ width: `${sessionProgress}%` }} />
         </div>
         <div className="mt-2 flex items-center justify-between text-[11px]">
           <span className="text-gray-400">Progreso: {sessionProgress}%</span>
@@ -347,12 +356,22 @@ export default function Workout() {
       )}
 
       <div className="space-y-4">
-        {todayRoutine?.exercises.map((exercise, index) => (
+        {todayRoutine?.exercises.map((exercise, index) => {
+          const completedCount = setsByExercise.get(exercise.id) ?? 0;
+          const targetSets = Math.max(1, Number(exercise.sets || 0));
+          const isCompleted = completedCount >= targetSets;
+
+          return (
           <motion.div
             key={exercise.id}
             {...listStagger(index)}
+            whileTap={{ scale: 0.985 }}
             onClick={() => setSelectedExercise(exercise)}
-            className="panel-soft interactive-tile rounded-3xl p-5 flex items-center gap-4 cursor-pointer hover:border-[color:var(--app-accent)]/50 transition-colors group"
+            className={`panel-soft interactive-tile rounded-3xl p-5 flex items-center gap-4 cursor-pointer transition-all group ripple-host ${
+              isCompleted
+                ? 'border-[color:var(--app-accent)]/60 bg-[color:var(--app-accent)]/5 anim-glow-pulse'
+                : 'hover:border-[color:var(--app-accent)]/50'
+            }`}
           >
             <div className="w-16 h-16 rounded-2xl overflow-hidden bg-black flex-shrink-0 relative">
               <img 
@@ -363,7 +382,17 @@ export default function Workout() {
                 referrerPolicy="no-referrer" 
               />
               <div className="absolute inset-0 flex items-center justify-center bg-black/40 group-hover:bg-transparent transition-colors">
-                <Play className="app-accent opacity-80" size={20} />
+                <AnimatePresence mode="wait" initial={false}>
+                  {isCompleted ? (
+                    <motion.span key="done" {...checkBounce}>
+                      <CheckCircle2 className="text-[var(--app-accent)]" size={22} />
+                    </motion.span>
+                  ) : (
+                    <motion.span key="play" initial={{ opacity: 0.8 }} animate={{ opacity: 0.8 }}>
+                      <Play className="app-accent opacity-80" size={20} />
+                    </motion.span>
+                  )}
+                </AnimatePresence>
               </div>
             </div>
             <div className="flex-1">
@@ -371,10 +400,34 @@ export default function Workout() {
               <p className="text-sm text-gray-400 font-mono">
                 {exercise.sets} sets x {exercise.reps} reps
               </p>
+              {completedCount > 0 && (
+                <AnimatePresence>
+                  <motion.p
+                    key={`${exercise.id}-count`}
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                    className="text-xs font-mono mt-0.5 text-[var(--app-accent)]"
+                  >
+                    {isCompleted ? '✅ Completado' : `${completedCount}/${targetSets} series`}
+                  </motion.p>
+                </AnimatePresence>
+              )}
             </div>
-            <ChevronLeft className="text-gray-600 rotate-180 group-hover:text-[var(--app-accent)] transition-colors" />
+            <AnimatePresence mode="wait" initial={false}>
+              {isCompleted ? (
+                <motion.span key="done-icon" {...completionGlow}>
+                  <CheckCircle2 className="text-[var(--app-accent)]" size={20} />
+                </motion.span>
+              ) : (
+                <motion.span key="chevron" initial={{ opacity: 1 }} animate={{ opacity: 1 }}>
+                  <ChevronLeft className="text-gray-600 rotate-180 group-hover:text-[var(--app-accent)] transition-colors" />
+                </motion.span>
+              )}
+            </AnimatePresence>
           </motion.div>
-        ))}
+          );
+        })}
       </div>
 
       {profile?.weeklySpecialSession?.enabled && (
@@ -400,7 +453,7 @@ export default function Workout() {
               className={`tap-target px-3 py-1.5 text-xs rounded-full border transition-colors ${
                 selectedMuscleGroup === group
                   ? 'border-[color:var(--app-accent)] bg-[color:var(--app-accent)]/10 text-[var(--app-accent)]'
-                  : 'border-[var(--app-border)] text-gray-400'
+                  : 'border-[color:var(--neuro-shadow-light)]/50 text-gray-400 shadow-[3px_3px_8px_var(--neuro-shadow-dark),-1px_-1px_5px_var(--neuro-shadow-light)]'
               }`}
             >
               {group}
@@ -413,7 +466,7 @@ export default function Workout() {
             const alreadyAdded = customWorkout.some((item) => item.id === exercise.id);
 
             return (
-              <div key={exercise.id} className="flex items-center justify-between bg-black/45 border border-[var(--app-border)] rounded-xl p-3">
+              <div key={exercise.id} className="flex items-center justify-between neuro-inset p-3">
                 <div>
                   <p className="text-sm text-white font-medium">{exercise.name}</p>
                   <p className="text-xs text-gray-500">{exercise.muscleGroup} • {exercise.defaultSets}x{exercise.defaultReps}</p>
@@ -421,7 +474,7 @@ export default function Workout() {
                 <button
                   onClick={() => addToCustomWorkout(exercise)}
                   disabled={alreadyAdded}
-                  className="p-2 rounded-full bg-[var(--app-border)] text-gray-300 hover:text-[var(--app-accent)] disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="p-2 rounded-full neuro-raised text-gray-300 hover:text-[var(--app-accent)] disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <PlusCircle size={16} />
                 </button>
@@ -436,14 +489,14 @@ export default function Workout() {
           <SectionHeader title={`📋 Tu Rutina Personal (${customWorkout.length})`} />
           <div className="space-y-2">
             {customWorkout.map((exercise) => (
-              <div key={exercise.id} className="flex items-center justify-between bg-black/45 border border-[var(--app-border)] rounded-xl p-3">
+              <div key={exercise.id} className="flex items-center justify-between neuro-inset p-3">
                 <div>
                   <p className="text-sm text-white">{exercise.name}</p>
                   <p className="text-xs text-gray-500">{exercise.muscleGroup}</p>
                 </div>
                 <button
                   onClick={() => removeFromCustomWorkout(exercise.id)}
-                  className="p-2 rounded-full bg-[var(--app-border)] text-gray-300 hover:text-red-400"
+                  className="p-2 rounded-full neuro-raised text-gray-300 hover:text-red-400"
                 >
                   <Trash2 size={16} />
                 </button>
@@ -456,9 +509,7 @@ export default function Workout() {
       <AnimatePresence>
         {selectedExercise && (
           <motion.div
-            initial={{ opacity: 0, y: '100%' }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: '100%' }}
+            {...slideUpSheet}
             className="fixed inset-0 z-50 bg-[#050505] flex flex-col"
           >
             <div className="relative h-1/3 bg-black">
@@ -478,28 +529,43 @@ export default function Workout() {
               </button>
             </div>
 
-            <div className="flex-1 p-6 flex flex-col">
+            <div className="flex-1 p-6 flex flex-col overflow-y-auto">
               <h2 className="text-3xl font-bold text-white mb-2">{selectedExercise.name}</h2>
-              <div className="flex gap-4 mb-8">
-                <span className="app-surface border border-[var(--app-border)] px-4 py-2 rounded-full text-sm app-accent font-mono glow-box">
+              <div className="flex gap-4 mb-6">
+                <span className="neuro-inset px-4 py-2 rounded-full text-sm app-accent font-mono glow-box">
                   {selectedExercise.muscleGroup}
                 </span>
-                <span className="app-surface border border-[var(--app-border)] px-4 py-2 rounded-full text-sm text-gray-300 font-mono">
+                <span className="neuro-inset px-4 py-2 rounded-full text-sm text-gray-300 font-mono">
                   {selectedExercise.sets} x {selectedExercise.reps}
                 </span>
+                {selectedExercise.weight > 0 && (
+                  <span className="neuro-inset px-4 py-2 rounded-full text-sm text-gray-300 font-mono">
+                    Meta: <span className="app-accent font-bold">{selectedExercise.weight} kg</span>
+                  </span>
+                )}
               </div>
 
-              <div className="app-surface border border-[var(--app-border)] rounded-3xl p-6 mb-8">
-                <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+              <div className="neuro-raised rounded-3xl p-6 mb-8">
+                <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
                   <CheckCircle2 className="app-accent" />
-                  Registrar Serie ✏️
+                  Registrar Series ✏️
                 </h3>
+
+                {/* Smart Weight Calculator */}
+                <WeightCalculator
+                  exerciseId={selectedExercise.id}
+                  exerciseName={selectedExercise.name}
+                  targetWeight={selectedExercise.weight}
+                  userBodyweight={profile?.weight}
+                  onWeightChange={handleCalculatorWeightChange}
+                />
                 
-                <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="grid grid-cols-3 gap-3 mb-6">
                   <div>
                     <label className="block text-sm text-gray-400 mb-2 font-mono">Peso (kg)</label>
                     <input
                       type="number"
+                      inputMode="decimal"
                       value={weightInput || ''}
                       onChange={(e) => setWeightInput(Number(e.target.value))}
                       className="w-full input-field rounded-2xl p-4 text-2xl font-bold text-center"
@@ -510,21 +576,37 @@ export default function Workout() {
                     <label className="block text-sm text-gray-400 mb-2 font-mono">Reps</label>
                     <input
                       type="number"
+                      inputMode="numeric"
                       value={repsInput || ''}
                       onChange={(e) => setRepsInput(Number(e.target.value))}
                       className="w-full input-field rounded-2xl p-4 text-2xl font-bold text-center"
                       placeholder="0"
                     />
                   </div>
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2 font-mono">Series</label>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min={1}
+                      max={10}
+                      value={setsInput || ''}
+                      onChange={(e) => setSetsInput(Math.max(1, Number(e.target.value)))}
+                      className="w-full input-field rounded-2xl p-4 text-2xl font-bold text-center"
+                      placeholder="1"
+                    />
+                  </div>
                 </div>
 
-                <button
+                <motion.button
                   onClick={handleLog}
                   disabled={!weightInput || !repsInput}
-                  className="w-full tap-target primary-btn font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  whileTap={!weightInput || !repsInput ? {} : { scale: [1, 1.06, 0.97, 1.02, 1] }}
+                  transition={{ duration: 0.45, ease: [0.2, 0.9, 0.4, 1.1] }}
+                  className="w-full tap-target primary-btn ripple-host font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Guardar Serie 💾
-                </button>
+                  {setsInput > 1 ? `Guardar ${setsInput} series 💾` : 'Guardar Serie 💾'}
+                </motion.button>
               </div>
             </div>
           </motion.div>

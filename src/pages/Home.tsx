@@ -3,15 +3,15 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore } from '../store/useAppStore';
 import { Dumbbell, Utensils, Flame, Moon, Activity, Sparkles, Quote, Clock3, Camera } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { format, subDays } from 'date-fns';
+import { format, subDays, isValid } from 'date-fns';
 import { AppCard, SectionHeader, StatPill } from '../components/ui';
-import { fadeSlideUp, listStagger } from '../lib/motion';
+import { fadeSlideUp, listStagger, timelineStagger, checkBounce } from '../lib/motion';
 import { getMondayFirstIndex, mapRoutineByWeekday } from '../lib/routineWeek';
 import { workoutService } from '../services/workoutService';
 
 function FlipMetric({ value, label }: { value: string; label: string }) {
   return (
-    <div className="rounded-2xl border border-[var(--app-border)] bg-black/35 px-3 py-2">
+    <div className="neuro-inset px-3 py-2">
       <AnimatePresence mode="wait">
         <motion.p
           key={value}
@@ -29,8 +29,14 @@ function FlipMetric({ value, label }: { value: string; label: string }) {
   );
 }
 
+/** Parse HH:MM time string to integer hour. Defined outside component to avoid recreation on every render. */
+function parseMealHour(time: string): number {
+  const match = String(time || '').match(/^(\d{1,2}):/);
+  return match ? parseInt(match[1], 10) : -1;
+}
+
 export default function Home() {
-  const { profile, routine, diet, logs, insights, setTab, motivationPhrase, motivationPhoto, showToast, addLog, authToken } = useAppStore();
+  const { profile, routine, diet, logs, insights, setTab, motivationPhrase, motivationPhoto, showToast, addLog, authToken, mealEatenRecord, progressPhotos } = useAppStore();
   const [syncState, setSyncState] = useState<'idle' | 'local' | 'syncing' | 'synced' | 'error'>('idle');
 
   const today = new Date().toLocaleDateString('es-ES', { weekday: 'long' });
@@ -50,14 +56,22 @@ export default function Home() {
   };
 
   const completedDays = useMemo(() => {
-    const uniqueDates = new Set(logs.map((log) => format(new Date(log.date), 'yyyy-MM-dd')));
+    const uniqueDates = new Set(
+      logs
+        .filter((log) => isValid(new Date(log.date)))
+        .map((log) => format(new Date(log.date), 'yyyy-MM-dd'))
+    );
     return uniqueDates.size;
   }, [logs]);
 
   const currentStreak = useMemo(() => {
     if (logs.length === 0) return 0;
 
-    const dateSet = new Set(logs.map((log) => format(new Date(log.date), 'yyyy-MM-dd')));
+    const dateSet = new Set(
+      logs
+        .filter((log) => isValid(new Date(log.date)))
+        .map((log) => format(new Date(log.date), 'yyyy-MM-dd'))
+    );
     let streak = 0;
     let cursor = new Date();
 
@@ -224,16 +238,42 @@ export default function Home() {
     return cards;
   }, [weeklyConsistency, currentStreak, caloriesTarget, mealCount, sleepScore, nutritionAdherence, routineCompletion]);
 
+  const eatenTodayMeals = mealEatenRecord[todayDateKey] ?? [];
+
+  const isBreakfastEaten = useMemo(() => {
+    if (!diet?.meals) return false;
+    return diet.meals.some((m) => {
+      const hour = parseMealHour(m.time);
+      const n = String(m.name || '').toLowerCase();
+      const isBreakfast = (hour >= 6 && hour <= 10) || n.includes('desay');
+      return isBreakfast && eatenTodayMeals.includes(m.id);
+    });
+  }, [diet?.meals, eatenTodayMeals]);
+
+  const isLunchEaten = useMemo(() => {
+    if (!diet?.meals) return false;
+    return diet.meals.some((m) => {
+      const hour = parseMealHour(m.time);
+      const n = String(m.name || '').toLowerCase();
+      const isLunch = (hour >= 12 && hour <= 16) || n.includes('comida');
+      return isLunch && eatenTodayMeals.includes(m.id);
+    });
+  }, [diet?.meals, eatenTodayMeals]);
+
+  const hasProgressPhotoToday = useMemo(() => {
+    return progressPhotos.some((p) => p.date.slice(0, 10) === todayDateKey);
+  }, [progressPhotos, todayDateKey]);
+
   const timelineItems = [
     {
       time: profile?.mealTimes?.breakfast || '08:00',
       title: '🥣 Desayuno de arranque',
-      done: false,
+      done: isBreakfastEaten,
     },
     {
       time: profile?.mealTimes?.lunch || '14:00',
       title: '🍗 Comida principal',
-      done: false,
+      done: isLunchEaten,
     },
     {
       time: 'Entreno',
@@ -243,7 +283,7 @@ export default function Home() {
     {
       time: 'Progreso',
       title: '📸 Subir foto del día',
-      done: false,
+      done: hasProgressPhotoToday,
     },
   ];
 
@@ -376,13 +416,7 @@ export default function Home() {
         <motion.button
           whileTap={{ scale: 0.98 }}
           onTapStart={triggerHaptic}
-          onClick={() => {
-            showToast({
-              type: 'info',
-              title: 'Sugerencia activada',
-              message: aiCoachCopy.subtitle,
-            });
-          }}
+          onClick={() => setTab('workout')}
           className="pressable pulse-surface rounded-xl border border-[var(--app-accent)]/40 px-4 py-3 text-sm font-bold text-white"
         >
           {aiCoachCopy.cta}
@@ -396,15 +430,43 @@ export default function Home() {
           {timelineItems.map((item, index) => (
             <motion.div
               key={`${item.time}-${item.title}`}
-              {...listStagger(index)}
-              className="flex items-center gap-3 rounded-xl border border-[var(--app-border)] bg-black/35 p-3"
+              {...timelineStagger(index)}
+              className={`flex items-center gap-3 neuro-inset p-3 rounded-xl transition-all ${
+                item.done ? 'border border-[color:var(--app-accent)]/20' : ''
+              }`}
             >
-              <div className={`timeline-dot ${item.done ? 'done' : ''}`} />
+              <AnimatePresence mode="wait" initial={false}>
+                {item.done ? (
+                  <motion.div key="done-dot" {...checkBounce} className="timeline-dot done" />
+                ) : (
+                  <motion.div key="pending-dot" initial={{ opacity: 1 }} animate={{ opacity: 1 }} className="timeline-dot" />
+                )}
+              </AnimatePresence>
               <div className="min-w-[54px] text-xs font-mono text-gray-400">{item.time}</div>
               <p className="text-sm text-white flex-1">{item.title}</p>
-              <span className={`text-[10px] font-semibold uppercase tracking-wider ${item.done ? 'text-emerald-400' : 'text-gray-500'}`}>
-                {item.done ? 'Hecho' : 'Pendiente'}
-              </span>
+              <AnimatePresence mode="wait" initial={false}>
+                {item.done ? (
+                  <motion.span
+                    key="done-label"
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    transition={{ duration: 0.2, ease: [0.34, 1.2, 0.64, 1] }}
+                    className="text-[10px] font-semibold uppercase tracking-wider text-emerald-400"
+                  >
+                    Hecho ✓
+                  </motion.span>
+                ) : (
+                  <motion.span
+                    key="pending-label"
+                    initial={{ opacity: 1 }}
+                    animate={{ opacity: 1 }}
+                    className="text-[10px] font-semibold uppercase tracking-wider text-gray-500"
+                  >
+                    Pendiente
+                  </motion.span>
+                )}
+              </AnimatePresence>
             </motion.div>
           ))}
         </div>
@@ -419,7 +481,7 @@ export default function Home() {
             whileTap={{ scale: 0.97 }}
             onTapStart={triggerHaptic}
             onClick={() => void quickLogSet()}
-            className="interactive-tile tap-target pressable pulse-surface rounded-xl border border-[var(--app-border)] bg-black/35 px-3 py-4 text-xs font-semibold text-white"
+            className="interactive-tile tap-target pressable pulse-surface neuro-raised ripple-host px-3 py-4 text-xs font-semibold text-white"
           >
             <Dumbbell size={16} className="mx-auto mb-2 app-accent" />
             Registrar serie 📝
@@ -428,7 +490,7 @@ export default function Home() {
             whileTap={{ scale: 0.97 }}
             onTapStart={triggerHaptic}
             onClick={() => setTab('diet')}
-            className="interactive-tile tap-target pressable pulse-surface rounded-xl border border-[var(--app-border)] bg-black/35 px-3 py-4 text-xs font-semibold text-white"
+            className="interactive-tile tap-target pressable pulse-surface neuro-raised ripple-host px-3 py-4 text-xs font-semibold text-white"
           >
             <Utensils size={16} className="mx-auto mb-2 app-accent" />
             Swap meal 🔄
@@ -437,7 +499,7 @@ export default function Home() {
             whileTap={{ scale: 0.97 }}
             onTapStart={triggerHaptic}
             onClick={() => setTab('profile')}
-            className="interactive-tile tap-target pressable pulse-surface rounded-xl border border-[var(--app-border)] bg-black/35 px-3 py-4 text-xs font-semibold text-white"
+            className="interactive-tile tap-target pressable pulse-surface neuro-raised ripple-host px-3 py-4 text-xs font-semibold text-white"
           >
             <Camera size={16} className="mx-auto mb-2 app-accent" />
             Subir progreso 📸

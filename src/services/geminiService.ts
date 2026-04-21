@@ -37,27 +37,34 @@ async function extractErrorMessage(response: Response) {
   }
 }
 
-function getAuthHeaders(): Record<string, string> {
-  const stored = localStorage.getItem('voltbody-storage');
-  if (stored) {
-    try {
+function getAuthHeaders(token?: string | null): Record<string, string> {
+  if (token) {
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    };
+  }
+  // Fallback: try to read from persisted store for unauthenticated callers
+  try {
+    const stored = localStorage.getItem('voltbody-storage');
+    if (stored) {
       const parsed = JSON.parse(stored);
-      const token = parsed?.state?.authToken;
-      if (token) {
+      const storedToken = parsed?.state?.authToken;
+      if (storedToken) {
         return {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${storedToken}`,
         };
       }
-    } catch {}
-  }
+    }
+  } catch { /* silent */ }
   return { 'Content-Type': 'application/json' };
 }
 
-export async function generatePlan(profile: any): Promise<{ routine: WorkoutDay[]; diet: DietPlan; insights: Insights }> {
+export async function generatePlan(profile: any, token?: string | null): Promise<{ routine: WorkoutDay[]; diet: DietPlan; insights: Insights }> {
   const response = await apiFetch(`${API_URL}/ai/generate-plan`, {
     method: 'POST',
-    headers: getAuthHeaders(),
+    headers: getAuthHeaders(token),
     body: JSON.stringify(profile),
   });
 
@@ -68,10 +75,10 @@ export async function generatePlan(profile: any): Promise<{ routine: WorkoutDay[
   return response.json();
 }
 
-export async function generateAlternativeMeal(oldMeal: Meal, profile: any): Promise<Meal> {
+export async function generateAlternativeMeal(oldMeal: Meal, profile: any, token?: string | null): Promise<Meal> {
   const response = await apiFetch(`${API_URL}/ai/generate-alternative-meal`, {
     method: 'POST',
-    headers: getAuthHeaders(),
+    headers: getAuthHeaders(token),
     body: JSON.stringify({ oldMeal, profile }),
   });
 
@@ -88,10 +95,10 @@ export async function generateProgressReport(payload: {
   routine: unknown[];
   diet: unknown;
   progressPhotos: unknown[];
-}): Promise<ProgressReport> {
+}, token?: string | null): Promise<ProgressReport> {
   const response = await apiFetch(`${API_URL}/ai/generate-progress-report`, {
     method: 'POST',
-    headers: getAuthHeaders(),
+    headers: getAuthHeaders(token),
     body: JSON.stringify(payload),
   });
 

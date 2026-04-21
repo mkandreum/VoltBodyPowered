@@ -1,11 +1,13 @@
-import { useState, useRef } from 'react';
-import { motion } from 'motion/react';
+import { useState, useRef, useMemo } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore } from '../store/useAppStore';
 import { authService } from '../services/authService';
 import { workoutService } from '../services/workoutService';
 import { generateProgressReport, ProgressReport } from '../services/geminiService';
-import { User, LogOut, Activity, Target, Clock, Scale, Ruler, Camera, Plus, Edit2, Check, Palette, Quote } from 'lucide-react';
-import { listStagger } from '../lib/motion';
+import { User, LogOut, Activity, Target, Clock, Scale, Ruler, Camera, Plus, Edit2, Check, Palette, Quote, TrendingUp } from 'lucide-react';
+import { listStagger, checkBounce, tapPulse, numberRoll } from '../lib/motion';
+import { format, subWeeks, startOfWeek } from 'date-fns';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function Profile() {
   const {
@@ -27,6 +29,10 @@ export default function Profile() {
     logs,
     routine,
     diet,
+    weightLogs,
+    addWeightLog,
+    weeklyGoals,
+    toggleWeeklyGoal,
   } = useAppStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const progressInputRef = useRef<HTMLInputElement>(null);
@@ -36,15 +42,36 @@ export default function Profile() {
     weight: String(profile?.weight || ''),
     height: String(profile?.height || ''),
   });
-  const [weeklyGoals, setWeeklyGoals] = useState([
-    { id: 'habit-1', label: 'Completar 3 sesiones de fuerza', done: false },
-    { id: 'habit-2', label: 'Dormir 7h al menos 5 dias', done: false },
-    { id: 'habit-3', label: 'Cumplir proteina diaria 5 dias', done: false },
-  ]);
   const [reportLoading, setReportLoading] = useState(false);
   const [report, setReport] = useState<ProgressReport | null>(null);
+  const [weightInput, setWeightInput] = useState<string>('');
+
+  const todayDateKey = format(new Date(), 'yyyy-MM-dd');
+  const currentWeekStart = format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd');
+  const nextWeekStart = format(startOfWeek(new Date(new Date().getTime() + 7 * 24 * 60 * 60 * 1000), { weekStartsOn: 1 }), 'yyyy-MM-dd');
+  const alreadyLoggedThisWeek = weightLogs.some((l) => l.date >= currentWeekStart && l.date < nextWeekStart);
+  const lastWeightLog = weightLogs.length > 0 ? weightLogs[weightLogs.length - 1] : null;
+
+  const weightChartData = useMemo(() => {
+    const logByWeekStart = new Map(
+      weightLogs.map((l) => [format(startOfWeek(new Date(l.date), { weekStartsOn: 1 }), 'yyyy-MM-dd'), l.weight])
+    );
+    return Array.from({ length: 8 }, (_, i) => {
+      const weekDate = subWeeks(new Date(), 7 - i);
+      const weekStart = format(startOfWeek(weekDate, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+      return { week: `S${i + 1}`, peso: logByWeekStart.get(weekStart) ?? null };
+    });
+  }, [weightLogs]);
 
   if (!profile) return null;
+
+  const handleLogWeight = () => {
+    const val = Number(weightInput);
+    if (!val || val < 20 || val > 400) return;
+    addWeightLog({ date: todayDateKey, weight: val });
+    setWeightInput('');
+    showToast({ type: 'success', title: `Peso registrado: ${val} kg ⚖️` });
+  };
 
   const persistProfilePatch = async (patch: Record<string, unknown>, silent = true) => {
     if (!authToken) return;
@@ -118,7 +145,8 @@ export default function Profile() {
 
     showToast({
       type: 'success',
-      title: 'Cambios guardados ✅',
+      title: authToken ? 'Cambios guardados ✅' : 'Guardado localmente 💾',
+      message: authToken ? undefined : 'Inicia sesión para sincronizar con el servidor.',
     });
 
     setIsEditing(false);
@@ -133,12 +161,8 @@ export default function Profile() {
     await persistProfilePatch({ motivationPhrase });
   };
 
-  const toggleWeeklyGoal = (id: string) => {
-    setWeeklyGoals((prev) => prev.map((goal) => (goal.id === id ? { ...goal, done: !goal.done } : goal)));
-  };
-
   const completedGoals = weeklyGoals.filter((goal) => goal.done).length;
-  const weeklyGoalProgress = Math.round((completedGoals / weeklyGoals.length) * 100);
+  const weeklyGoalProgress = Math.round((completedGoals / Math.max(1, weeklyGoals.length)) * 100);
 
   const handleGenerateReport = async () => {
     setReportLoading(true);
@@ -149,7 +173,7 @@ export default function Profile() {
         routine,
         diet,
         progressPhotos: progressPhotos.map((p) => ({ date: p.date })),
-      });
+      }, authToken);
       setReport(response);
       showToast({
         type: 'success',
@@ -178,7 +202,7 @@ export default function Profile() {
         </h1>
         <button 
           onClick={() => isEditing ? handleSaveProfile() : setIsEditing(true)}
-          className="tap-target pressable p-2 app-surface border border-[var(--app-border)] rounded-full hover:border-[color:var(--app-accent)]/50 transition-colors"
+          className="tap-target pressable p-2 neuro-raised rounded-full hover:text-[var(--app-accent)] transition-colors"
         >
           {isEditing ? <Check className="app-accent" /> : <Edit2 className="text-gray-400 hover:text-white transition-colors" />}
         </button>
@@ -221,7 +245,7 @@ export default function Profile() {
       </motion.div>
 
       <motion.div {...listStagger(1)} className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
-        <div className="app-surface border border-[var(--app-border)] rounded-3xl p-5 flex items-center gap-4">
+        <div className="neuro-raised rounded-3xl p-5 flex items-center gap-4">
           <Scale className="app-accent" size={24} />
           <div>
             <p className="text-xs text-gray-500 font-mono">Peso</p>
@@ -237,7 +261,7 @@ export default function Profile() {
             )}
           </div>
         </div>
-        <div className="app-surface border border-[var(--app-border)] rounded-3xl p-5 flex items-center gap-4">
+        <div className="neuro-raised rounded-3xl p-5 flex items-center gap-4">
           <Ruler className="app-accent" size={24} />
           <div>
             <p className="text-xs text-gray-500 font-mono">Altura</p>
@@ -253,14 +277,14 @@ export default function Profile() {
             )}
           </div>
         </div>
-        <div className="app-surface border border-[var(--app-border)] rounded-3xl p-5 flex items-center gap-4">
+        <div className="neuro-raised rounded-3xl p-5 flex items-center gap-4">
           <Activity className="app-accent" size={24} />
           <div>
             <p className="text-xs text-gray-500 font-mono">Nivel</p>
             <p className="text-lg font-bold text-white capitalize">{profile.currentState.split(' ')[0]}</p>
           </div>
         </div>
-        <div className="app-surface border border-[var(--app-border)] rounded-3xl p-5 flex items-center gap-4">
+        <div className="neuro-raised rounded-3xl p-5 flex items-center gap-4">
           <Clock className="app-accent" size={24} />
           <div>
             <p className="text-xs text-gray-500 font-mono">Edad</p>
@@ -277,7 +301,7 @@ export default function Profile() {
           </h3>
           <button 
             onClick={() => progressInputRef.current?.click()}
-            className="tap-target pressable p-2 bg-[var(--app-border)] rounded-full text-white hover:text-[var(--app-accent)] transition-colors"
+            className="tap-target pressable p-2 neuro-raised rounded-full text-white hover:text-[var(--app-accent)] transition-colors"
           >
             <Plus size={16} />
           </button>
@@ -293,7 +317,7 @@ export default function Profile() {
         {progressPhotos.length > 0 ? (
           <div className="flex gap-4 overflow-x-auto pb-2">
             {progressPhotos.map((photo, i) => (
-              <div key={i} className="min-w-[120px] h-[160px] rounded-xl overflow-hidden border border-[var(--app-border)] relative">
+              <div key={i} className="min-w-[120px] h-[160px] rounded-xl overflow-hidden neuro-raised relative">
                 <img src={photo.url} alt="Progreso" className="w-full h-full object-cover" />
                 <div className="absolute bottom-0 inset-x-0 bg-black/60 backdrop-blur-sm p-1 text-center text-[10px] font-mono text-gray-300">
                   {new Date(photo.date).toLocaleDateString()}
@@ -303,6 +327,93 @@ export default function Profile() {
           </div>
         ) : (
           <p className="text-gray-500 text-sm text-center py-4">Sube fotos para ver tu evolución.</p>
+        )}
+      </div>
+
+      {/* ─── Weekly weight tracking ───────────────────── */}
+      <div className="glass-panel border border-[var(--app-border)] rounded-3xl p-6 mb-8">
+        <h3 className="text-lg font-bold text-white mb-1 flex items-center gap-2">
+          <TrendingUp className="app-accent" size={20} />
+          ⚖️ Registro de Peso Semanal
+        </h3>
+        <p className="text-xs text-gray-500 mb-4">
+          {alreadyLoggedThisWeek
+            ? `✅ Esta semana ya registraste ${lastWeightLog?.weight} kg`
+            : 'Registra tu peso una vez a la semana para ver tu evolución.'}
+        </p>
+
+        <div className="flex gap-3 mb-5">
+          <input
+            type="number"
+            min={20}
+            max={400}
+            step={0.1}
+            value={weightInput}
+            onChange={(e) => setWeightInput(e.target.value)}
+            placeholder={`Ej. ${profile.weight}`}
+            className="input-field flex-1"
+          />
+          <button
+            onClick={handleLogWeight}
+            disabled={!weightInput || alreadyLoggedThisWeek}
+            className="tap-target pressable primary-btn px-5 py-2 rounded-xl font-bold disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+          >
+            Guardar ⚖️
+          </button>
+        </div>
+
+        {weightChartData.some((d) => d.peso !== null) ? (
+          <div className="h-28 w-full neuro-inset p-2 rounded-xl">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={weightChartData}>
+                <XAxis dataKey="week" stroke="#6b7280" fontSize={10} tickLine={false} axisLine={false} />
+                <YAxis hide domain={['auto', 'auto']} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: 'var(--neuro-surface)', border: '1px solid var(--app-border)', borderRadius: '10px' }}
+                  itemStyle={{ color: 'var(--app-accent)' }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="peso"
+                  stroke="var(--app-accent)"
+                  strokeWidth={2.5}
+                  dot={{ r: 3, fill: 'var(--app-accent)', strokeWidth: 0 }}
+                  connectNulls
+                  activeDot={{ r: 5, fill: 'var(--app-accent)' }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <p className="text-xs text-gray-600 text-center py-2">Sin datos aún. ¡Empieza a registrar!</p>
+        )}
+
+        {weightLogs.length > 0 && (
+          <div className="mt-4 space-y-1 max-h-32 overflow-y-auto">
+            <AnimatePresence initial={false}>
+              {[...weightLogs].reverse().slice(0, 6).map((l, idx) => (
+                <motion.div
+                  key={l.date}
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  transition={{ delay: idx * 0.04, duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                  className="flex items-center justify-between neuro-inset px-3 py-1.5 rounded-lg"
+                >
+                  <span className="text-xs text-gray-400 font-mono">{l.date}</span>
+                  <AnimatePresence mode="wait">
+                    <motion.span
+                      key={l.weight}
+                      {...numberRoll}
+                      className="text-sm font-bold text-[var(--app-accent)]"
+                    >
+                      {l.weight} kg
+                    </motion.span>
+                  </AnimatePresence>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
         )}
       </div>
 
@@ -325,17 +436,19 @@ export default function Profile() {
             { id: 'verde-negro', label: '💚 Verde - Negro' },
             { id: 'ocaso-negro', label: '🌅 Ocaso - Negro' },
           ].map((option) => (
-            <button
+            <motion.button
               key={option.id}
+              whileTap={{ scale: 0.97 }}
+              transition={{ duration: 0.14, ease: [0.34, 1.2, 0.64, 1] }}
               onClick={() => handleThemeChange(option.id as 'aguamarina-negro' | 'verde-negro' | 'ocaso-negro')}
               className={`tap-target text-left px-4 py-3 rounded-xl border transition-all ${
                 theme === option.id
-                  ? 'border-[var(--app-accent)] bg-[color:var(--app-accent)]/10 text-[var(--app-accent)]'
-                  : 'border-[var(--app-border)] text-gray-300'
+                  ? 'border-[color:var(--app-accent)]/60 bg-[color:var(--app-accent)]/10 text-[var(--app-accent)] shadow-[inset_2px_2px_6px_var(--neuro-shadow-dark),inset_-1px_-1px_4px_var(--neuro-shadow-light)]'
+                  : 'neuro-raised text-gray-300'
               }`}
             >
               {option.label}
-            </button>
+            </motion.button>
           ))}
         </div>
       </div>
@@ -387,24 +500,40 @@ export default function Profile() {
           <span>Progreso semanal</span>
           <span>{completedGoals}/{weeklyGoals.length} metas</span>
         </div>
-        <div className="mb-4 h-2 w-full overflow-hidden rounded-full bg-black/45">
-          <div className="h-full rounded-full bg-[var(--app-accent)]" style={{ width: `${weeklyGoalProgress}%` }} />
+        <div className="mb-4 h-2.5 w-full neuro-progress-track">
+          <div className="neuro-progress-fill" style={{ width: `${weeklyGoalProgress}%` }} />
         </div>
         <div className="space-y-2">
-          {weeklyGoals.map((goal) => (
-            <button
+          {weeklyGoals.map((goal, idx) => {
+            const staggerProps = listStagger(idx);
+            return (
+            <motion.button
               key={goal.id}
               type="button"
               onClick={() => toggleWeeklyGoal(goal.id)}
-              className={`tap-target w-full rounded-xl border px-3 py-3 text-left text-sm transition-colors ${
+              initial={staggerProps.initial}
+              animate={staggerProps.animate}
+              whileTap={{ scale: 0.97 }}
+              transition={{ ...staggerProps.transition, type: 'spring', bounce: 0.3 }}
+              className={`tap-target w-full rounded-xl border px-3 py-3 text-left text-sm transition-all ${
                 goal.done
-                  ? 'border-emerald-400/50 bg-emerald-500/10 text-emerald-300'
-                  : 'border-[var(--app-border)] bg-black/30 text-gray-200'
+                  ? 'border-emerald-400/50 bg-emerald-500/10 text-emerald-300 shadow-[inset_2px_2px_5px_var(--neuro-shadow-dark)]'
+                  : 'neuro-raised text-gray-200'
               }`}
             >
-              {goal.done ? '✅' : '⬜'} {goal.label}
-            </button>
-          ))}
+              <span className="inline-flex items-center gap-2">
+                <AnimatePresence mode="wait" initial={false}>
+                  {goal.done ? (
+                    <motion.span key="done" {...checkBounce}>✅</motion.span>
+                  ) : (
+                    <motion.span key="undone" {...checkBounce}>⬜</motion.span>
+                  )}
+                </AnimatePresence>
+                {goal.label}
+              </span>
+            </motion.button>
+            );
+          })}
         </div>
       </div>
 
@@ -430,29 +559,29 @@ export default function Profile() {
         {report && (
           <div className="mt-5 space-y-3">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <div className="rounded-xl border border-[var(--app-border)] bg-black/35 p-3">
+              <div className="neuro-inset p-3">
                 <p className="text-[10px] uppercase tracking-wider text-gray-500">Score total</p>
                 <p className="text-xl font-black text-white">{report.overallScore}%</p>
               </div>
-              <div className="rounded-xl border border-[var(--app-border)] bg-black/35 p-3">
+              <div className="neuro-inset p-3">
                 <p className="text-[10px] uppercase tracking-wider text-gray-500">Progreso</p>
                 <p className="text-xl font-black text-white">{report.progressPercent}%</p>
               </div>
-              <div className="rounded-xl border border-[var(--app-border)] bg-black/35 p-3">
+              <div className="neuro-inset p-3">
                 <p className="text-[10px] uppercase tracking-wider text-gray-500">Consistencia</p>
                 <p className="text-xl font-black text-white">{report.consistencyPercent}%</p>
               </div>
-              <div className="rounded-xl border border-[var(--app-border)] bg-black/35 p-3">
+              <div className="neuro-inset p-3">
                 <p className="text-[10px] uppercase tracking-wider text-gray-500">Te falta</p>
                 <p className="text-xl font-black text-white">{report.weeksToVisibleChange} sem</p>
               </div>
             </div>
 
-            <div className="rounded-xl border border-[var(--app-border)] bg-black/30 p-3">
+            <div className="neuro-inset p-3">
               <p className="text-sm text-gray-200">{report.summary}</p>
             </div>
 
-            <div className="rounded-xl border border-[var(--app-border)] bg-black/30 p-3">
+            <div className="neuro-inset p-3">
               <p className="mb-2 text-xs uppercase tracking-wider text-gray-500">Que puedes mejorar</p>
               <ul className="space-y-1 text-sm text-gray-300">
                 {report.improvements?.map((item, index) => (
@@ -461,7 +590,7 @@ export default function Profile() {
               </ul>
             </div>
 
-            <div className="rounded-xl border border-[var(--app-border)] bg-black/30 p-3">
+            <div className="neuro-inset p-3">
               <p className="mb-2 text-xs uppercase tracking-wider text-gray-500">Siguientes pasos</p>
               <ul className="space-y-1 text-sm text-gray-300">
                 {report.nextActions?.map((item, index) => (

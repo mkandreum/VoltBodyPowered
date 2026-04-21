@@ -90,7 +90,7 @@ export default function Onboarding() {
           },
         };
 
-        const plan = await generatePlan(sanitizedData);
+        const plan = await generatePlan(sanitizedData, authToken);
         
         const profileData = {
           ...sanitizedData,

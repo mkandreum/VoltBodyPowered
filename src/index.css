@@ -28,6 +28,11 @@
   --app-glass-border: color-mix(in srgb, var(--app-border) 68%, white 10%);
   --app-grid-line: color-mix(in srgb, var(--app-border) 60%, transparent);
 
+  /* Neumorphic shadow palette */
+  --neuro-surface: #0b0b0b;
+  --neuro-shadow-dark: #020202;
+  --neuro-shadow-light: #121212;
+
   --motion-fast: 96ms;
   --motion-base: 168ms;
   --motion-expressive: 288ms;
@@ -82,6 +87,9 @@ body[data-theme="verde-negro"] {
   --app-bg: #050505;
   --app-surface: #121212;
   --app-border: #262626;
+  --neuro-surface: #0b0b0b;
+  --neuro-shadow-dark: #020202;
+  --neuro-shadow-light: #121212;
 }
 
 body[data-theme="aguamarina-negro"] {
@@ -90,6 +98,9 @@ body[data-theme="aguamarina-negro"] {
   --app-bg: #03110e;
   --app-surface: #0a1a16;
   --app-border: #1f3a34;
+  --neuro-surface: #071512;
+  --neuro-shadow-dark: #010b08;
+  --neuro-shadow-light: #0c201c;
 }
 
 body[data-theme="ocaso-negro"] {
@@ -98,6 +109,9 @@ body[data-theme="ocaso-negro"] {
   --app-bg: #120905;
   --app-surface: #1a100a;
   --app-border: #3a271c;
+  --neuro-surface: #160b06;
+  --neuro-shadow-dark: #0a0503;
+  --neuro-shadow-light: #1f1009;
 }
 
 .app-shell {
@@ -111,6 +125,11 @@ body[data-theme="ocaso-negro"] {
   #root,
   .app-shell {
     min-height: 100dvh;
+  }
+
+  /* Ensure safe-area below nav bar shows theme background, not white */
+  html {
+    background-color: var(--app-bg);
   }
 }
 
@@ -169,50 +188,72 @@ body[data-theme="ocaso-negro"] {
 .app-card {
   position: relative;
   overflow: hidden;
-  transition: transform var(--motion-base) cubic-bezier(0.22, 1, 0.36, 1),
-    border-color var(--motion-base),
-    box-shadow var(--motion-base),
-    background-color var(--motion-base);
-  box-shadow: var(--app-shadow-soft);
+  border-radius: 1.5rem;
+  background: var(--neuro-surface);
+  border: 1px solid color-mix(in srgb, var(--neuro-shadow-light) 80%, transparent);
+  box-shadow:
+    8px 8px 20px var(--neuro-shadow-dark),
+    -4px -4px 12px var(--neuro-shadow-light);
+  transition:
+    transform var(--motion-base) cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow var(--motion-base);
 }
 
 .app-card::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(150deg, color-mix(in srgb, var(--app-accent) 8%, transparent), transparent 45%);
-  opacity: 0.2;
+  background: linear-gradient(150deg, color-mix(in srgb, var(--app-accent) 5%, transparent), transparent 45%);
+  opacity: 0.25;
   pointer-events: none;
 }
 
 .glass-panel {
-  background: var(--app-glass);
-  border-color: var(--app-glass-border);
-  backdrop-filter: blur(18px);
+  background: var(--neuro-surface) !important;
+  border-color: color-mix(in srgb, var(--neuro-shadow-light) 70%, transparent) !important;
+  backdrop-filter: none;
+  box-shadow:
+    8px 8px 20px var(--neuro-shadow-dark),
+    -4px -4px 12px var(--neuro-shadow-light) !important;
 }
 
 .app-card.interactive-card:hover {
   transform: translateY(-2px);
-  box-shadow: var(--app-shadow-accent);
+  box-shadow:
+    10px 10px 28px var(--neuro-shadow-dark),
+    -5px -5px 16px var(--neuro-shadow-light),
+    0 0 0 1px color-mix(in srgb, var(--app-accent) 22%, transparent);
 }
 
 .app-card.interactive-card:active {
   transform: translateY(0) scale(0.995);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.32);
+  box-shadow:
+    inset 3px 3px 8px var(--neuro-shadow-dark),
+    inset -2px -2px 6px var(--neuro-shadow-light);
 }
 
 .stat-pill {
-  transition: transform var(--motion-fast) ease, border-color var(--motion-fast), background-color var(--motion-fast);
+  background: var(--neuro-surface);
+  border: 1px solid color-mix(in srgb, var(--neuro-shadow-light) 70%, transparent);
+  box-shadow:
+    4px 4px 10px var(--neuro-shadow-dark),
+    -2px -2px 7px var(--neuro-shadow-light);
+  transition: box-shadow var(--motion-fast), transform var(--motion-fast);
 }
 
 .stat-pill:hover {
   transform: translateY(-1px);
-  border-color: var(--app-accent);
-  background-color: rgba(255, 255, 255, 0.03);
+  box-shadow:
+    6px 6px 14px var(--neuro-shadow-dark),
+    -3px -3px 9px var(--neuro-shadow-light),
+    0 0 0 1px color-mix(in srgb, var(--app-accent) 30%, transparent);
 }
 
 .stat-pill:active {
   transform: translateY(0);
+  box-shadow:
+    inset 2px 2px 6px var(--neuro-shadow-dark),
+    inset -1px -1px 4px var(--neuro-shadow-light);
 }
 
 .pressable {
@@ -350,27 +391,38 @@ button:active {
   width: 10px;
   height: 10px;
   border-radius: 9999px;
-  border: 2px solid var(--app-border);
-  background: #111;
+  border: none;
+  background: var(--neuro-surface);
+  box-shadow:
+    2px 2px 5px var(--neuro-shadow-dark),
+    -1px -1px 3px var(--neuro-shadow-light);
 }
 
 .timeline-dot.done {
-  border-color: var(--app-accent);
   background: var(--app-accent);
-  box-shadow: 0 0 10px var(--app-accent-dim);
+  box-shadow:
+    0 0 8px var(--app-accent-dim),
+    2px 2px 5px var(--neuro-shadow-dark),
+    -1px -1px 3px color-mix(in srgb, var(--app-accent) 20%, transparent);
 }
 
 .onboard-theme input:not([type="checkbox"]),
 .onboard-theme select {
-  background-color: var(--app-surface) !important;
-  border-color: var(--app-border) !important;
+  background-color: var(--app-bg) !important;
+  border-color: color-mix(in srgb, var(--neuro-shadow-light) 55%, transparent) !important;
   color: #fff;
+  box-shadow:
+    inset 3px 3px 8px var(--neuro-shadow-dark),
+    inset -2px -2px 6px var(--neuro-shadow-light) !important;
 }
 
 .onboard-theme input:not([type="checkbox"]):focus,
 .onboard-theme select:focus {
-  border-color: var(--app-accent) !important;
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--app-accent) 65%, transparent) !important;
+  border-color: color-mix(in srgb, var(--app-accent) 70%, transparent) !important;
+  box-shadow:
+    inset 3px 3px 8px var(--neuro-shadow-dark),
+    inset -2px -2px 6px var(--neuro-shadow-light),
+    0 0 0 1px color-mix(in srgb, var(--app-accent) 45%, transparent) !important;
 }
 
 .onboard-theme ::placeholder {
@@ -396,15 +448,20 @@ button:active {
 }
 
 .panel-soft {
-  background: linear-gradient(160deg, color-mix(in srgb, var(--app-surface) 90%, black 10%), color-mix(in srgb, var(--app-surface-elevated) 90%, black 10%));
-  border: 1px solid var(--app-border);
-  box-shadow: var(--app-shadow-soft);
-  border-radius: 1.15rem;
+  background: var(--neuro-surface);
+  border: 1px solid color-mix(in srgb, var(--neuro-shadow-light) 65%, transparent);
+  box-shadow:
+    6px 6px 16px var(--neuro-shadow-dark),
+    -3px -3px 10px var(--neuro-shadow-light);
+  border-radius: 1.25rem;
 }
 
 .chip {
-  border: 1px solid color-mix(in srgb, var(--app-border) 86%, white 4%);
-  background: color-mix(in srgb, var(--app-surface-contrast) 86%, transparent);
+  border: 1px solid color-mix(in srgb, var(--neuro-shadow-light) 65%, transparent);
+  background: var(--neuro-surface);
+  box-shadow:
+    3px 3px 7px var(--neuro-shadow-dark),
+    -1px -1px 4px var(--neuro-shadow-light);
   border-radius: 9999px;
   padding: 0.34rem 0.7rem;
   font-size: 0.72rem;
@@ -413,49 +470,96 @@ button:active {
 
 .input-field {
   width: 100%;
-  border: 1px solid var(--app-border);
-  background: color-mix(in srgb, var(--app-surface) 82%, black 18%);
+  border: 1px solid color-mix(in srgb, var(--neuro-shadow-light) 55%, transparent);
+  background: var(--app-bg);
   color: #fff;
   border-radius: 0.88rem;
   padding: 0.8rem 0.95rem;
   outline: none;
-  transition: border-color var(--motion-fast), box-shadow var(--motion-fast), background-color var(--motion-fast);
+  box-shadow:
+    inset 3px 3px 8px var(--neuro-shadow-dark),
+    inset -2px -2px 6px var(--neuro-shadow-light);
+  transition: border-color var(--motion-fast), box-shadow var(--motion-fast);
 }
 
 .input-field:focus {
-  border-color: color-mix(in srgb, var(--app-accent) 82%, white 8%);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--app-accent) 60%, transparent);
+  border-color: color-mix(in srgb, var(--app-accent) 70%, transparent);
+  box-shadow:
+    inset 3px 3px 8px var(--neuro-shadow-dark),
+    inset -2px -2px 6px var(--neuro-shadow-light),
+    0 0 0 1px color-mix(in srgb, var(--app-accent) 45%, transparent);
 }
 
 .primary-btn {
   border-radius: 0.9rem;
   font-weight: 700;
-  background: linear-gradient(115deg, color-mix(in srgb, var(--app-accent) 90%, white 10%), var(--app-accent));
+  background: var(--app-accent);
   color: #050505;
-  border: 1px solid color-mix(in srgb, var(--app-accent) 70%, black 16%);
-  box-shadow: var(--app-shadow-accent);
+  border: none;
+  overflow: hidden;
+  box-shadow:
+    4px 4px 14px color-mix(in srgb, var(--app-accent) 40%, var(--neuro-shadow-dark)),
+    -2px -2px 8px color-mix(in srgb, var(--app-accent) 18%, transparent);
+  transition: box-shadow var(--motion-fast), transform var(--motion-fast);
+}
+
+.primary-btn:active {
+  transform: scale(0.97);
+  box-shadow:
+    2px 2px 8px color-mix(in srgb, var(--app-accent) 30%, var(--neuro-shadow-dark)),
+    -1px -1px 4px color-mix(in srgb, var(--app-accent) 12%, transparent);
+}
+
+.primary-btn:hover {
+  box-shadow:
+    6px 6px 18px color-mix(in srgb, var(--app-accent) 50%, var(--neuro-shadow-dark)),
+    -3px -3px 10px color-mix(in srgb, var(--app-accent) 22%, transparent);
 }
 
 .secondary-btn {
   border-radius: 0.9rem;
-  border: 1px solid var(--app-border);
-  background: color-mix(in srgb, var(--app-surface) 72%, black 28%);
+  border: 1px solid color-mix(in srgb, var(--neuro-shadow-light) 70%, transparent);
+  background: var(--neuro-surface);
   color: #fff;
+  overflow: hidden;
+  box-shadow:
+    4px 4px 12px var(--neuro-shadow-dark),
+    -2px -2px 8px var(--neuro-shadow-light);
+  transition: transform var(--motion-fast), box-shadow var(--motion-fast);
+}
+
+.secondary-btn:active {
+  transform: scale(0.97);
+  box-shadow:
+    inset 3px 3px 8px var(--neuro-shadow-dark),
+    inset -2px -2px 6px var(--neuro-shadow-light);
 }
 
 .danger-btn {
   border-radius: 0.9rem;
-  border: 1px solid rgba(244, 63, 94, 0.45);
-  background: rgba(190, 24, 93, 0.12);
+  border: 1px solid rgba(244, 63, 94, 0.35);
+  background: var(--neuro-surface);
   color: #fecdd3;
+  overflow: hidden;
+  box-shadow:
+    4px 4px 12px var(--neuro-shadow-dark),
+    -2px -2px 8px var(--neuro-shadow-light);
+  transition: transform var(--motion-fast), box-shadow var(--motion-fast);
+}
+
+.danger-btn:active {
+  transform: scale(0.97);
+  box-shadow:
+    inset 3px 3px 8px var(--neuro-shadow-dark),
+    inset -2px -2px 6px var(--neuro-shadow-light);
 }
 
 .nav-soft-btn {
   height: 48px;
   min-width: 48px;
-  border-radius: 9999px;
-  border: 1px solid color-mix(in srgb, var(--app-border) 86%, white 4%);
-  background: color-mix(in srgb, var(--app-surface) 78%, black 22%);
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--neuro-shadow-light) 60%, transparent);
+  background: var(--neuro-surface);
   color: #aeb5c1;
   display: inline-flex;
   align-items: center;
@@ -463,6 +567,10 @@ button:active {
   gap: 0;
   will-change: transform;
   backface-visibility: hidden;
+  box-shadow:
+    4px 4px 10px var(--neuro-shadow-dark),
+    -2px -2px 7px var(--neuro-shadow-light);
+  transition: box-shadow var(--motion-fast), border-color var(--motion-fast), color var(--motion-fast);
 }
 
 .nav-soft-btn svg {
@@ -474,19 +582,23 @@ button:active {
 }
 
 .nav-soft-btn-active {
-  border-color: color-mix(in srgb, var(--app-accent) 55%, var(--app-border));
-  background: color-mix(in srgb, var(--app-accent) 16%, var(--app-surface));
+  border-color: color-mix(in srgb, var(--app-accent) 50%, transparent);
+  background: var(--neuro-surface);
   color: var(--app-accent);
-  box-shadow: 0 10px 24px color-mix(in srgb, var(--app-accent) 24%, transparent);
+  box-shadow:
+    inset 3px 3px 8px var(--neuro-shadow-dark),
+    inset -2px -2px 6px var(--neuro-shadow-light),
+    0 0 14px color-mix(in srgb, var(--app-accent) 22%, transparent);
 }
 
 .ios-pill-nav {
   position: relative;
-  backdrop-filter: blur(18px) saturate(1.16);
-  background: color-mix(in srgb, var(--app-surface) 66%, transparent);
+  background: var(--neuro-surface);
+  border: 1px solid color-mix(in srgb, var(--neuro-shadow-light) 55%, transparent);
   box-shadow:
-    0 18px 45px rgba(0, 0, 0, 0.45),
-    0 0 0 1px color-mix(in srgb, var(--app-accent) 22%, transparent);
+    10px 10px 28px var(--neuro-shadow-dark),
+    -5px -5px 16px var(--neuro-shadow-light),
+    0 0 0 1px color-mix(in srgb, var(--app-accent) 12%, transparent);
   will-change: transform;
   backface-visibility: hidden;
   contain: layout paint;
@@ -502,8 +614,8 @@ button:active {
   inset: -1px;
   border-radius: inherit;
   pointer-events: none;
-  box-shadow: 0 0 20px color-mix(in srgb, var(--app-accent) 24%, transparent);
-  opacity: 0.7;
+  box-shadow: 0 0 18px color-mix(in srgb, var(--app-accent) 18%, transparent);
+  opacity: 0.5;
 }
 
 .liquid-indicator {
@@ -599,8 +711,10 @@ button:active {
   .stat-pill:hover {
     transform: none;
     filter: none;
-    box-shadow: var(--app-shadow-soft);
-    border-color: var(--app-border);
+    box-shadow:
+      6px 6px 16px var(--neuro-shadow-dark),
+      -3px -3px 10px var(--neuro-shadow-light);
+    border-color: color-mix(in srgb, var(--neuro-shadow-light) 70%, transparent);
   }
 
   .nav-soft-btn:hover svg {
@@ -614,16 +728,162 @@ button:active {
   }
 
   .app-card {
-    border-radius: 1.15rem;
-  }
-
-  .glass-panel {
-    backdrop-filter: blur(10px);
+    border-radius: 1.25rem;
   }
 
   .brutal-title {
     font-size: clamp(1.65rem, 8.4vw, 2.15rem);
     letter-spacing: -0.04em;
   }
+}
+
+/* ─── Neumorphic utilities ─────────────────────────────── */
+.neuro-raised {
+  background: var(--neuro-surface);
+  border: 1px solid color-mix(in srgb, var(--neuro-shadow-light) 65%, transparent);
+  box-shadow:
+    6px 6px 16px var(--neuro-shadow-dark),
+    -3px -3px 10px var(--neuro-shadow-light);
+  border-radius: 1.25rem;
+}
+
+.neuro-inset {
+  background: var(--app-bg);
+  border: 1px solid color-mix(in srgb, var(--neuro-shadow-light) 45%, transparent);
+  box-shadow:
+    inset 3px 3px 8px var(--neuro-shadow-dark),
+    inset -2px -2px 6px var(--neuro-shadow-light);
+  border-radius: 0.75rem;
+}
+
+/* Neumorphic progress track/bar */
+.neuro-progress-track {
+  background: var(--app-bg);
+  box-shadow:
+    inset 2px 2px 5px var(--neuro-shadow-dark),
+    inset -1px -1px 4px var(--neuro-shadow-light);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.neuro-progress-fill {
+  height: 100%;
+  border-radius: 9999px;
+  background: var(--app-accent);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--app-accent) 50%, transparent);
+  transition: width 0.32s cubic-bezier(0.34, 1.1, 0.64, 1);
+}
+
+/* ─── Premium Animation Keyframes ──────────────────────────── */
+
+/* Checkbox bounce-in */
+@keyframes check-bounce {
+  0%   { transform: scale(0.4); opacity: 0; }
+  55%  { transform: scale(1.18); opacity: 1; }
+  75%  { transform: scale(0.93); }
+  90%  { transform: scale(1.04); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Success burst ripple */
+@keyframes success-burst {
+  0%   { transform: scale(1); }
+  20%  { transform: scale(1.1); }
+  45%  { transform: scale(0.96); }
+  70%  { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+
+/* Glow pulse for exercise completion */
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 0px color-mix(in srgb, var(--app-accent) 0%, transparent); }
+  50%       { box-shadow: 0 0 18px color-mix(in srgb, var(--app-accent) 55%, transparent),
+                          0 0 36px color-mix(in srgb, var(--app-accent) 22%, transparent); }
+}
+
+/* Number counter roll */
+@keyframes number-roll-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Ripple expand for tap feedback */
+@keyframes ripple-expand {
+  0%   { transform: scale(0); opacity: 0.6; }
+  100% { transform: scale(2.8); opacity: 0; }
+}
+
+/* Shimmer sweep for loading state */
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+/* Fade float in for new list items */
+@keyframes fade-float-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Animation Utility Classes ─────────────────────────────── */
+
+/** Animate checkbox icon when toggled */
+.anim-check-bounce {
+  animation: check-bounce 0.38s cubic-bezier(0.34, 1.2, 0.64, 1) both;
+}
+
+/** Scale burst on save/complete */
+.anim-success-burst {
+  animation: success-burst 0.46s cubic-bezier(0.2, 0.9, 0.4, 1.1) both;
+}
+
+/** Pulsing glow — exercise completed */
+.anim-glow-pulse {
+  animation: glow-pulse 1.6s ease-in-out 2;
+}
+
+/** Haptic-style micro-bounce on tap (fallback for no haptics) */
+.anim-tap-haptic {
+  transition: transform 0.14s cubic-bezier(0.34, 1.2, 0.64, 1);
+}
+.anim-tap-haptic:active {
+  transform: scale(0.96);
+}
+
+/** New list item entry */
+.anim-fade-float-in {
+  animation: fade-float-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/** Loading shimmer skeleton */
+.anim-shimmer {
+  background: linear-gradient(90deg,
+    var(--neuro-surface) 25%,
+    color-mix(in srgb, var(--neuro-shadow-light) 80%, var(--app-accent) 8%) 50%,
+    var(--neuro-surface) 75%);
+  background-size: 400% 100%;
+  animation: shimmer 1.5s linear infinite;
+}
+
+/** Ripple container — position:relative required on parent */
+.ripple-host {
+  position: relative;
+  overflow: hidden;
+}
+
+.ripple-host::after {
+  content: '';
+  position: absolute;
+  inset: 50% 50%;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--app-accent) 28%, transparent);
+  pointer-events: none;
+  transform: scale(0);
+  opacity: 0;
+}
+
+.ripple-host:active::after {
+  inset: 0;
+  animation: ripple-expand 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 

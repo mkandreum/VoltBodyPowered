@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { useAppStore } from '../store/useAppStore';
+import { useAppStore, WorkoutDay, Exercise } from '../store/useAppStore';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Dumbbell, CheckCircle2, Flame } from 'lucide-react';
-import { format, addDays, startOfWeek, isSameDay } from 'date-fns';
+import { format, addDays, startOfWeek, isSameDay, isValid } from 'date-fns';
 import { es } from 'date-fns/locale';
 import clsx from 'clsx';
 import { getMondayFirstIndex, mapRoutineByWeekday, WEEKDAY_LABELS } from '../lib/routineWeek';
@@ -24,7 +24,10 @@ export default function CalendarView() {
 
   // Find logs for selected day
   const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
-  const dayLogs = logs.filter(log => format(new Date(log.date), 'yyyy-MM-dd') === selectedDateStr);
+  const dayLogs = logs.filter(log => {
+    const d = new Date(log.date);
+    return isValid(d) && format(d, 'yyyy-MM-dd') === selectedDateStr;
+  });
   const setsByExercise = dayLogs.reduce<Map<string, number>>((acc, log) => {
     acc.set(log.exerciseId, (acc.get(log.exerciseId) || 0) + 1);
     return acc;
@@ -54,7 +57,7 @@ export default function CalendarView() {
       ...plannedRoutine,
       day: WEEKDAY_LABELS[targetIndex].full,
     };
-    const updatedRoutine = draft.filter(Boolean);
+    const updatedRoutine = draft.filter((d): d is WorkoutDay => d !== null);
     setRoutine(updatedRoutine);
     setIsRescheduling(false);
 
@@ -94,13 +97,13 @@ export default function CalendarView() {
 
       <div className="glass-panel border border-[var(--app-border)] rounded-3xl p-6 mb-8">
         <div className="flex justify-between items-center mb-6">
-          <button onClick={() => setCurrentDate(addDays(currentDate, -7))} className="pressable p-2 text-gray-400 hover:text-white transition-colors">
+          <button onClick={() => setCurrentDate(addDays(currentDate, -7))} className="tap-target pressable p-2 text-gray-400 hover:text-white transition-colors">
             <ChevronLeft />
           </button>
           <span className="text-lg font-bold text-white capitalize">
             {format(currentDate, 'MMMM yyyy', { locale: es })}
           </span>
-          <button onClick={() => setCurrentDate(addDays(currentDate, 7))} className="pressable p-2 text-gray-400 hover:text-white transition-colors">
+          <button onClick={() => setCurrentDate(addDays(currentDate, 7))} className="tap-target pressable p-2 text-gray-400 hover:text-white transition-colors">
             <ChevronRight />
           </button>
         </div>
@@ -176,8 +179,8 @@ export default function CalendarView() {
                   <span>Progreso por series</span>
                   <span>{completedSets}/{totalSets} series</span>
                 </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-black/50">
-                  <div className="h-full rounded-full bg-[var(--app-accent)] transition-all" style={{ width: `${sessionProgress}%` }} />
+                <div className="h-2.5 w-full neuro-progress-track">
+                  <div className="neuro-progress-fill" style={{ width: `${sessionProgress}%` }} />
                 </div>
               </div>
 
@@ -227,7 +230,7 @@ export default function CalendarView() {
               )}
 
               <div className="space-y-4">
-                {groupedExercises && Object.entries(groupedExercises).map(([muscleGroup, exercises]) => (
+                {groupedExercises && (Object.entries(groupedExercises) as [string, Exercise[]][]).map(([muscleGroup, exercises]) => (
                   <div key={muscleGroup} className="space-y-2">
                     <div className="inline-flex items-center rounded-full border border-[var(--app-border)] bg-black/30 px-3 py-1">
                       <span className="text-[11px] uppercase tracking-wider text-gray-300">{muscleGroup}</span>
