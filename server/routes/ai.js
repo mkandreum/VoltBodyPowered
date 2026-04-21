@@ -213,7 +213,7 @@ async function enrichExercisesWithGifs(exercises = []) {
       if (ex.gifUrl) return ex; // already has a GIF, skip
       try {
         const searchTerm = encodeURIComponent(toEnglishSearchTerm(ex.name));
-        const url = `${EXERCISEDB_BASE}/exercises/search?name=${searchTerm}&limit=1`;
+        const url = `${EXERCISEDB_BASE}/exercises?name=${searchTerm}&limit=1`;
         const resp = await fetch(url, {
           headers: { 'Accept': 'application/json' },
         });
