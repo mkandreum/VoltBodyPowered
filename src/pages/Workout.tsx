@@ -58,13 +58,17 @@ export default function Workout() {
     historyPushedRef.current = true;
 
     const handlePopState = () => {
+      if (!historyPushedRef.current) return; // guard: already closed via UI button
       historyPushedRef.current = false;
       setSelectedExercise(null);
     };
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  // Re-run only when the selected exercise changes identity
+  // Re-run only when the selected exercise changes identity.
+  // `closeExercise` is intentionally excluded: `handlePopState` calls `setSelectedExercise`
+  // directly (stable useState setter) instead of going through `closeExercise`, so there is
+  // no stale-closure risk here.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedExercise?.id]);
 
