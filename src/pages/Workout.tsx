@@ -539,10 +539,10 @@ export default function Workout() {
                 src={selectedExercise.gifUrl || 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=400&auto=format&fit=crop'} 
                 alt={selectedExercise.name} 
                 onError={handleImageError}
-                className="w-full h-full object-cover opacity-80" 
+                className="w-full h-full object-contain" 
                 referrerPolicy="no-referrer" 
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#050505] to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-black/20" />
               <button
                 onClick={() => setSelectedExercise(null)}
                 className="absolute top-6 left-6 p-3 bg-black/50 backdrop-blur-md rounded-full border border-white/10 text-white"

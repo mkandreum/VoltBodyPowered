@@ -5,13 +5,18 @@ import './index.css';
 
 console.log('[VoltBody] main.tsx loaded');
 
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch((error) => {
-      console.error('[VoltBody] SW register error:', error);
-    });
-  });
-}
+import { registerSW } from 'virtual:pwa-register';
+
+// Register PWA Service Worker with auto-update
+registerSW({
+  onNeedRefresh() {
+    console.log('[VoltBody] New version available, reloading...');
+    window.location.reload();
+  },
+  onOfflineReady() {
+    console.log('[VoltBody] App ready for offline use');
+  },
+});
 
 // Error Boundary to catch any React crash
 class ErrorBoundary extends Component<{children: ReactNode}, {error: Error | null}> {
