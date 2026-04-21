@@ -536,11 +536,12 @@ export default function Workout() {
           >
             <div className="relative h-1/3 bg-black">
               <img 
+                key={selectedExercise.exerciseId}
                 src={selectedExercise.gifUrl || 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=400&auto=format&fit=crop'} 
                 alt={selectedExercise.name} 
                 onError={handleImageError}
                 className="w-full h-full object-contain" 
-                referrerPolicy="no-referrer" 
+                referrerPolicy="no-referrer"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-black/20" />
               <button
