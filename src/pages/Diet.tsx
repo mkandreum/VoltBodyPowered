@@ -1,17 +1,21 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
 import { useAppStore, Meal } from '../store/useAppStore';
-import { Utensils, Flame, Droplet, Beef, Wheat, RefreshCw, Sparkles } from 'lucide-react';
+import { Utensils, Flame, Droplet, Beef, Wheat, RefreshCw, Sparkles, CheckCircle2, Circle } from 'lucide-react';
 import { generateAlternativeMeal } from '../services/geminiService';
 import { authService } from '../services/authService';
 import { AppCard, SectionHeader, StatPill } from '../components/ui';
 import { listStagger } from '../lib/motion';
+import { format } from 'date-fns';
 
 export default function Diet() {
-  const { diet, profile, swapMeal, showToast, authToken } = useAppStore();
+  const { diet, profile, swapMeal, showToast, authToken, mealEatenRecord, toggleMealEaten } = useAppStore();
   const [loadingMealId, setLoadingMealId] = useState<string | null>(null);
   const [specialDishTarget, setSpecialDishTarget] = useState(390);
   const [macroQuickMode, setMacroQuickMode] = useState(false);
+
+  const todayDateKey = format(new Date(), 'yyyy-MM-dd');
+  const eatenToday = mealEatenRecord[todayDateKey] ?? [];
 
   if (!diet) return null;
 
@@ -73,7 +77,8 @@ export default function Diet() {
   const avgMealCalories = Math.round(diet.dailyCalories / Math.max(1, diet.meals.length));
   const totalMacros = Math.max(1, diet.macros.protein + diet.macros.carbs + diet.macros.fat);
   const macroBalance = Math.round((diet.macros.protein * 4 + diet.macros.carbs * 4 + diet.macros.fat * 9) / Math.max(1, diet.dailyCalories) * 100);
-  const dailyCompliance = Math.min(100, Math.round(((diet.meals.length / 5) * 55) + ((macroBalance / 100) * 45)));
+  const eatenCount = diet.meals.filter((m) => eatenToday.includes(m.id)).length;
+  const dailyCompliance = Math.min(100, Math.round(((eatenCount / Math.max(1, diet.meals.length)) * 55) + ((macroBalance / 100) * 45)));
 
   const mealEmoji = (meal: Meal) => {
     const time = String(meal.time || '').toLowerCase();
@@ -120,7 +125,7 @@ export default function Diet() {
         <div className="grid grid-cols-3 gap-2 mb-4">
           <StatPill label="kcal" value={`${diet.dailyCalories}`} />
           <StatPill label="comidas" value={`${diet.meals.length}`} />
-          <StatPill label="promedio" value={`${avgMealCalories}`} />
+          <StatPill label="comidas hoy" value={`${eatenCount}/${diet.meals.length}`} />
         </div>
 
         <div className="mb-4 rounded-xl border border-[var(--app-border)] bg-black/35 p-3">
@@ -158,21 +163,42 @@ export default function Diet() {
       </div>
 
       <div className="space-y-4">
-        {diet.meals.map((meal, index) => (
+        {diet.meals.map((meal, index) => {
+          const isEaten = eatenToday.includes(meal.id);
+          return (
           <motion.div
             key={meal.id}
             {...listStagger(index)}
-            className="panel-soft interactive-tile rounded-3xl p-5 relative overflow-hidden group hover:border-[color:var(--app-accent)]/50 transition-colors"
+            className={`panel-soft interactive-tile rounded-3xl p-5 relative overflow-hidden group transition-colors ${
+              isEaten
+                ? 'border-[color:var(--app-accent)]/50 bg-[color:var(--app-accent)]/5'
+                : 'hover:border-[color:var(--app-accent)]/50'
+            }`}
           >
             <div className="absolute top-0 right-0 w-32 h-32 bg-[color:var(--app-accent)]/5 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-[color:var(--app-accent)]/10 transition-colors" />
             
             <div className="mb-4 relative z-10">
               <div className="flex items-start justify-between gap-3">
-                <h3 className="text-lg font-bold text-white leading-tight pr-2">{withMealEmoji(meal)}</h3>
+                <div className="flex items-start gap-3 flex-1 min-w-0">
+                  <button
+                    type="button"
+                    onClick={() => toggleMealEaten(meal.id, todayDateKey)}
+                    aria-label={isEaten ? 'Marcar como no comida' : 'Marcar como comida'}
+                    className="tap-target flex-shrink-0 mt-0.5 text-gray-500 hover:text-[var(--app-accent)] transition-colors"
+                  >
+                    {isEaten
+                      ? <CheckCircle2 size={20} className="text-[var(--app-accent)]" />
+                      : <Circle size={20} />
+                    }
+                  </button>
+                  <h3 className={`text-lg font-bold leading-tight ${isEaten ? 'line-through text-gray-400' : 'text-white'}`}>
+                    {withMealEmoji(meal)}
+                  </h3>
+                </div>
                 <button
                   onClick={() => handleSwap(meal)}
                   disabled={loadingMealId === meal.id}
-                  className="tap-target pressable pulse-surface p-2 bg-[var(--app-border)] rounded-full text-gray-400 hover:text-[var(--app-accent)] transition-colors disabled:opacity-50"
+                  className="tap-target pressable pulse-surface p-2 bg-[var(--app-border)] rounded-full text-gray-400 hover:text-[var(--app-accent)] transition-colors disabled:opacity-50 flex-shrink-0"
                   title="Cambiar comida"
                 >
                   <RefreshCw size={16} className={loadingMealId === meal.id ? 'animate-spin' : ''} />
@@ -198,7 +224,8 @@ export default function Diet() {
               <span>G: {meal.fat}g</span>
             </div>
           </motion.div>
-        ))}
+          );
+        })}
       </div>
 
       {profile?.foodPreferences && (

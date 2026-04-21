@@ -27,6 +27,7 @@ export default function Workout() {
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
   const [weightInput, setWeightInput] = useState<number>(0);
   const [repsInput, setRepsInput] = useState<number>(0);
+  const [setsInput, setSetsInput] = useState<number>(1);
   const [selectedMuscleGroup, setSelectedMuscleGroup] = useState<string>('Todos');
   const [selectedDayIndex, setSelectedDayIndex] = useState<number>(() => getMondayFirstIndex(new Date()));
   const [isEditingDays, setIsEditingDays] = useState(false);
@@ -164,20 +165,21 @@ export default function Workout() {
 
   const handleLog = async () => {
     if (selectedExercise && weightInput > 0 && repsInput > 0) {
-      const newLog = {
+      const count = Math.max(1, setsInput);
+      const newLogs = Array.from({ length: count }, () => ({
         date: new Date().toISOString(),
         exerciseId: selectedExercise.id,
         weight: weightInput,
         reps: repsInput,
-      };
+      }));
 
-      addLog(newLog);
+      newLogs.forEach((log) => addLog(log));
       setSyncStatus('local');
 
       if (authToken) {
         try {
           setSyncStatus('syncing');
-          await workoutService.addLog(authToken, newLog);
+          await Promise.all(newLogs.map((log) => workoutService.addLog(authToken, log)));
           setSyncStatus('synced');
         } catch (error) {
           console.error('Error persisting workout log:', error);
@@ -187,11 +189,12 @@ export default function Workout() {
 
       showToast({
         type: 'success',
-        title: 'Serie guardada 💪',
+        title: count > 1 ? `${count} series guardadas 💪` : 'Serie guardada 💪',
         message: `${weightInput}kg x ${repsInput} reps`,
       });
       setWeightInput(0);
       setRepsInput(0);
+      setSetsInput(1);
     }
   };
 
@@ -347,12 +350,21 @@ export default function Workout() {
       )}
 
       <div className="space-y-4">
-        {todayRoutine?.exercises.map((exercise, index) => (
+        {todayRoutine?.exercises.map((exercise, index) => {
+          const completedCount = setsByExercise.get(exercise.id) ?? 0;
+          const targetSets = Math.max(1, Number(exercise.sets || 0));
+          const isCompleted = completedCount >= targetSets;
+
+          return (
           <motion.div
             key={exercise.id}
             {...listStagger(index)}
             onClick={() => setSelectedExercise(exercise)}
-            className="panel-soft interactive-tile rounded-3xl p-5 flex items-center gap-4 cursor-pointer hover:border-[color:var(--app-accent)]/50 transition-colors group"
+            className={`panel-soft interactive-tile rounded-3xl p-5 flex items-center gap-4 cursor-pointer transition-colors group ${
+              isCompleted
+                ? 'border-[color:var(--app-accent)]/60 bg-[color:var(--app-accent)]/5'
+                : 'hover:border-[color:var(--app-accent)]/50'
+            }`}
           >
             <div className="w-16 h-16 rounded-2xl overflow-hidden bg-black flex-shrink-0 relative">
               <img 
@@ -363,7 +375,10 @@ export default function Workout() {
                 referrerPolicy="no-referrer" 
               />
               <div className="absolute inset-0 flex items-center justify-center bg-black/40 group-hover:bg-transparent transition-colors">
-                <Play className="app-accent opacity-80" size={20} />
+                {isCompleted
+                  ? <CheckCircle2 className="text-[var(--app-accent)]" size={22} />
+                  : <Play className="app-accent opacity-80" size={20} />
+                }
               </div>
             </div>
             <div className="flex-1">
@@ -371,10 +386,19 @@ export default function Workout() {
               <p className="text-sm text-gray-400 font-mono">
                 {exercise.sets} sets x {exercise.reps} reps
               </p>
+              {completedCount > 0 && (
+                <p className="text-xs font-mono mt-0.5 text-[var(--app-accent)]">
+                  {isCompleted ? '✅ Completado' : `${completedCount}/${targetSets} series`}
+                </p>
+              )}
             </div>
-            <ChevronLeft className="text-gray-600 rotate-180 group-hover:text-[var(--app-accent)] transition-colors" />
+            {isCompleted
+              ? <CheckCircle2 className="text-[var(--app-accent)]" size={20} />
+              : <ChevronLeft className="text-gray-600 rotate-180 group-hover:text-[var(--app-accent)] transition-colors" />
+            }
           </motion.div>
-        ))}
+          );
+        })}
       </div>
 
       {profile?.weeklySpecialSession?.enabled && (
@@ -492,10 +516,10 @@ export default function Workout() {
               <div className="app-surface border border-[var(--app-border)] rounded-3xl p-6 mb-8">
                 <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
                   <CheckCircle2 className="app-accent" />
-                  Registrar Serie ✏️
+                  Registrar Series ✏️
                 </h3>
                 
-                <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="grid grid-cols-3 gap-3 mb-6">
                   <div>
                     <label className="block text-sm text-gray-400 mb-2 font-mono">Peso (kg)</label>
                     <input
@@ -516,6 +540,18 @@ export default function Workout() {
                       placeholder="0"
                     />
                   </div>
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2 font-mono">Series</label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={10}
+                      value={setsInput || ''}
+                      onChange={(e) => setSetsInput(Math.max(1, Number(e.target.value)))}
+                      className="w-full input-field rounded-2xl p-4 text-2xl font-bold text-center"
+                      placeholder="1"
+                    />
+                  </div>
                 </div>
 
                 <button
@@ -523,7 +559,7 @@ export default function Workout() {
                   disabled={!weightInput || !repsInput}
                   className="w-full tap-target primary-btn font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Guardar Serie 💾
+                  {setsInput > 1 ? `Guardar ${setsInput} series 💾` : 'Guardar Serie 💾'}
                 </button>
               </div>
             </div>

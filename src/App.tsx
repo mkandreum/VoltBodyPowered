@@ -25,9 +25,16 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    const bgColors: Record<string, string> = {
+      'verde-negro': '#050505',
+      'aguamarina-negro': '#03110e',
+      'ocaso-negro': '#120905',
+    };
     document.body.setAttribute('data-theme', theme);
+    document.documentElement.style.backgroundColor = bgColors[theme] ?? '#050505';
     return () => {
       document.body.removeAttribute('data-theme');
+      document.documentElement.style.backgroundColor = '';
     };
   }, [theme]);
 

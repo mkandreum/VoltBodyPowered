@@ -80,6 +80,11 @@ export type WorkoutLog = {
   reps: number;
 };
 
+export type WeightLog = {
+  date: string; // YYYY-MM-DD
+  weight: number;
+};
+
 export type ProgressPhoto = {
   date: string;
   url: string;
@@ -130,6 +135,9 @@ interface AppState {
   motivationPhrase: string;
   motivationPhoto: string | null;
   toasts: AppToast[];
+  weightLogs: WeightLog[];
+  // Maps date (YYYY-MM-DD) -> array of eaten meal IDs
+  mealEatenRecord: Record<string, string[]>;
   
   // Auth actions
   setAuthToken: (token: string | null) => void;
@@ -157,6 +165,8 @@ interface AppState {
   showToast: (toast: Omit<AppToast, 'id'>) => void;
   dismissToast: (id: string) => void;
   clearToasts: () => void;
+  addWeightLog: (log: WeightLog) => void;
+  toggleMealEaten: (mealId: string, date: string) => void;
   completeOnboarding: () => void;
   resetApp: () => void;
 }
@@ -212,6 +222,8 @@ export const useAppStore = create<AppState>()(
       motivationPhrase: 'Cada repetición te acerca a tu mejor versión.',
       motivationPhoto: null,
       toasts: [],
+      weightLogs: [],
+      mealEatenRecord: {},
 
       // Auth actions
       setAuthToken: (token) => set({ authToken: token, isAuthenticated: !!token }),
@@ -232,6 +244,8 @@ export const useAppStore = create<AppState>()(
         customWorkout: [],
         motivationPhoto: null,
         toasts: [],
+        weightLogs: [],
+        mealEatenRecord: {},
       }),
 
       // Profile actions
@@ -297,6 +311,18 @@ export const useAppStore = create<AppState>()(
           toasts: state.toasts.filter((toast) => toast.id !== id),
         })),
       clearToasts: () => set({ toasts: [] }),
+      addWeightLog: (log) =>
+        set((state) => ({
+          weightLogs: [...state.weightLogs.filter((l) => l.date !== log.date), log],
+        })),
+      toggleMealEaten: (mealId, date) =>
+        set((state) => {
+          const existing = state.mealEatenRecord[date] ?? [];
+          const updated = existing.includes(mealId)
+            ? existing.filter((id) => id !== mealId)
+            : [...existing, mealId];
+          return { mealEatenRecord: { ...state.mealEatenRecord, [date]: updated } };
+        }),
       completeOnboarding: () => set({ isOnboarded: true }),
       resetApp: () => set({
         isOnboarded: false,
@@ -311,6 +337,8 @@ export const useAppStore = create<AppState>()(
         customWorkout: [],
         motivationPhoto: null,
         toasts: [],
+        weightLogs: [],
+        mealEatenRecord: {},
       }),
     }),
     {

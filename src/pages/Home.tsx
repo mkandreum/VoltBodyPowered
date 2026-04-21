@@ -30,7 +30,7 @@ function FlipMetric({ value, label }: { value: string; label: string }) {
 }
 
 export default function Home() {
-  const { profile, routine, diet, logs, insights, setTab, motivationPhrase, motivationPhoto, showToast, addLog, authToken } = useAppStore();
+  const { profile, routine, diet, logs, insights, setTab, motivationPhrase, motivationPhoto, showToast, addLog, authToken, mealEatenRecord, progressPhotos } = useAppStore();
   const [syncState, setSyncState] = useState<'idle' | 'local' | 'syncing' | 'synced' | 'error'>('idle');
 
   const today = new Date().toLocaleDateString('es-ES', { weekday: 'long' });
@@ -224,16 +224,42 @@ export default function Home() {
     return cards;
   }, [weeklyConsistency, currentStreak, caloriesTarget, mealCount, sleepScore, nutritionAdherence, routineCompletion]);
 
+  const eatenTodayMeals = mealEatenRecord[todayDateKey] ?? [];
+
+  const isBreakfastEaten = useMemo(() => {
+    if (!diet?.meals) return false;
+    return diet.meals.some((m) => {
+      const t = String(m.time || '').toLowerCase();
+      const n = String(m.name || '').toLowerCase();
+      const isBreakfast = t.includes('07') || t.includes('08') || t.includes('09') || n.includes('desay');
+      return isBreakfast && eatenTodayMeals.includes(m.id);
+    });
+  }, [diet?.meals, eatenTodayMeals]);
+
+  const isLunchEaten = useMemo(() => {
+    if (!diet?.meals) return false;
+    return diet.meals.some((m) => {
+      const t = String(m.time || '').toLowerCase();
+      const n = String(m.name || '').toLowerCase();
+      const isLunch = t.includes('13') || t.includes('14') || t.includes('15') || n.includes('comida');
+      return isLunch && eatenTodayMeals.includes(m.id);
+    });
+  }, [diet?.meals, eatenTodayMeals]);
+
+  const hasProgressPhotoToday = useMemo(() => {
+    return progressPhotos.some((p) => p.date.slice(0, 10) === todayDateKey);
+  }, [progressPhotos, todayDateKey]);
+
   const timelineItems = [
     {
       time: profile?.mealTimes?.breakfast || '08:00',
       title: '🥣 Desayuno de arranque',
-      done: false,
+      done: isBreakfastEaten,
     },
     {
       time: profile?.mealTimes?.lunch || '14:00',
       title: '🍗 Comida principal',
-      done: false,
+      done: isLunchEaten,
     },
     {
       time: 'Entreno',
@@ -243,7 +269,7 @@ export default function Home() {
     {
       time: 'Progreso',
       title: '📸 Subir foto del día',
-      done: false,
+      done: hasProgressPhotoToday,
     },
   ];
 

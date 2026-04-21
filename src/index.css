@@ -112,6 +112,11 @@ body[data-theme="ocaso-negro"] {
   .app-shell {
     min-height: 100dvh;
   }
+
+  /* Ensure safe-area below nav bar shows theme background, not white */
+  html {
+    background-color: var(--app-bg);
+  }
 }
 
 .app-surface {
