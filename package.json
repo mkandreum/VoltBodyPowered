@@ -36,12 +36,12 @@
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
+    "prisma": "^6.1.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "recharts": "^3.7.0",
     "tailwind-merge": "^3.5.0",
     "three": "^0.183.2",
-    "vite": "^6.2.0",
     "zustand": "^5.0.11"
   },
   "devDependencies": {
@@ -54,7 +54,6 @@
     "@types/node": "^22.14.0",
     "autoprefixer": "^10.4.21",
     "concurrently": "^9.1.0",
-    "prisma": "^6.1.0",
     "tailwindcss": "^4.1.14",
     "terser": "^5.46.0",
     "tsx": "^4.21.0",
