@@ -536,14 +536,17 @@ button:active {
   overflow: hidden;
   box-shadow:
     0 1px 2px rgba(0,0,0,0.35),
-    0 8px 24px color-mix(in srgb, var(--app-accent) 28%, transparent),
+    0 8px 28px color-mix(in srgb, var(--app-accent) 40%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--app-accent) 20%, transparent),
     inset 0 1px 0 rgba(255, 255, 255, 0.22);
   transition: box-shadow var(--motion-fast), transform var(--motion-fast), filter var(--motion-fast);
 }
 
 .primary-btn:active {
   transform: scale(0.96);
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--app-accent) 35%, transparent);
+  box-shadow:
+    0 2px 8px color-mix(in srgb, var(--app-accent) 35%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--app-accent) 15%, transparent);
   transition: transform 0.12s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -551,7 +554,8 @@ button:active {
   filter: brightness(1.08);
   box-shadow:
     0 2px 4px rgba(0,0,0,0.4),
-    0 12px 32px color-mix(in srgb, var(--app-accent) 38%, transparent),
+    0 16px 40px color-mix(in srgb, var(--app-accent) 50%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--app-accent) 25%, transparent),
     inset 0 1px 0 rgba(255, 255, 255, 0.22);
 }
 

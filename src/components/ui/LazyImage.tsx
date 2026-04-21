@@ -25,10 +25,12 @@ export default function LazyImage({
   loading = 'lazy',
 }: LazyImageProps) {
   const [loaded, setLoaded] = useState(false);
+  const [errored, setErrored] = useState(false);
 
   const handleLoad = () => setLoaded(true);
   const handleError = (e: SyntheticEvent<HTMLImageElement, Event>) => {
     setLoaded(true);
+    setErrored(true);
     onError?.(e);
   };
 
@@ -48,7 +50,7 @@ export default function LazyImage({
         referrerPolicy={referrerPolicy}
         onLoad={handleLoad}
         onError={handleError}
-        className={`${className} transition-opacity duration-300 ease-out ${loaded ? 'opacity-100' : 'opacity-0'}`}
+        className={`${className} transition-opacity duration-300 ease-out ${loaded ? 'opacity-100' : errored ? 'opacity-100' : 'opacity-0'}`}
       />
     </>
   );
