@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useCallback } from 'react';
+import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore, Exercise, WorkoutDay } from '../store/useAppStore';
 import { ChevronLeft, Play, CheckCircle2, Dumbbell, PlusCircle, Trash2, Star, CalendarClock, Flame } from 'lucide-react';
@@ -31,6 +31,7 @@ export default function Workout() {
   const [weightInput, setWeightInput] = useState<number>(0);
   const [repsInput, setRepsInput] = useState<number>(0);
   const [setsInput, setSetsInput] = useState<number>(1);
+  const historyPushedRef = useRef(false);
   const [selectedMuscleGroup, setSelectedMuscleGroup] = useState<string>('Todos');
   const [selectedDayIndex, setSelectedDayIndex] = useState<number>(() => getMondayFirstIndex(new Date()));
   const [isEditingDays, setIsEditingDays] = useState(false);
@@ -39,6 +40,37 @@ export default function Workout() {
 
   // Stable callback passed to WeightCalculator — avoids stale-closure issue with onWeightChange
   const handleCalculatorWeightChange = useCallback((w: number) => setWeightInput(w), []);
+
+  // Close exercise detail and clean up history state
+  const closeExercise = useCallback(() => {
+    setSelectedExercise(null);
+    if (historyPushedRef.current) {
+      historyPushedRef.current = false;
+      window.history.back();
+    }
+  }, []);
+
+  // Push a history entry when exercise detail opens so the hardware back button closes it
+  useEffect(() => {
+    if (!selectedExercise) return;
+
+    window.history.pushState({ exerciseOpen: true }, '');
+    historyPushedRef.current = true;
+
+    const handlePopState = () => {
+      if (!historyPushedRef.current) return; // guard: already closed via UI button
+      historyPushedRef.current = false;
+      setSelectedExercise(null);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  // Re-run only when the selected exercise changes identity.
+  // `closeExercise` is intentionally excluded: `handlePopState` calls `setSelectedExercise`
+  // directly (stable useState setter) instead of going through `closeExercise`, so there is
+  // no stale-closure risk here.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedExercise?.id]);
 
   const routinesByDay = useMemo(() => mapRoutineByWeekday(routine), [routine]);
   const activeDayIndexes = useMemo(
@@ -395,12 +427,12 @@ export default function Workout() {
                 : 'hover:border-[color:var(--app-accent)]/50'
             }`}
           >
-            <div className="w-16 h-16 rounded-2xl overflow-hidden bg-black flex-shrink-0 relative">
+            <div className="w-16 h-16 rounded-2xl overflow-hidden bg-[var(--app-surface)] flex-shrink-0 relative">
               <img 
                 src={exercise.gifUrl || 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=400&auto=format&fit=crop'} 
                 alt={exercise.name} 
                 onError={handleImageError}
-                className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" 
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
                 referrerPolicy="no-referrer" 
               />
               <div className="absolute inset-0 flex items-center justify-center bg-black/40 group-hover:bg-transparent transition-colors">
@@ -532,9 +564,9 @@ export default function Workout() {
         {selectedExercise && (
           <motion.div
             {...slideUpSheet}
-            className="fixed inset-0 z-[60] bg-[#050505] flex flex-col"
+            className="fixed inset-0 z-[60] bg-[var(--app-bg)] flex flex-col"
           >
-            <div className="relative h-1/3 bg-gradient-to-b from-[#0e0e12] to-[#09090c] overflow-hidden flex items-center justify-center">
+            <div className="relative h-2/5 bg-[var(--app-surface)] overflow-hidden flex items-center justify-center">
               {/* Main sharp GIF */}
               <img 
                 key={selectedExercise.exerciseId}
@@ -545,10 +577,10 @@ export default function Workout() {
                 referrerPolicy="no-referrer"
                 loading="eager"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-black/20 z-20 pointer-events-none" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[var(--app-bg)] via-transparent to-transparent z-20 pointer-events-none" />
               <button
-                onClick={() => setSelectedExercise(null)}
-                className="absolute top-6 left-6 p-3 bg-black/50 backdrop-blur-md rounded-full border border-white/10 text-white"
+                onClick={closeExercise}
+                className="absolute top-6 left-6 p-3 bg-black/50 backdrop-blur-md rounded-full border border-white/10 text-white z-30"
               >
                 <ChevronLeft size={24} />
               </button>
@@ -556,7 +588,7 @@ export default function Workout() {
 
             <div className="flex-1 p-6 flex flex-col overflow-y-auto safe-bottom">
               <h2 className="text-3xl font-bold text-white mb-2">{selectedExercise.name}</h2>
-              <div className="flex gap-4 mb-6">
+              <div className="flex flex-wrap gap-2 mb-6">
                 <span className="neuro-inset px-4 py-2 rounded-full text-sm app-accent font-mono glow-box">
                   {selectedExercise.muscleGroup}
                 </span>
