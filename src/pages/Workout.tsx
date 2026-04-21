@@ -566,7 +566,7 @@ export default function Workout() {
             {...slideUpSheet}
             className="fixed inset-0 z-[60] bg-[var(--app-bg)] flex flex-col"
           >
-            <div className="relative h-2/5 bg-[var(--app-surface)] overflow-hidden flex items-center justify-center">
+            <div key={selectedExercise.id} className="relative h-2/5 bg-[var(--app-surface)] overflow-hidden flex items-center justify-center">
               {/* Main sharp GIF */}
               <LazyImage 
                 src={selectedExercise.gifUrl || 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=400&auto=format&fit=crop'} 

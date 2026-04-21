@@ -218,14 +218,16 @@ function toEnglishSearchTerm(nameEs = '') {
 
 /**
  * Scores how well an ExerciseDB result name matches the English search term.
- * Returns a value in [0, 1]: 1 means every word in the term appears in the result name.
+ * Returns a value in [0, 1]: 1 means every word in the term appears as a
+ * whole word in the result name. Uses whole-word comparison to avoid false
+ * positives such as 'lat' matching 'lateral'.
  */
 function scoreExerciseMatch(resultName, searchTerm) {
   const normalize = (s) => s.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
-  const rName = normalize(resultName);
+  const rWords = new Set(normalize(resultName).split(/\s+/).filter(Boolean));
   const terms = normalize(searchTerm).split(/\s+/).filter(Boolean);
   if (!terms.length) return 0;
-  const hits = terms.filter((t) => rName.includes(t));
+  const hits = terms.filter((t) => rWords.has(t));
   return hits.length / terms.length;
 }
 
