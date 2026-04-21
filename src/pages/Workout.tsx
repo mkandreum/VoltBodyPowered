@@ -686,7 +686,7 @@ export default function Workout() {
               </button>
             </div>
 
-            <div className="flex-1 p-6 flex flex-col overflow-y-auto safe-bottom">
+            <div className="flex-1 p-6 flex flex-col overflow-y-auto">
               <h2 className="text-3xl font-bold text-white mb-2">{selectedExercise.name}</h2>
               <div className="flex flex-wrap gap-2 mb-6">
                 <span className="neuro-inset px-4 py-2 rounded-full text-sm app-accent font-mono glow-box">
@@ -702,7 +702,7 @@ export default function Workout() {
                 )}
               </div>
 
-              <div className="neuro-raised rounded-3xl p-6 mb-8">
+              <div className="neuro-raised rounded-3xl p-6">
                 <h3 className="text-base font-semibold text-white/90 mb-4 flex items-center gap-2">
                   <CheckCircle2 className="app-accent" size={16} />
                   Registrar Series
@@ -757,24 +757,27 @@ export default function Workout() {
 
                 {/* Last session context */}
                 {lastSessionLog && (
-                  <p className="text-xs text-gray-500 mb-4 text-center tabular-nums">
+                  <p className="text-xs text-gray-500 text-center tabular-nums">
                     Última vez:{' '}
                     <span className="text-white/70 font-medium">
                       {lastSessionLog.weight}kg × {lastSessionLog.reps} reps
                     </span>
                   </p>
                 )}
-
-                <motion.button
-                  onClick={handleLog}
-                  disabled={!weightInput || !repsInput}
-                  whileTap={!weightInput || !repsInput ? {} : { scale: [1, 1.06, 0.97, 1.02, 1] }}
-                  transition={{ duration: 0.45, ease: [0.2, 0.9, 0.4, 1.1] }}
-                  className="w-full tap-target primary-btn ripple-host font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {setsInput > 1 ? `Guardar ${setsInput} series 💾` : 'Guardar Serie 💾'}
-                </motion.button>
               </div>
+            </div>
+
+            {/* Sticky save button – always visible at the bottom of the sheet */}
+            <div className="px-6 pt-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] border-t border-[var(--app-border)] bg-[var(--app-bg)]">
+              <motion.button
+                onClick={handleLog}
+                disabled={!weightInput || !repsInput}
+                whileTap={!weightInput || !repsInput ? {} : { scale: [1, 1.06, 0.97, 1.02, 1] }}
+                transition={{ duration: 0.45, ease: [0.2, 0.9, 0.4, 1.1] }}
+                className="w-full tap-target primary-btn ripple-host font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {setsInput > 1 ? `Guardar ${setsInput} series 💾` : 'Guardar Serie 💾'}
+              </motion.button>
             </div>
           </motion.div>
         )}
