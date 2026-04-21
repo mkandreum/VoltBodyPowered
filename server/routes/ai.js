@@ -18,11 +18,11 @@ function fallbackRoutine(profile) {
     day,
     focus: dayIndex % 2 === 0 ? 'Fuerza Full Body' : 'Empuje y tiron',
     exercises: [
-      { id: `${day}-sentadilla`, name: 'Sentadilla goblet', sets: 3, reps: '10-12', weight: 12, gifUrl: '', muscleGroup: 'Piernas' },
-      { id: `${day}-press`, name: 'Press con mancuernas', sets: 3, reps: '8-12', weight: 10, gifUrl: '', muscleGroup: 'Pecho' },
-      { id: `${day}-remo`, name: 'Remo con mancuerna', sets: 3, reps: '10-12', weight: 12, gifUrl: '', muscleGroup: 'Espalda' },
-      { id: `${day}-hombro`, name: 'Press militar sentado', sets: 3, reps: '10', weight: 8, gifUrl: '', muscleGroup: 'Hombros' },
-      { id: `${day}-core`, name: 'Plancha frontal', sets: 3, reps: '30 segundos', weight: 0, gifUrl: '', muscleGroup: 'Core' },
+      { id: `${day}-sentadilla`, name: 'Sentadilla goblet', nameEn: 'goblet squat', sets: 3, reps: '10-12', weight: 12, gifUrl: '', muscleGroup: 'Piernas' },
+      { id: `${day}-press`, name: 'Press con mancuernas', nameEn: 'dumbbell press', sets: 3, reps: '8-12', weight: 10, gifUrl: '', muscleGroup: 'Pecho' },
+      { id: `${day}-remo`, name: 'Remo con mancuerna', nameEn: 'dumbbell row', sets: 3, reps: '10-12', weight: 12, gifUrl: '', muscleGroup: 'Espalda' },
+      { id: `${day}-hombro`, name: 'Press militar sentado', nameEn: 'seated overhead press', sets: 3, reps: '10', weight: 8, gifUrl: '', muscleGroup: 'Hombros' },
+      { id: `${day}-core`, name: 'Plancha frontal', nameEn: 'plank', sets: 3, reps: '30 segundos', weight: 0, gifUrl: '', muscleGroup: 'Core' },
     ],
   }));
 }
@@ -247,7 +247,9 @@ async function enrichExercisesWithGifs(exercises = []) {
       const timeoutId = setTimeout(() => controller.abort(), 3500); // 3.5s limit per exercise
 
       try {
-        const englishTerm = toEnglishSearchTerm(ex.name);
+        // Use the English name provided by Gemini directly; fall back to the
+        // static translation map only for exercises that predate this field.
+        const englishTerm = ex.nameEn || toEnglishSearchTerm(ex.name);
         // limit=10: fetching a small candidate set (vs. limit=1) lets the word-overlap
         // scorer pick the best-matching exercise name, avoiding mismatched GIFs (e.g.
         // "lat pulldown" returning a lateral-raise gif). 10 is a deliberate balance
@@ -354,6 +356,7 @@ Responde SOLO con JSON válido (sin markdown, sin bloques de código, sin coment
         {
           "id": "string único",
           "name": "string (nombre del ejercicio en español)",
+          "nameEn": "string (exercise name in English, used to search exercise GIFs)",
           "sets": number,
           "reps": "string (ej: '10-12' o '15' o '30 segundos')",
           "weight": number (en kg, 0 si es con peso corporal),

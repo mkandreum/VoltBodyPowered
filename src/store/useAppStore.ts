@@ -43,6 +43,7 @@ export type UserProfile = {
 export type Exercise = {
   id: string;
   name: string;
+  nameEn?: string;
   sets: number;
   reps: string;
   weight: number;
