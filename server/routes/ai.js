@@ -248,6 +248,10 @@ async function enrichExercisesWithGifs(exercises = []) {
 
       try {
         const englishTerm = toEnglishSearchTerm(ex.name);
+        // limit=10: fetching a small candidate set (vs. limit=1) lets the word-overlap
+        // scorer pick the best-matching exercise name, avoiding mismatched GIFs (e.g.
+        // "lat pulldown" returning a lateral-raise gif). 10 is a deliberate balance
+        // between accuracy and API payload size — 3-5 candidates often omit the best match.
         const url = `${EXERCISEDB_BASE}/exercises?name=${encodeURIComponent(englishTerm)}&limit=10`;
         
         const resp = await fetch(url, {

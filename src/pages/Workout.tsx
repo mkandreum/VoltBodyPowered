@@ -449,10 +449,10 @@ export default function Workout() {
                 </AnimatePresence>
               </div>
             </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-bold text-white mb-1">{exercise.name}</h3>
-              <p className="text-sm text-gray-400 font-mono">
-                {exercise.sets} sets x {exercise.reps} reps
+            <div className="flex-1 min-w-0">
+              <h3 className="text-base font-semibold text-white mb-0.5 truncate">{exercise.name}</h3>
+              <p className="text-sm text-gray-500 font-medium tabular-nums">
+                {exercise.sets} sets × {exercise.reps} reps
               </p>
               {completedCount > 0 && (
                 <AnimatePresence>
@@ -602,10 +602,9 @@ export default function Workout() {
               </div>
 
               <div className="neuro-raised rounded-3xl p-6 mb-8">
-                <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                  <CheckCircle2 className="app-accent" />
-                  Registrar Series ✏️
-                </h3>
+                <h3 className="text-base font-semibold text-white/90 mb-4 flex items-center gap-2">
+                  <CheckCircle2 className="app-accent" size={16} />
+                  Registrar Series</h3>
 
                 {/* Smart Weight Calculator */}
                 <WeightCalculator
@@ -618,29 +617,29 @@ export default function Workout() {
                 
                 <div className="grid grid-cols-3 gap-3 mb-6">
                   <div>
-                    <label className="block text-sm text-gray-400 mb-2 font-mono">Peso (kg)</label>
+                    <label className="block text-xs font-medium text-gray-500 mb-2 uppercase tracking-wider">Peso (kg)</label>
                     <input
                       type="number"
                       inputMode="decimal"
                       value={weightInput || ''}
                       onChange={(e) => setWeightInput(Number(e.target.value))}
-                      className="w-full input-field rounded-2xl p-4 text-2xl font-bold text-center"
+                      className="w-full input-field rounded-2xl p-4 text-2xl font-semibold text-center"
                       placeholder="0"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm text-gray-400 mb-2 font-mono">Reps</label>
+                    <label className="block text-xs font-medium text-gray-500 mb-2 uppercase tracking-wider">Reps</label>
                     <input
                       type="number"
                       inputMode="numeric"
                       value={repsInput || ''}
                       onChange={(e) => setRepsInput(Number(e.target.value))}
-                      className="w-full input-field rounded-2xl p-4 text-2xl font-bold text-center"
+                      className="w-full input-field rounded-2xl p-4 text-2xl font-semibold text-center"
                       placeholder="0"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm text-gray-400 mb-2 font-mono">Series</label>
+                    <label className="block text-xs font-medium text-gray-500 mb-2 uppercase tracking-wider">Series</label>
                     <input
                       type="number"
                       inputMode="numeric"
@@ -648,7 +647,7 @@ export default function Workout() {
                       max={10}
                       value={setsInput || ''}
                       onChange={(e) => setSetsInput(Math.max(1, Number(e.target.value)))}
-                      className="w-full input-field rounded-2xl p-4 text-2xl font-bold text-center"
+                      className="w-full input-field rounded-2xl p-4 text-2xl font-semibold text-center"
                       placeholder="1"
                     />
                   </div>
