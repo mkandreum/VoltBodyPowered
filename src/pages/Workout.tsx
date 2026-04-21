@@ -534,16 +534,25 @@ export default function Workout() {
             {...slideUpSheet}
             className="fixed inset-0 z-[60] bg-[#050505] flex flex-col"
           >
-            <div className="relative h-1/3 bg-black">
+            <div className="relative h-1/3 bg-[#0a0a0a] overflow-hidden">
+              {/* Ambient blurred background to fill side bars */}
+              <img 
+                src={selectedExercise.gifUrl} 
+                className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-20 scale-150"
+                aria-hidden="true"
+                referrerPolicy="no-referrer"
+              />
+              
+              {/* Main sharp GIF */}
               <img 
                 key={selectedExercise.exerciseId}
                 src={selectedExercise.gifUrl || 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=400&auto=format&fit=crop'} 
                 alt={selectedExercise.name} 
                 onError={handleImageError}
-                className="w-full h-full object-contain" 
+                className="relative w-full h-full object-contain z-10" 
                 referrerPolicy="no-referrer"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-black/20" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-black/20 z-20" />
               <button
                 onClick={() => setSelectedExercise(null)}
                 className="absolute top-6 left-6 p-3 bg-black/50 backdrop-blur-md rounded-full border border-white/10 text-white"
