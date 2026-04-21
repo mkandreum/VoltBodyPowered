@@ -510,7 +510,7 @@ export default function Workout() {
         {selectedExercise && (
           <motion.div
             {...slideUpSheet}
-            className="fixed inset-0 z-50 bg-[#050505] flex flex-col"
+            className="fixed inset-0 z-[60] bg-[#050505] flex flex-col"
           >
             <div className="relative h-1/3 bg-black">
               <img 
@@ -529,7 +529,7 @@ export default function Workout() {
               </button>
             </div>
 
-            <div className="flex-1 p-6 flex flex-col overflow-y-auto">
+            <div className="flex-1 p-6 flex flex-col overflow-y-auto safe-bottom">
               <h2 className="text-3xl font-bold text-white mb-2">{selectedExercise.name}</h2>
               <div className="flex gap-4 mb-6">
                 <span className="neuro-inset px-4 py-2 rounded-full text-sm app-accent font-mono glow-box">

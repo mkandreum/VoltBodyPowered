@@ -131,6 +131,19 @@ body[data-theme="ocaso-negro"] {
   html {
     background-color: var(--app-bg);
   }
+
+  /* Fill bottom safe-area strip with app background to prevent white bar */
+  body::after {
+    content: '';
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: env(safe-area-inset-bottom, 0px);
+    background-color: var(--app-bg);
+    z-index: 1;
+    pointer-events: none;
+  }
 }
 
 .app-surface {
@@ -193,7 +206,9 @@ body[data-theme="ocaso-negro"] {
   border: 1px solid color-mix(in srgb, var(--neuro-shadow-light) 80%, transparent);
   box-shadow:
     8px 8px 20px var(--neuro-shadow-dark),
-    -4px -4px 12px var(--neuro-shadow-light);
+    -4px -4px 12px var(--neuro-shadow-light),
+    0 0 0 1px color-mix(in srgb, var(--app-accent) 8%, transparent),
+    0 4px 18px color-mix(in srgb, var(--app-accent) 5%, transparent);
   transition:
     transform var(--motion-base) cubic-bezier(0.22, 1, 0.36, 1),
     box-shadow var(--motion-base);
@@ -214,7 +229,9 @@ body[data-theme="ocaso-negro"] {
   backdrop-filter: none;
   box-shadow:
     8px 8px 20px var(--neuro-shadow-dark),
-    -4px -4px 12px var(--neuro-shadow-light) !important;
+    -4px -4px 12px var(--neuro-shadow-light),
+    0 0 0 1px color-mix(in srgb, var(--app-accent) 8%, transparent),
+    0 4px 18px color-mix(in srgb, var(--app-accent) 5%, transparent) !important;
 }
 
 .app-card.interactive-card:hover {
@@ -237,7 +254,8 @@ body[data-theme="ocaso-negro"] {
   border: 1px solid color-mix(in srgb, var(--neuro-shadow-light) 70%, transparent);
   box-shadow:
     4px 4px 10px var(--neuro-shadow-dark),
-    -2px -2px 7px var(--neuro-shadow-light);
+    -2px -2px 7px var(--neuro-shadow-light),
+    0 0 0 1px color-mix(in srgb, var(--app-accent) 6%, transparent);
   transition: box-shadow var(--motion-fast), transform var(--motion-fast);
 }
 
@@ -320,16 +338,19 @@ button:active {
   content: '';
   position: absolute;
   inset: -40%;
-  background: radial-gradient(circle, color-mix(in srgb, var(--app-accent) 28%, transparent) 0%, transparent 58%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--app-accent) 20%, transparent) 0%, transparent 58%);
   transform: scale(0.82);
   opacity: 0;
-  transition: opacity var(--motion-fast), transform var(--motion-fast);
+  /* Slow fade-out when finger is released — no more harsh flash */
+  transition: opacity 320ms ease-out, transform 320ms ease-out;
   pointer-events: none;
 }
 
 .pulse-surface:active::after {
-  opacity: 1;
+  opacity: 0.55;
   transform: scale(1);
+  /* Quick fade-in on press so feedback feels immediate */
+  transition: opacity 35ms ease-in, transform 35ms ease-in;
 }
 
 .tap-target {
@@ -452,7 +473,8 @@ button:active {
   border: 1px solid color-mix(in srgb, var(--neuro-shadow-light) 65%, transparent);
   box-shadow:
     6px 6px 16px var(--neuro-shadow-dark),
-    -3px -3px 10px var(--neuro-shadow-light);
+    -3px -3px 10px var(--neuro-shadow-light),
+    0 0 0 1px color-mix(in srgb, var(--app-accent) 7%, transparent);
   border-radius: 1.25rem;
 }
 
@@ -743,7 +765,8 @@ button:active {
   border: 1px solid color-mix(in srgb, var(--neuro-shadow-light) 65%, transparent);
   box-shadow:
     6px 6px 16px var(--neuro-shadow-dark),
-    -3px -3px 10px var(--neuro-shadow-light);
+    -3px -3px 10px var(--neuro-shadow-light),
+    0 0 0 1px color-mix(in srgb, var(--app-accent) 6%, transparent);
   border-radius: 1.25rem;
 }
 

@@ -29,8 +29,12 @@ export default function App() {
       'aguamarina-negro': '#03110e',
       'ocaso-negro': '#120905',
     };
+    const bg = bgColors[theme] ?? '#050505';
     document.body.setAttribute('data-theme', theme);
-    document.documentElement.style.backgroundColor = bgColors[theme] ?? '#050505';
+    document.documentElement.style.backgroundColor = bg;
+    // Update PWA status-bar / address-bar theme color
+    const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+    if (themeColorMeta) themeColorMeta.setAttribute('content', bg);
     return () => {
       document.body.removeAttribute('data-theme');
       document.documentElement.style.backgroundColor = '';
