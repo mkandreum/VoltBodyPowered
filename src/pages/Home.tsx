@@ -1,13 +1,39 @@
 import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore } from '../store/useAppStore';
-import { Dumbbell, Utensils, Flame, Moon, Activity, Sparkles, Quote, Clock3, Camera } from 'lucide-react';
+import { Dumbbell, Utensils, Flame, Moon, Activity, Sparkles, Quote, Clock3, Camera, Zap } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { format, subDays, isValid } from 'date-fns';
 import { AppCard, SectionHeader, StatPill } from '../components/ui';
 import { fadeSlideUp, listStagger, timelineStagger, checkBounce } from '../lib/motion';
 import { getMondayFirstIndex, mapRoutineByWeekday } from '../lib/routineWeek';
 import { workoutService } from '../services/workoutService';
+
+/** Circular SVG progress ring */
+function CircularProgress({ value, size = 64 }: { value: number; size?: number }) {
+  const radius = 24;
+  const circumference = 2 * Math.PI * radius;
+  const filled = Math.max(0, Math.min(100, value));
+  const dashArray = `${(filled / 100) * circumference} ${circumference}`;
+
+  return (
+    <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
+      <svg width={size} height={size} viewBox="0 0 56 56">
+        <circle cx="28" cy="28" r={radius} className="circular-ring-track" />
+        <circle
+          cx="28"
+          cy="28"
+          r={radius}
+          className="circular-ring-fill"
+          strokeDasharray={dashArray}
+          strokeDashoffset="0"
+          style={{ transformOrigin: '28px 28px' }}
+        />
+      </svg>
+      <span className="absolute text-[10px] font-black text-white">{filled}%</span>
+    </div>
+  );
+}
 
 function FlipMetric({ value, label }: { value: string; label: string }) {
   return (
@@ -162,6 +188,22 @@ export default function Home() {
   const caloriesTarget = diet?.dailyCalories || 0;
   const mealCount = diet?.meals?.length || 0;
   const nutritionAdherence = mealCount > 0 ? Math.min(100, Math.round((mealCount / 5) * 100)) : 0;
+
+  // ── Gamification XP / Level ──────────────────────────────
+  // XP gains: 12 per completed set (more impactful), 8 per streak day (consistency bonus)
+  const XP_PER_LOG = 12;
+  const XP_PER_STREAK_DAY = 8;
+  const XP_PER_LEVEL = 250;
+  const MINUTES_PER_EXERCISE = 5; // average time estimate per exercise including rest
+
+  const totalXP = useMemo(() => logs.length * XP_PER_LOG + currentStreak * XP_PER_STREAK_DAY, [logs.length, currentStreak]);
+  const xpPerLevel = XP_PER_LEVEL;
+  const level = Math.floor(totalXP / XP_PER_LEVEL) + 1;
+  const xpInLevel = totalXP % XP_PER_LEVEL;
+  const xpProgress = Math.round((xpInLevel / XP_PER_LEVEL) * 100);
+
+  // Estimated workout duration based on number of exercises
+  const estimatedMinutes = (todayRoutine?.exercises?.length || 0) * MINUTES_PER_EXERCISE;
 
   const sleepScore = useMemo(() => {
     if (!insights?.sleepRecommendation) return 72;
@@ -323,45 +365,79 @@ export default function Home() {
         transition={fadeSlideUp.transition}
         className="mb-8"
       >
-        <AppCard accent interactive className="p-6 glass-panel">
+        <AppCard accent interactive className="p-6 glass-panel dynamic-glow-card">
           <div className="flex items-start justify-between gap-4 mb-5">
-            <div>
+            <div className="flex-1 min-w-0">
               <p className="text-xs uppercase tracking-[0.18em] text-gray-400 mb-2">🏆 Hoy conquistas</p>
               <h2 className="text-3xl font-black leading-none tracking-tight headline-gradient">
-                {todayRoutine?.focus || 'Recuperación activa'}
+                {todayRoutine?.focus
+                  ? `${todayRoutine.focus} 💀🔥`
+                  : 'Recuperación activa'}
               </h2>
               <p className="text-sm text-gray-300 mt-3">
                 {todayRoutine
-                  ? `${todayRoutine.exercises.length} ejercicios cargados para cerrar en verde`
+                  ? `⚡ ${estimatedMinutes} min · 🔥 ${caloriesTarget} kcal · ${todayRoutine.exercises.length} ejercicios`
                   : 'Sin rutina cargada. Activa una sesión rápida en menos de 2 min'}
               </p>
             </div>
-            <Sparkles className="app-accent shrink-0" />
+            <CircularProgress value={routineCompletion} size={68} />
           </div>
 
-          <div className="grid grid-cols-3 gap-2 mb-5">
-            <FlipMetric value={`${currentStreak}🔥`} label="Racha" />
-            <FlipMetric value={`${routineCompletion}%`} label="Sesión" />
-            <FlipMetric value={`${caloriesTarget}`} label="Kcal" />
+          <div className="grid grid-cols-2 gap-2 mb-5">
+            <FlipMetric value={`${currentStreak}🔥`} label="Racha días" />
+            <FlipMetric value={`Nv. ${level} ⚡`} label={`${xpInLevel}/${xpPerLevel} XP`} />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <motion.button
               onClick={() => setTab('workout')}
-              whileTap={{ scale: 0.98 }}
+              whileTap={{ scale: 0.96 }}
               onTapStart={triggerHaptic}
-              className="tap-target pulse-surface pressable primary-btn rounded-xl py-3 px-4 transition-base"
+              className="tap-target pulse-surface pressable primary-btn rounded-xl py-3.5 px-4 font-bold text-sm transition-base flex items-center justify-center gap-2"
             >
-              Empezar sesión ⚡
+              <Zap size={15} className="shrink-0" />
+              Empezar sesión
             </motion.button>
             <motion.button
               onClick={() => setTab('diet')}
-              whileTap={{ scale: 0.98 }}
+              whileTap={{ scale: 0.97 }}
               onTapStart={triggerHaptic}
-              className="tap-target pulse-surface pressable secondary-btn rounded-xl text-white font-semibold py-3 px-4 hover:border-[color:var(--app-accent)]/40 transition-base"
+              className="tap-target pulse-surface pressable secondary-btn rounded-xl text-white font-semibold py-3.5 px-4 hover:border-[color:var(--app-accent)]/40 transition-base"
             >
               Optimizar comida 🍽️
             </motion.button>
+          </div>
+        </AppCard>
+      </motion.div>
+
+      {/* ── Gamification XP bar ──────────────────────────── */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.26, delay: 0.12, ease: [0.22, 1, 0.36, 1] }}
+        className="mb-8"
+      >
+        <AppCard className="p-4 glass-panel">
+          <div className="flex items-center justify-between mb-2.5">
+            <div className="flex items-center gap-2">
+              <Zap size={14} className="app-accent" />
+              <span className="text-sm font-black text-white">Nivel {level}</span>
+              <span className="text-[10px] text-gray-500 font-mono">· {totalXP} XP total</span>
+            </div>
+            <span className="text-[10px] font-mono text-gray-400">{xpInLevel}/{xpPerLevel} XP</span>
+          </div>
+          <div className="h-2 w-full neuro-progress-track mb-3">
+            <motion.div
+              className="xp-bar-fill"
+              initial={{ width: 0 }}
+              animate={{ width: `${xpProgress}%` }}
+              transition={{ duration: 0.9, ease: [0.34, 1.1, 0.64, 1], delay: 0.4 }}
+            />
+          </div>
+          <div className="flex gap-5 flex-wrap text-xs text-gray-400">
+            <span>🔥 {currentStreak} días racha</span>
+            <span>💪 {logs.length} series totales</span>
+            <span>📊 {weeklyConsistency}% semana</span>
           </div>
         </AppCard>
       </motion.div>
