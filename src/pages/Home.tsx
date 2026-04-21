@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore } from '../store/useAppStore';
 import { Dumbbell, Utensils, Flame, Moon, Activity, Sparkles, Quote, Clock3, Camera } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { format, subDays, isValid } from 'date-fns';
 import { AppCard, SectionHeader, StatPill } from '../components/ui';
 import { fadeSlideUp, listStagger, timelineStagger, checkBounce } from '../lib/motion';
@@ -374,22 +374,32 @@ export default function Home() {
             <p className="text-sm text-gray-400 mb-4">{bentoCards[0].subtitle}</p>
             <div className="h-24 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData}>
+                <AreaChart data={chartData}>
+                  <defs>
+                    <linearGradient id="voltGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="var(--app-accent)" stopOpacity={0.28} />
+                      <stop offset="100%" stopColor="var(--app-accent)" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
                   <XAxis dataKey="name" stroke="#6b7280" fontSize={10} tickLine={false} axisLine={false} />
                   <YAxis hide />
                   <Tooltip
                     contentStyle={{ backgroundColor: 'color-mix(in srgb, var(--app-surface) 85%, transparent)', border: '1px solid var(--app-border)', borderRadius: '10px' }}
                     itemStyle={{ color: 'var(--app-accent)' }}
                   />
-                  <Line
+                  <Area
                     type="monotone"
                     dataKey="peso"
                     stroke="var(--app-accent)"
-                    strokeWidth={3}
-                    dot={{ r: 0 }}
-                    activeDot={{ r: 5, fill: 'var(--app-accent)' }}
+                    strokeWidth={2.5}
+                    fill="url(#voltGradient)"
+                    dot={false}
+                    activeDot={{ r: 5, fill: 'var(--app-accent)', strokeWidth: 0 }}
+                    isAnimationActive={true}
+                    animationDuration={900}
+                    animationEasing="ease-out"
                   />
-                </LineChart>
+                </AreaChart>
               </ResponsiveContainer>
             </div>
           </AppCard>

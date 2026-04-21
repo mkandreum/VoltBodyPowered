@@ -5,7 +5,7 @@ import { ChevronLeft, Play, CheckCircle2, Dumbbell, PlusCircle, Trash2, Star, Ca
 import { workoutService } from '../services/workoutService';
 import { authService } from '../services/authService';
 import { enrichRoutine, routineNeedsEnrichment } from '../services/exerciseImageService';
-import { AppCard, SectionHeader, StatPill } from '../components/ui';
+import { AppCard, SectionHeader, StatPill, LazyImage } from '../components/ui';
 import { listStagger, slideUpSheet, checkBounce, successBurst, completionGlow, tapPulse, timelineStagger } from '../lib/motion';
 import { WEEKDAY_LABELS, getMondayFirstIndex, mapRoutineByWeekday } from '../lib/routineWeek';
 import { format } from 'date-fns';
@@ -27,6 +27,10 @@ export default function Workout() {
     showToast,
     logs,
   } = useAppStore();
+  // SVG circle circumference for rest timer ring: 2π × r=10
+  const TIMER_CIRCUMFERENCE = 2 * Math.PI * 10;
+  const REST_TIMER_SECONDS = 90;
+
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
   const [weightInput, setWeightInput] = useState<number>(0);
   const [repsInput, setRepsInput] = useState<number>(0);
@@ -37,6 +41,11 @@ export default function Workout() {
   const [isEditingDays, setIsEditingDays] = useState(false);
   const [moveSourceDayIndex, setMoveSourceDayIndex] = useState<number | null>(null);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'local' | 'syncing' | 'synced' | 'error'>('idle');
+  // Rest timer state
+  const [restSeconds, setRestSeconds] = useState<number>(0);
+  const restIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Completion celebration
+  const [showCompletion, setShowCompletion] = useState(false);
 
   // Stable callback passed to WeightCalculator — avoids stale-closure issue with onWeightChange
   const handleCalculatorWeightChange = useCallback((w: number) => setWeightInput(w), []);
@@ -111,6 +120,52 @@ export default function Workout() {
   const isSpecialClassToday =
     Boolean(profile?.weeklySpecialSession?.enabled) &&
     profile?.weeklySpecialSession?.day?.toLowerCase() === todayLabel.toLowerCase();
+
+  // Whether every exercise in today's routine is fully completed
+  const allExercisesDone = useMemo(() => {
+    if (!todayRoutine?.exercises?.length) return false;
+    return todayRoutine.exercises.every((ex) => {
+      const done = setsByExercise.get(ex.id) ?? 0;
+      return done >= Math.max(1, Number(ex.sets || 0));
+    });
+  }, [todayRoutine, setsByExercise]);
+
+  // Last session log for the selected exercise (most recent entry before today)
+  const lastSessionLog = useMemo(() => {
+    if (!selectedExercise) return null;
+    const past = logs
+      .filter((l) => l.exerciseId === selectedExercise.id && l.date.slice(0, 10) !== todayDateKey)
+      .sort((a, b) => b.date.localeCompare(a.date));
+    return past[0] ?? null;
+  }, [selectedExercise, logs, todayDateKey]);
+
+  // Rest timer helpers
+  const startRestTimer = useCallback((seconds = REST_TIMER_SECONDS) => {
+    if (restIntervalRef.current) clearInterval(restIntervalRef.current);
+    setRestSeconds(seconds);
+    restIntervalRef.current = setInterval(() => {
+      setRestSeconds((prev) => {
+        if (prev <= 1) {
+          clearInterval(restIntervalRef.current!);
+          restIntervalRef.current = null;
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => () => { if (restIntervalRef.current) clearInterval(restIntervalRef.current); }, []);
+
+  // Fire completion celebration when all exercises are done (guard with showCompletion to avoid repeated timers)
+  useEffect(() => {
+    if (allExercisesDone && !showCompletion) {
+      setShowCompletion(true);
+      const timer = setTimeout(() => setShowCompletion(false), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [allExercisesDone, showCompletion]);
 
   useEffect(() => {
     if (routinesByDay[selectedDayIndex]) return;
@@ -234,6 +289,8 @@ export default function Workout() {
 
       newLogs.forEach((log) => addLog(log));
       setSyncStatus('local');
+      // Start the rest timer immediately after saving
+      startRestTimer(90);
 
       if (authToken) {
         try {
@@ -410,10 +467,11 @@ export default function Workout() {
       )}
 
       <div className="space-y-4">
-        {todayRoutine?.exercises.map((exercise, index) => {
+        {todayRoutine?.exercises.length ? todayRoutine.exercises.map((exercise, index) => {
           const completedCount = setsByExercise.get(exercise.id) ?? 0;
           const targetSets = Math.max(1, Number(exercise.sets || 0));
           const isCompleted = completedCount >= targetSets;
+          const progressPct = Math.min(100, Math.round((completedCount / targetSets) * 100));
 
           return (
           <motion.div
@@ -421,67 +479,104 @@ export default function Workout() {
             {...listStagger(index)}
             whileTap={{ scale: 0.985 }}
             onClick={() => setSelectedExercise(exercise)}
-            className={`panel-soft interactive-tile rounded-3xl p-5 flex items-center gap-4 cursor-pointer transition-all group ripple-host ${
+            className={`panel-soft interactive-tile rounded-3xl overflow-hidden cursor-pointer transition-all group ripple-host ${
               isCompleted
                 ? 'border-[color:var(--app-accent)]/60 bg-[color:var(--app-accent)]/5 anim-glow-pulse'
                 : 'hover:border-[color:var(--app-accent)]/50'
             }`}
           >
-            <div className="w-16 h-16 rounded-2xl overflow-hidden bg-[var(--app-surface)] flex-shrink-0 relative">
-              <img 
-                src={exercise.gifUrl || 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=400&auto=format&fit=crop'} 
-                alt={exercise.name} 
-                onError={handleImageError}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
-                referrerPolicy="no-referrer" 
-              />
-              <div className="absolute inset-0 flex items-center justify-center bg-black/40 group-hover:bg-transparent transition-colors">
-                <AnimatePresence mode="wait" initial={false}>
-                  {isCompleted ? (
-                    <motion.span key="done" {...checkBounce}>
-                      <CheckCircle2 className="text-[var(--app-accent)]" size={22} />
-                    </motion.span>
-                  ) : (
-                    <motion.span key="play" initial={{ opacity: 0.8 }} animate={{ opacity: 0.8 }}>
-                      <Play className="app-accent opacity-80" size={20} />
-                    </motion.span>
-                  )}
-                </AnimatePresence>
+            <div className="p-5 flex items-center gap-4">
+              <motion.div
+                layoutId={`ex-img-${exercise.id}`}
+                className="w-16 h-16 rounded-2xl overflow-hidden bg-[var(--app-surface)] flex-shrink-0 relative"
+              >
+                <LazyImage 
+                  src={exercise.gifUrl || 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=400&auto=format&fit=crop'} 
+                  alt={exercise.name} 
+                  onError={handleImageError}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+                  referrerPolicy="no-referrer"
+                />
+                <div className="absolute inset-0 flex items-center justify-center bg-black/40 group-hover:bg-transparent transition-colors">
+                  <AnimatePresence mode="wait" initial={false}>
+                    {isCompleted ? (
+                      <motion.span key="done" {...checkBounce}>
+                        <CheckCircle2 className="text-[var(--app-accent)]" size={22} />
+                      </motion.span>
+                    ) : (
+                      <motion.span key="play" initial={{ opacity: 0.8 }} animate={{ opacity: 0.8 }}>
+                        <Play className="app-accent opacity-80" size={20} />
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </motion.div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-base font-semibold text-white mb-0.5 truncate">{exercise.name}</h3>
+                <p className="text-sm text-gray-500 font-medium tabular-nums">
+                  {exercise.sets} sets × {exercise.reps} reps
+                </p>
+                {completedCount > 0 && (
+                  <AnimatePresence>
+                    <motion.p
+                      key={`${exercise.id}-count`}
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                      className="text-xs font-mono mt-0.5 text-[var(--app-accent)]"
+                    >
+                      {isCompleted ? '✅ Completado' : `${completedCount}/${targetSets} series`}
+                    </motion.p>
+                  </AnimatePresence>
+                )}
               </div>
+              <AnimatePresence mode="wait" initial={false}>
+                {isCompleted ? (
+                  <motion.span key="done-icon" {...completionGlow}>
+                    <CheckCircle2 className="text-[var(--app-accent)]" size={20} />
+                  </motion.span>
+                ) : (
+                  <motion.span key="chevron" initial={{ opacity: 1 }} animate={{ opacity: 1 }}>
+                    <ChevronLeft className="text-gray-600 rotate-180 group-hover:text-[var(--app-accent)] transition-colors" />
+                  </motion.span>
+                )}
+              </AnimatePresence>
             </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-bold text-white mb-1">{exercise.name}</h3>
-              <p className="text-sm text-gray-400 font-mono">
-                {exercise.sets} sets x {exercise.reps} reps
-              </p>
-              {completedCount > 0 && (
-                <AnimatePresence>
-                  <motion.p
-                    key={`${exercise.id}-count`}
-                    initial={{ opacity: 0, y: 4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                    className="text-xs font-mono mt-0.5 text-[var(--app-accent)]"
-                  >
-                    {isCompleted ? '✅ Completado' : `${completedCount}/${targetSets} series`}
-                  </motion.p>
-                </AnimatePresence>
-              )}
+            {/* Ultra-thin series progress bar */}
+            <div className="h-[3px] w-full bg-white/5">
+              <motion.div
+                className="h-full rounded-full"
+                style={{ background: isCompleted ? 'var(--app-accent)' : 'var(--app-accent)' }}
+                initial={{ width: 0 }}
+                animate={{ width: `${progressPct}%` }}
+                transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+              />
             </div>
-            <AnimatePresence mode="wait" initial={false}>
-              {isCompleted ? (
-                <motion.span key="done-icon" {...completionGlow}>
-                  <CheckCircle2 className="text-[var(--app-accent)]" size={20} />
-                </motion.span>
-              ) : (
-                <motion.span key="chevron" initial={{ opacity: 1 }} animate={{ opacity: 1 }}>
-                  <ChevronLeft className="text-gray-600 rotate-180 group-hover:text-[var(--app-accent)] transition-colors" />
-                </motion.span>
-              )}
-            </AnimatePresence>
           </motion.div>
           );
-        })}
+        }) : (
+          /* Empty state */
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+            className="flex flex-col items-center justify-center py-16 px-6 text-center"
+          >
+            <div className="relative mb-6">
+              <svg width="96" height="96" viewBox="0 0 96 96" fill="none" className="opacity-20">
+                <rect x="12" y="36" width="72" height="42" rx="6" stroke="currentColor" strokeWidth="1.5" strokeDasharray="4 3" />
+                <circle cx="48" cy="24" r="12" stroke="currentColor" strokeWidth="1.5" strokeDasharray="4 3" />
+                <line x1="32" y1="57" x2="64" y2="57" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                <line x1="38" y1="65" x2="58" y2="65" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Dumbbell className="app-accent opacity-60" size={32} />
+              </div>
+            </div>
+            <p className="text-white/70 font-semibold text-base mb-1">Sin rutina para hoy</p>
+            <p className="text-gray-500 text-sm max-w-[220px]">Genera tu plan con IA o añade ejercicios en "Arma tu Entrenamiento"</p>
+          </motion.div>
+        )}
       </div>
 
       {profile?.weeklySpecialSession?.enabled && (
@@ -566,17 +661,22 @@ export default function Workout() {
             {...slideUpSheet}
             className="fixed inset-0 z-[60] bg-[var(--app-bg)] flex flex-col"
           >
+            {/* Header with shared-element image transition */}
             <div className="relative h-2/5 bg-[var(--app-surface)] overflow-hidden flex items-center justify-center">
-              {/* Main sharp GIF */}
-              <img 
-                key={selectedExercise.exerciseId}
-                src={selectedExercise.gifUrl || 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=400&auto=format&fit=crop'} 
-                alt={selectedExercise.name} 
-                onError={handleImageError}
-                className="relative w-full h-full object-contain z-10" 
-                referrerPolicy="no-referrer"
-                loading="eager"
-              />
+              <motion.div
+                layoutId={`ex-img-${selectedExercise.id}`}
+                className="w-full h-full"
+                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              >
+                <LazyImage 
+                  src={selectedExercise.gifUrl || 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=400&auto=format&fit=crop'} 
+                  alt={selectedExercise.name} 
+                  onError={handleImageError}
+                  className="w-full h-full object-contain z-10" 
+                  referrerPolicy="no-referrer"
+                  loading="eager"
+                />
+              </motion.div>
               <div className="absolute inset-0 bg-gradient-to-t from-[var(--app-bg)] via-transparent to-transparent z-20 pointer-events-none" />
               <button
                 onClick={closeExercise}
@@ -603,9 +703,9 @@ export default function Workout() {
               </div>
 
               <div className="neuro-raised rounded-3xl p-6 mb-8">
-                <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                  <CheckCircle2 className="app-accent" />
-                  Registrar Series ✏️
+                <h3 className="text-base font-semibold text-white/90 mb-4 flex items-center gap-2">
+                  <CheckCircle2 className="app-accent" size={16} />
+                  Registrar Series
                 </h3>
 
                 {/* Smart Weight Calculator */}
@@ -617,31 +717,31 @@ export default function Workout() {
                   onWeightChange={handleCalculatorWeightChange}
                 />
                 
-                <div className="grid grid-cols-3 gap-3 mb-6">
+                <div className="grid grid-cols-3 gap-3 mb-3">
                   <div>
-                    <label className="block text-sm text-gray-400 mb-2 font-mono">Peso (kg)</label>
+                    <label className="block text-xs font-medium text-gray-500 mb-2 uppercase tracking-wider">Peso (kg)</label>
                     <input
                       type="number"
                       inputMode="decimal"
                       value={weightInput || ''}
                       onChange={(e) => setWeightInput(Number(e.target.value))}
-                      className="w-full input-field rounded-2xl p-4 text-2xl font-bold text-center"
+                      className="w-full input-field rounded-2xl p-4 text-2xl font-semibold text-center"
                       placeholder="0"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm text-gray-400 mb-2 font-mono">Reps</label>
+                    <label className="block text-xs font-medium text-gray-500 mb-2 uppercase tracking-wider">Reps</label>
                     <input
                       type="number"
                       inputMode="numeric"
                       value={repsInput || ''}
                       onChange={(e) => setRepsInput(Number(e.target.value))}
-                      className="w-full input-field rounded-2xl p-4 text-2xl font-bold text-center"
+                      className="w-full input-field rounded-2xl p-4 text-2xl font-semibold text-center"
                       placeholder="0"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm text-gray-400 mb-2 font-mono">Series</label>
+                    <label className="block text-xs font-medium text-gray-500 mb-2 uppercase tracking-wider">Series</label>
                     <input
                       type="number"
                       inputMode="numeric"
@@ -649,11 +749,21 @@ export default function Workout() {
                       max={10}
                       value={setsInput || ''}
                       onChange={(e) => setSetsInput(Math.max(1, Number(e.target.value)))}
-                      className="w-full input-field rounded-2xl p-4 text-2xl font-bold text-center"
+                      className="w-full input-field rounded-2xl p-4 text-2xl font-semibold text-center"
                       placeholder="1"
                     />
                   </div>
                 </div>
+
+                {/* Last session context */}
+                {lastSessionLog && (
+                  <p className="text-xs text-gray-500 mb-4 text-center tabular-nums">
+                    Última vez:{' '}
+                    <span className="text-white/70 font-medium">
+                      {lastSessionLog.weight}kg × {lastSessionLog.reps} reps
+                    </span>
+                  </p>
+                )}
 
                 <motion.button
                   onClick={handleLog}
@@ -665,6 +775,67 @@ export default function Workout() {
                   {setsInput > 1 ? `Guardar ${setsInput} series 💾` : 'Guardar Serie 💾'}
                 </motion.button>
               </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Floating rest timer pill */}
+      <AnimatePresence>
+        {restSeconds > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+            className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-[55] flex items-center gap-3 px-5 py-2.5 rounded-full glass-panel border border-[var(--app-border)]"
+          >
+            <div className="w-6 h-6 relative flex items-center justify-center">
+              <svg className="absolute inset-0 -rotate-90" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.1)" strokeWidth="2" />
+                <circle
+                  cx="12" cy="12" r="10"
+                  stroke="var(--app-accent)"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeDasharray={`${TIMER_CIRCUMFERENCE * (restSeconds / REST_TIMER_SECONDS)} ${TIMER_CIRCUMFERENCE}`}
+                  style={{ transition: 'stroke-dasharray 1s linear' }}
+                />
+              </svg>
+            </div>
+            <span className="text-white font-semibold text-sm tabular-nums">
+              Descanso: {Math.floor(restSeconds / 60)}:{String(restSeconds % 60).padStart(2, '0')}
+            </span>
+            <button
+              onClick={() => { setRestSeconds(0); if (restIntervalRef.current) clearInterval(restIntervalRef.current); }}
+              className="text-gray-500 hover:text-white text-xs ml-1 transition-colors"
+            >
+              ✕
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Completion celebration banner */}
+      <AnimatePresence>
+        {showCompletion && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8, y: -20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.8, y: -20 }}
+            transition={{ type: 'spring', stiffness: 350, damping: 25 }}
+            className="fixed top-[max(1.5rem,env(safe-area-inset-top))] left-1/2 -translate-x-1/2 z-[70] flex items-center gap-3 px-6 py-3 rounded-2xl border border-[color:var(--app-accent)]/40 bg-[color:var(--app-accent)]/10 backdrop-blur-xl shadow-[0_8px_32px_color-mix(in_srgb,var(--app-accent)_30%,transparent)]"
+          >
+            <motion.span
+              animate={{ rotate: [0, -10, 10, -6, 6, 0], scale: [1, 1.2, 1] }}
+              transition={{ duration: 0.6, ease: 'easeInOut' }}
+              className="text-2xl"
+            >
+              🏆
+            </motion.span>
+            <div>
+              <p className="text-white font-bold text-sm leading-none">¡Sesión completada!</p>
+              <p className="text-[color:var(--app-accent)] text-xs mt-0.5">Todos los ejercicios en verde ⚡</p>
             </div>
           </motion.div>
         )}
