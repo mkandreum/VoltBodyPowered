@@ -1,6 +1,6 @@
 import { Dumbbell, Calendar, User, Utensils, Zap } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import clsx from 'clsx';
 
 type TabId = 'home' | 'workout' | 'diet' | 'calendar' | 'profile';
@@ -63,7 +63,21 @@ export default function BottomNav() {
                     className="liquid-indicator absolute inset-0"
                   />
                 )}
-                <item.icon size={18} className={clsx('transition-transform', isActive && 'scale-110')} />
+                <item.icon size={16} className={clsx('transition-transform', isActive && 'scale-110')} />
+                <AnimatePresence>
+                  {isActive && (
+                    <motion.span
+                      key="label-left"
+                      initial={{ opacity: 0, y: -3 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -3 }}
+                      transition={{ duration: 0.15, ease: [0.22, 1, 0.36, 1] }}
+                      className="nav-label"
+                    >
+                      {item.label}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
               </button>
             );
           })}
@@ -133,7 +147,21 @@ export default function BottomNav() {
                     className="liquid-indicator absolute inset-0"
                   />
                 )}
-                <item.icon size={18} className={clsx('transition-transform', isActive && 'scale-110')} />
+                <item.icon size={16} className={clsx('transition-transform', isActive && 'scale-110')} />
+                <AnimatePresence>
+                  {isActive && (
+                    <motion.span
+                      key="label-right"
+                      initial={{ opacity: 0, y: -3 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -3 }}
+                      transition={{ duration: 0.15, ease: [0.22, 1, 0.36, 1] }}
+                      className="nav-label"
+                    >
+                      {item.label}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
               </button>
             );
           })}

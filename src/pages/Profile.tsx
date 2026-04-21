@@ -213,8 +213,8 @@ export default function Profile() {
         <div className="absolute top-0 right-0 w-32 h-32 bg-[color:var(--app-accent)]/10 rounded-full blur-3xl -mr-16 -mt-16" />
         
         <div className="relative">
-          <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[color:var(--app-accent)] to-black p-1 glow-box">
-            <div className="w-full h-full bg-black rounded-full flex items-center justify-center border-2 border-[#121212] overflow-hidden">
+          <div className="w-24 h-24 rounded-full avatar-ring-animated p-[3px]">
+            <div className="w-full h-full bg-black rounded-full flex items-center justify-center border-2 border-[#0a0a0a] overflow-hidden">
               {profilePhoto ? (
                 <img src={profilePhoto} alt="Profile" className="w-full h-full object-cover" />
               ) : (
@@ -292,6 +292,50 @@ export default function Profile() {
           </div>
         </div>
       </motion.div>
+
+      {/* ── Visual fitness stat bars ──────────────────────── */}
+      {(() => {
+        // Strength: each completed set contributes 4% up to 100% (25 sets = max strength score)
+        const STRENGTH_XP_PER_LOG = 4;
+        // Energy: each weekly weight log contributes 18% (5-6 logs ≈ full engagement); minimum 30%
+        const ENERGY_XP_PER_WEIGHT_LOG = 18;
+        const ENERGY_MIN = 30;
+
+        const strengthScore = Math.min(100, logs.length * STRENGTH_XP_PER_LOG);
+        const consistencyScore = weeklyGoalProgress;
+        const energyScore = Math.min(100, Math.max(ENERGY_MIN, weightLogs.length * ENERGY_XP_PER_WEIGHT_LOG));
+        const statBars = [
+          { label: '💪 Fuerza', value: strengthScore },
+          { label: '🔥 Consistencia', value: consistencyScore },
+          { label: '⚡ Energía', value: energyScore },
+        ];
+        return (
+          <motion.div {...listStagger(2)} className="glass-panel border border-[var(--app-border)] rounded-3xl p-6 mb-8">
+            <h3 className="text-base font-bold text-white mb-5 flex items-center gap-2">
+              <Activity className="app-accent" size={18} />
+              📊 Indicadores de forma
+            </h3>
+            <div className="space-y-4">
+              {statBars.map((stat) => (
+                <div key={stat.label}>
+                  <div className="flex justify-between mb-1.5">
+                    <span className="text-sm text-gray-300">{stat.label}</span>
+                    <span className="text-sm font-bold text-white">{stat.value}%</span>
+                  </div>
+                  <div className="stat-bar-track">
+                    <motion.div
+                      className="stat-bar-fill"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${stat.value}%` }}
+                      transition={{ duration: 0.9, ease: [0.34, 1.1, 0.64, 1], delay: 0.3 }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        );
+      })()}
 
       <div className="glass-panel border border-[var(--app-border)] rounded-3xl p-6 mb-8">
         <div className="flex justify-between items-center mb-4">

@@ -603,7 +603,7 @@ button:active {
 }
 
 .nav-soft-btn {
-  height: 48px;
+  height: 52px;
   min-width: 48px;
   border-radius: 14px;
   border: 1px solid transparent;
@@ -612,7 +612,8 @@ button:active {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0;
+  flex-direction: column;
+  gap: 2px;
   will-change: transform;
   backface-visibility: hidden;
   transition: color var(--motion-fast);
@@ -838,6 +839,38 @@ button:active {
   100% { transform: scale(2.8); opacity: 0; }
 }
 
+/* ─── Animated avatar ring ───────────────────────────────── */
+@property --avatar-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes avatar-ring-spin {
+  to { --avatar-angle: 360deg; }
+}
+
+/* ─── Primary button shimmer sweep ───────────────────────── */
+@keyframes btn-shimmer-sweep {
+  0%   { left: -120%; opacity: 0; }
+  20%  { opacity: 1; }
+  80%  { opacity: 1; }
+  100% { left: 120%; opacity: 0; }
+}
+
+/* ─── XP bar pulse glow ──────────────────────────────────── */
+@keyframes xp-glow {
+  0%, 100% { box-shadow: 0 0 6px color-mix(in srgb, var(--app-accent) 40%, transparent); }
+  50%       { box-shadow: 0 0 16px color-mix(in srgb, var(--app-accent) 75%, transparent),
+                          0 0 30px color-mix(in srgb, var(--app-accent) 30%, transparent); }
+}
+
+/* ─── Dynamic glow pulse (replaces static) ───────────────── */
+@keyframes dynamic-glow {
+  0%, 100% { opacity: 0.4; }
+  50%       { opacity: 0.85; }
+}
+
 /* Shimmer sweep for loading state */
 @keyframes shimmer {
   0%   { background-position: -200% center; }
@@ -910,5 +943,116 @@ button:active {
 .ripple-host:active::after {
   inset: 0;
   animation: ripple-expand 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* ─── Animated avatar ring ───────────────────────────────── */
+.avatar-ring-animated {
+  --avatar-angle: 0deg;
+  background: conic-gradient(
+    from var(--avatar-angle),
+    var(--app-accent) 0%,
+    color-mix(in srgb, var(--app-accent) 20%, black) 25%,
+    #000 45%,
+    color-mix(in srgb, var(--app-accent) 60%, #a8ff00) 70%,
+    var(--app-accent) 100%
+  );
+  animation: avatar-ring-spin 3s linear infinite;
+  box-shadow:
+    0 0 22px color-mix(in srgb, var(--app-accent) 55%, transparent),
+    0 0 50px color-mix(in srgb, var(--app-accent) 18%, transparent);
+}
+
+/* ─── Primary button shimmer sweep ───────────────────────── */
+.primary-btn {
+  position: relative;
+}
+
+.primary-btn::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -120%;
+  width: 55%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.22),
+    transparent
+  );
+  animation: btn-shimmer-sweep 2.8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* ─── XP progress bar with glow ─────────────────────────── */
+.xp-bar-fill {
+  height: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, var(--app-accent), color-mix(in srgb, var(--app-accent) 70%, #a8ff00));
+  animation: xp-glow 2s ease-in-out infinite;
+  transition: width 0.9s cubic-bezier(0.34, 1.1, 0.64, 1);
+}
+
+/* ─── Circular SVG progress ring ────────────────────────── */
+.circular-ring-track {
+  fill: none;
+  stroke: color-mix(in srgb, var(--app-accent) 15%, transparent);
+  stroke-width: 2.5;
+}
+
+.circular-ring-fill {
+  fill: none;
+  stroke: var(--app-accent);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+  transform-origin: center;
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--app-accent) 80%, transparent));
+  transition: stroke-dasharray 0.9s cubic-bezier(0.34, 1.1, 0.64, 1);
+}
+
+/* ─── Visual stat bars ───────────────────────────────────── */
+.stat-bar-track {
+  height: 8px;
+  border-radius: 9999px;
+  background: var(--app-bg);
+  box-shadow:
+    inset 2px 2px 5px var(--neuro-shadow-dark),
+    inset -1px -1px 4px var(--neuro-shadow-light);
+  overflow: hidden;
+}
+
+.stat-bar-fill {
+  height: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, var(--app-accent), color-mix(in srgb, var(--app-accent) 70%, #a8ff00));
+  box-shadow: 0 0 8px color-mix(in srgb, var(--app-accent) 50%, transparent);
+  transition: width 0.9s cubic-bezier(0.34, 1.1, 0.64, 1);
+}
+
+/* ─── Dynamic glow overlay on cards ─────────────────────── */
+.dynamic-glow-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    ellipse at 50% 0%,
+    color-mix(in srgb, var(--app-accent) 12%, transparent),
+    transparent 65%
+  );
+  animation: dynamic-glow 2.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* ─── Nav label for active tab ───────────────────────────── */
+.nav-label {
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  color: var(--app-accent);
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--app-accent) 60%, transparent));
 }
 
