@@ -4,6 +4,7 @@ import { useAppStore, Exercise, WorkoutDay } from '../store/useAppStore';
 import { ChevronLeft, Play, CheckCircle2, Dumbbell, PlusCircle, Trash2, Star, CalendarClock, Flame } from 'lucide-react';
 import { workoutService } from '../services/workoutService';
 import { authService } from '../services/authService';
+import { enrichRoutine, routineNeedsEnrichment } from '../services/exerciseImageService';
 import { AppCard, SectionHeader, StatPill } from '../components/ui';
 import { listStagger, slideUpSheet, checkBounce, successBurst, completionGlow, tapPulse, timelineStagger } from '../lib/motion';
 import { WEEKDAY_LABELS, getMondayFirstIndex, mapRoutineByWeekday } from '../lib/routineWeek';
@@ -90,6 +91,27 @@ export default function Workout() {
       setSelectedDayIndex(activeDayIndexes[0]);
     }
   }, [selectedDayIndex, routinesByDay, activeDayIndexes]);
+
+  // Silently enrich GIFs for existing users whose routines have empty gifUrls
+  useEffect(() => {
+    if (!authToken || !routine.length || !routineNeedsEnrichment(routine)) return;
+    let cancelled = false;
+    (async () => {
+      const enriched = await enrichRoutine(routine, authToken);
+      if (cancelled || !routineNeedsEnrichment(enriched)) return;
+      // Only update if something actually changed
+      const hasChanges = enriched.some((day, di) =>
+        day.exercises.some((ex, ei) => ex.gifUrl !== routine[di]?.exercises[ei]?.gifUrl)
+      );
+      if (!hasChanges) return;
+      setRoutine(enriched);
+      try {
+        await authService.updateProfile(authToken, { routine: enriched });
+      } catch { /* non-fatal: store is already updated locally */ }
+    })();
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authToken]); // Run once on mount
 
   const moveTrainingDay = async (sourceIndex: number, targetIndex: number) => {
     const sourceRoutine = routinesByDay[sourceIndex];

@@ -155,6 +155,98 @@ if (!apiKey) {
 
 const ai = new GoogleGenAI({ apiKey });
 
+// ExerciseDB config
+const EXERCISEDB_API_KEY = process.env.EXERCISEDB_API_KEY || '';
+const EXERCISEDB_HOST = process.env.EXERCISEDB_HOST || 'exercisedb.p.rapidapi.com';
+
+/**
+ * Translates a Spanish exercise name to an English search term
+ * using a simple keyword map. Falls back to the original name.
+ */
+function toEnglishSearchTerm(nameEs = '') {
+  const lower = nameEs.toLowerCase();
+  const map = [
+    [/sentadill/,        'squat'],
+    [/press.*banca/,     'bench press'],
+    [/press.*inclin/,    'incline dumbbell press'],
+    [/press.*militar|press.*hombro|press.*shoulder/, 'shoulder press'],
+    [/press.*mancuerna/, 'dumbbell press'],
+    [/curl.*b.?ceps|curl.*barra/, 'barbell curl'],
+    [/curl.*martillo/,   'hammer curl'],
+    [/curl.*mancuerna/,  'dumbbell curl'],
+    [/remo.*barra/,      'barbell row'],
+    [/remo.*mancuerna/,  'dumbbell row'],
+    [/remo.*cable/,      'cable row'],
+    [/remo/,             'row'],
+    [/jalón|jalon/,      'lat pulldown'],
+    [/dominada/,         'pull up'],
+    [/fondos/,           'dips'],
+    [/apertura/,         'fly'],
+    [/peso muerto rumano/, 'romanian deadlift'],
+    [/peso muerto/,      'deadlift'],
+    [/zancada|lunge/,    'lunge'],
+    [/prensa.*pierna/,   'leg press'],
+    [/extensi.?n.*tri/,  'tricep extension'],
+    [/press.*franc.?s/,  'skull crusher'],
+    [/elevaci.?n lateral/, 'lateral raise'],
+    [/p.?jaro|face pull/, 'face pull'],
+    [/plancha/,          'plank'],
+    [/burpee/,           'burpee'],
+    [/hip thrust/,       'hip thrust'],
+    [/glut/,             'glute bridge'],
+    [/cardio|trote|corr/, 'run'],
+  ];
+  for (const [pattern, term] of map) {
+    if (pattern.test(lower)) return term;
+  }
+  return nameEs; // last resort: use as-is (ExerciseDB also accepts some Spanish)
+}
+
+/**
+ * Enriches an array of exercises with GIF URLs from ExerciseDB.
+ * Only fills gifUrl when it is empty ('') — never overwrites existing URLs.
+ */
+async function enrichExercisesWithGifs(exercises = []) {
+  if (!EXERCISEDB_API_KEY) {
+    logInfo('ai.enrich_gifs.skipped_no_key');
+    return exercises;
+  }
+
+  return Promise.all(
+    exercises.map(async (ex) => {
+      if (ex.gifUrl) return ex; // already has a GIF, skip
+      try {
+        const searchTerm = encodeURIComponent(toEnglishSearchTerm(ex.name));
+        const url = `https://${EXERCISEDB_HOST}/exercises/name/${searchTerm}?limit=1&offset=0`;
+        const resp = await fetch(url, {
+          headers: {
+            'x-rapidapi-key': EXERCISEDB_API_KEY,
+            'x-rapidapi-host': EXERCISEDB_HOST,
+          },
+        });
+        if (!resp.ok) return ex;
+        const data = await resp.json();
+        const gifUrl = Array.isArray(data) && data[0]?.gifUrl ? data[0].gifUrl : '';
+        return { ...ex, gifUrl };
+      } catch {
+        return ex; // silently degrade — no GIF is better than a crash
+      }
+    })
+  );
+}
+
+/**
+ * Enriches all exercises across a full routine (array of WorkoutDays).
+ */
+async function enrichRoutine(routine = []) {
+  return Promise.all(
+    routine.map(async (day) => ({
+      ...day,
+      exercises: await enrichExercisesWithGifs(day.exercises || []),
+    }))
+  );
+}
+
 // POST /api/ai/generate-plan
 router.post('/generate-plan', authMiddleware, aiRateLimiter, validateGeneratePlanPayload, async (req, res) => {
   try {
@@ -253,6 +345,15 @@ Responde SOLO con JSON válido (sin markdown, sin bloques de código, sin coment
     try {
       const jsonText = extractJsonBlock(response.text);
       const plan = JSON.parse(jsonText);
+
+      // Enrich exercises with GIF URLs from ExerciseDB
+      try {
+        plan.routine = await enrichRoutine(plan.routine || []);
+      } catch (enrichErr) {
+        logError('ai.generate_plan.enrich_error', { requestId: req.requestId, message: enrichErr.message });
+        // Non-fatal: proceed without GIFs
+      }
+
       logInfo('ai.generate_plan.success', { requestId: req.requestId });
       res.json(plan);
     } catch (parseErr) {
@@ -266,20 +367,16 @@ Responde SOLO con JSON válido (sin markdown, sin bloques de código, sin coment
   } catch (error) {
     if (isProviderUnavailableError(error)) {
       logInfo('ai.generate_plan.provider_busy_fallback', { requestId: req.requestId });
-      return res.json({
-        ...fallbackPlan(req.body || {}),
-        fallback: true,
-        details: 'Plan de respaldo generado porque el proveedor IA esta saturado temporalmente.',
-      });
+      const fb = fallbackPlan(req.body || {});
+      try { fb.routine = await enrichRoutine(fb.routine); } catch { /* non-fatal */ }
+      return res.json({ ...fb, fallback: true, details: 'Plan de respaldo generado porque el proveedor IA esta saturado temporalmente.' });
     }
 
     incrementAiError();
     logError('ai.generate_plan.error', { requestId: req.requestId, message: error.message, stack: error.stack });
-    return res.json({
-      ...fallbackPlan(req.body || {}),
-      fallback: true,
-      details: 'Plan de respaldo generado por error del proveedor IA.',
-    });
+    const fb = fallbackPlan(req.body || {});
+    try { fb.routine = await enrichRoutine(fb.routine); } catch { /* non-fatal */ }
+    return res.json({ ...fb, fallback: true, details: 'Plan de respaldo generado por error del proveedor IA.' });
   }
 });
 
@@ -462,6 +559,25 @@ Reglas:
     incrementAiError();
     logError('ai.generate_progress_report.error', { requestId: req.requestId, message: error.message, stack: error.stack });
     return res.json(fallbackProgressReport(req.body?.logs || []));
+  }
+});
+
+// POST /api/ai/enrich-routine
+// Receives a routine with empty gifUrls and returns it enriched.
+// Safe for existing users: only fills empty gifUrl fields.
+router.post('/enrich-routine', authMiddleware, async (req, res) => {
+  try {
+    const { routine } = req.body;
+    if (!Array.isArray(routine)) {
+      return res.status(400).json({ error: 'routine debe ser un array' });
+    }
+    logInfo('ai.enrich_routine.started', { requestId: req.requestId, days: routine.length });
+    const enriched = await enrichRoutine(routine);
+    logInfo('ai.enrich_routine.success', { requestId: req.requestId });
+    return res.json({ routine: enriched });
+  } catch (error) {
+    logError('ai.enrich_routine.error', { requestId: req.requestId, message: error.message });
+    return res.status(500).json({ error: 'Error al enriquecer la rutina' });
   }
 });
 
