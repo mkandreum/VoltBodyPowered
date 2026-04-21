@@ -15,23 +15,23 @@
 :root {
   color-scheme: dark;
   --app-accent: #39ff14;
-  --app-accent-dim: rgba(57, 255, 20, 0.2);
-  --app-bg: #050505;
-  --app-surface: #121212;
-  --app-border: #262626;
-  --app-surface-elevated: #171717;
-  --app-surface-contrast: #1e1e1e;
-  --app-text-muted: #9ca3af;
-  --app-shadow-soft: 0 10px 36px rgba(0, 0, 0, 0.28);
-  --app-shadow-accent: 0 18px 54px var(--app-accent-dim);
-  --app-glass: color-mix(in srgb, var(--app-surface) 76%, transparent);
-  --app-glass-border: color-mix(in srgb, var(--app-border) 68%, white 10%);
-  --app-grid-line: color-mix(in srgb, var(--app-border) 60%, transparent);
+  --app-accent-dim: rgba(57, 255, 20, 0.3);
+  --app-bg: #09090c; /* Carbono profundo azulado */
+  --app-surface: #131317;
+  --app-border: rgba(255, 255, 255, 0.08);
+  --app-surface-elevated: #1a1a20;
+  --app-surface-contrast: #202028;
+  --app-text-muted: #a1a1aa;
+  --app-shadow-soft: 0 16px 48px rgba(0, 0, 0, 0.6);
+  --app-shadow-accent: 0 12px 40px var(--app-accent-dim);
+  --app-glass: color-mix(in srgb, var(--app-surface) 60%, transparent);
+  --app-glass-border: rgba(255, 255, 255, 0.08);
+  --app-grid-line: rgba(255, 255, 255, 0.02);
 
-  /* Neumorphic shadow palette */
-  --neuro-surface: #0b0b0b;
-  --neuro-shadow-dark: #020202;
-  --neuro-shadow-light: #121212;
+  /* Premium Glass shadows / highlight */
+  --neuro-surface: rgba(20, 20, 26, 0.5); /* Translúcido */
+  --neuro-shadow-dark: rgba(0, 0, 0, 0.8);
+  --neuro-shadow-light: rgba(255, 255, 255, 0.06);
 
   --motion-fast: 96ms;
   --motion-base: 168ms;
@@ -83,13 +83,13 @@ body::before {
 
 body[data-theme="verde-negro"] {
   --app-accent: #39ff14;
-  --app-accent-dim: rgba(57, 255, 20, 0.2);
-  --app-bg: #050505;
-  --app-surface: #121212;
-  --app-border: #262626;
-  --neuro-surface: #0b0b0b;
-  --neuro-shadow-dark: #020202;
-  --neuro-shadow-light: #121212;
+  --app-accent-dim: rgba(57, 255, 20, 0.3);
+  --app-bg: #09090c;
+  --app-surface: #131317;
+  --app-border: rgba(255, 255, 255, 0.08);
+  --neuro-surface: rgba(20, 20, 26, 0.5);
+  --neuro-shadow-dark: rgba(0, 0, 0, 0.8);
+  --neuro-shadow-light: rgba(255, 255, 255, 0.06);
 }
 
 body[data-theme="aguamarina-negro"] {
@@ -203,10 +203,12 @@ body[data-theme="ocaso-negro"] {
   overflow: hidden;
   border-radius: 1.5rem;
   background: var(--neuro-surface);
-  border: 1px solid color-mix(in srgb, var(--neuro-shadow-light) 80%, transparent);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--app-border);
   box-shadow:
-    8px 8px 20px var(--neuro-shadow-dark),
-    -4px -4px 12px var(--neuro-shadow-light),
+    0 12px 32px var(--neuro-shadow-dark),
+    inset 0 1px 1px var(--neuro-shadow-light),
     0 0 0 1px color-mix(in srgb, var(--app-accent) 8%, transparent),
     0 4px 18px color-mix(in srgb, var(--app-accent) 5%, transparent);
   transition:
@@ -225,11 +227,12 @@ body[data-theme="ocaso-negro"] {
 
 .glass-panel {
   background: var(--neuro-surface) !important;
-  border-color: color-mix(in srgb, var(--neuro-shadow-light) 70%, transparent) !important;
-  backdrop-filter: none;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border: 1px solid var(--app-border) !important;
   box-shadow:
-    8px 8px 20px var(--neuro-shadow-dark),
-    -4px -4px 12px var(--neuro-shadow-light),
+    0 16px 40px var(--neuro-shadow-dark),
+    inset 0 1px 1px var(--neuro-shadow-light),
     0 0 0 1px color-mix(in srgb, var(--app-accent) 8%, transparent),
     0 4px 18px color-mix(in srgb, var(--app-accent) 5%, transparent) !important;
 }
@@ -251,10 +254,12 @@ body[data-theme="ocaso-negro"] {
 
 .stat-pill {
   background: var(--neuro-surface);
-  border: 1px solid color-mix(in srgb, var(--neuro-shadow-light) 70%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--app-border);
   box-shadow:
-    4px 4px 10px var(--neuro-shadow-dark),
-    -2px -2px 7px var(--neuro-shadow-light),
+    0 6px 16px var(--neuro-shadow-dark),
+    inset 0 1px 1px var(--neuro-shadow-light),
     0 0 0 1px color-mix(in srgb, var(--app-accent) 6%, transparent);
   transition: box-shadow var(--motion-fast), transform var(--motion-fast);
 }
@@ -470,20 +475,22 @@ button:active {
 
 .panel-soft {
   background: var(--neuro-surface);
-  border: 1px solid color-mix(in srgb, var(--neuro-shadow-light) 65%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--app-border);
   box-shadow:
-    6px 6px 16px var(--neuro-shadow-dark),
-    -3px -3px 10px var(--neuro-shadow-light),
+    0 8px 24px var(--neuro-shadow-dark),
+    inset 0 1px 1px var(--neuro-shadow-light),
     0 0 0 1px color-mix(in srgb, var(--app-accent) 7%, transparent);
   border-radius: 1.25rem;
 }
 
 .chip {
-  border: 1px solid color-mix(in srgb, var(--neuro-shadow-light) 65%, transparent);
+  border: 1px solid var(--app-border);
   background: var(--neuro-surface);
-  box-shadow:
-    3px 3px 7px var(--neuro-shadow-dark),
-    -1px -1px 4px var(--neuro-shadow-light);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 4px 12px var(--neuro-shadow-dark);
   border-radius: 9999px;
   padding: 0.34rem 0.7rem;
   font-size: 0.72rem;
@@ -492,24 +499,22 @@ button:active {
 
 .input-field {
   width: 100%;
-  border: 1px solid color-mix(in srgb, var(--neuro-shadow-light) 55%, transparent);
-  background: var(--app-bg);
+  border: 1px solid var(--app-border);
+  background: rgba(0, 0, 0, 0.4);
   color: #fff;
   border-radius: 0.88rem;
   padding: 0.8rem 0.95rem;
   outline: none;
-  box-shadow:
-    inset 3px 3px 8px var(--neuro-shadow-dark),
-    inset -2px -2px 6px var(--neuro-shadow-light);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
   transition: border-color var(--motion-fast), box-shadow var(--motion-fast);
 }
 
 .input-field:focus {
-  border-color: color-mix(in srgb, var(--app-accent) 70%, transparent);
+  border-color: var(--app-accent);
   box-shadow:
-    inset 3px 3px 8px var(--neuro-shadow-dark),
-    inset -2px -2px 6px var(--neuro-shadow-light),
-    0 0 0 1px color-mix(in srgb, var(--app-accent) 45%, transparent);
+    inset 0 2px 4px rgba(0,0,0,0.5),
+    0 0 0 1px color-mix(in srgb, var(--app-accent) 45%, transparent),
+    0 0 16px color-mix(in srgb, var(--app-accent) 20%, transparent);
 }
 
 .primary-btn {
@@ -519,69 +524,57 @@ button:active {
   color: #050505;
   border: none;
   overflow: hidden;
-  box-shadow:
-    4px 4px 14px color-mix(in srgb, var(--app-accent) 40%, var(--neuro-shadow-dark)),
-    -2px -2px 8px color-mix(in srgb, var(--app-accent) 18%, transparent);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--app-accent) 30%, transparent);
   transition: box-shadow var(--motion-fast), transform var(--motion-fast);
 }
 
 .primary-btn:active {
   transform: scale(0.97);
-  box-shadow:
-    2px 2px 8px color-mix(in srgb, var(--app-accent) 30%, var(--neuro-shadow-dark)),
-    -1px -1px 4px color-mix(in srgb, var(--app-accent) 12%, transparent);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--app-accent) 40%, transparent);
 }
 
 .primary-btn:hover {
-  box-shadow:
-    6px 6px 18px color-mix(in srgb, var(--app-accent) 50%, var(--neuro-shadow-dark)),
-    -3px -3px 10px color-mix(in srgb, var(--app-accent) 22%, transparent);
+  box-shadow: 0 12px 32px color-mix(in srgb, var(--app-accent) 40%, transparent);
 }
 
 .secondary-btn {
   border-radius: 0.9rem;
-  border: 1px solid color-mix(in srgb, var(--neuro-shadow-light) 70%, transparent);
+  border: 1px solid var(--app-border);
   background: var(--neuro-surface);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   color: #fff;
   overflow: hidden;
-  box-shadow:
-    4px 4px 12px var(--neuro-shadow-dark),
-    -2px -2px 8px var(--neuro-shadow-light);
+  box-shadow: 0 6px 16px var(--neuro-shadow-dark);
   transition: transform var(--motion-fast), box-shadow var(--motion-fast);
 }
 
 .secondary-btn:active {
   transform: scale(0.97);
-  box-shadow:
-    inset 3px 3px 8px var(--neuro-shadow-dark),
-    inset -2px -2px 6px var(--neuro-shadow-light);
+  box-shadow: 0 2px 8px var(--neuro-shadow-dark);
 }
 
 .danger-btn {
   border-radius: 0.9rem;
   border: 1px solid rgba(244, 63, 94, 0.35);
-  background: var(--neuro-surface);
+  background: rgba(244, 63, 94, 0.1);
   color: #fecdd3;
   overflow: hidden;
-  box-shadow:
-    4px 4px 12px var(--neuro-shadow-dark),
-    -2px -2px 8px var(--neuro-shadow-light);
+  box-shadow: 0 6px 16px rgba(244, 63, 94, 0.15);
   transition: transform var(--motion-fast), box-shadow var(--motion-fast);
 }
 
 .danger-btn:active {
   transform: scale(0.97);
-  box-shadow:
-    inset 3px 3px 8px var(--neuro-shadow-dark),
-    inset -2px -2px 6px var(--neuro-shadow-light);
+  box-shadow: 0 2px 8px rgba(244, 63, 94, 0.15);
 }
 
 .nav-soft-btn {
   height: 48px;
   min-width: 48px;
   border-radius: 14px;
-  border: 1px solid color-mix(in srgb, var(--neuro-shadow-light) 60%, transparent);
-  background: var(--neuro-surface);
+  border: 1px solid transparent;
+  background: transparent;
   color: #aeb5c1;
   display: inline-flex;
   align-items: center;
@@ -589,10 +582,7 @@ button:active {
   gap: 0;
   will-change: transform;
   backface-visibility: hidden;
-  box-shadow:
-    4px 4px 10px var(--neuro-shadow-dark),
-    -2px -2px 7px var(--neuro-shadow-light);
-  transition: box-shadow var(--motion-fast), border-color var(--motion-fast), color var(--motion-fast);
+  transition: color var(--motion-fast);
 }
 
 .nav-soft-btn svg {
@@ -604,23 +594,17 @@ button:active {
 }
 
 .nav-soft-btn-active {
-  border-color: color-mix(in srgb, var(--app-accent) 50%, transparent);
-  background: var(--neuro-surface);
   color: var(--app-accent);
-  box-shadow:
-    inset 3px 3px 8px var(--neuro-shadow-dark),
-    inset -2px -2px 6px var(--neuro-shadow-light),
-    0 0 14px color-mix(in srgb, var(--app-accent) 22%, transparent);
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--app-accent) 60%, transparent));
 }
 
 .ios-pill-nav {
   position: relative;
   background: var(--neuro-surface);
-  border: 1px solid color-mix(in srgb, var(--neuro-shadow-light) 55%, transparent);
-  box-shadow:
-    10px 10px 28px var(--neuro-shadow-dark),
-    -5px -5px 16px var(--neuro-shadow-light),
-    0 0 0 1px color-mix(in srgb, var(--app-accent) 12%, transparent);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--app-border);
+  box-shadow: 0 16px 40px var(--neuro-shadow-dark);
   will-change: transform;
   backface-visibility: hidden;
   contain: layout paint;
