@@ -541,10 +541,9 @@ export default function Workout() {
                 src={selectedExercise.gifUrl || 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=400&auto=format&fit=crop'} 
                 alt={selectedExercise.name} 
                 onError={handleImageError}
-                className="relative w-full h-full object-contain z-10 mix-blend-screen" 
+                className="relative w-full h-full object-contain z-10" 
                 referrerPolicy="no-referrer"
                 loading="eager"
-                decoding="async"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-black/20 z-20 pointer-events-none" />
               <button
