@@ -1,16 +1,31 @@
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import { useAppStore } from './store/useAppStore';
 import Login from './pages/Login';
 import Onboarding from './pages/Onboarding';
-import Home from './pages/Home';
-import Workout from './pages/Workout';
-import Diet from './pages/Diet';
-import CalendarView from './pages/CalendarView';
-import Profile from './pages/Profile';
 import BottomNav from './components/BottomNav';
 import { AnimatePresence, motion } from 'motion/react';
 import { pageTransition, fadeSlideUp } from './lib/motion';
 import { CheckCircle2, AlertCircle, Info } from 'lucide-react';
+
+const Home = lazy(() => import('./pages/Home'));
+const Workout = lazy(() => import('./pages/Workout'));
+const Diet = lazy(() => import('./pages/Diet'));
+const CalendarView = lazy(() => import('./pages/CalendarView'));
+const Profile = lazy(() => import('./pages/Profile'));
+
+function PageSkeleton() {
+  return (
+    <div className="min-h-screen app-shell px-4 safe-top safe-bottom">
+      <div className="page-wrap space-y-4 pt-6">
+        <div className="anim-shimmer rounded-2xl h-28" />
+        <div className="anim-shimmer rounded-2xl h-48" />
+        <div className="anim-shimmer rounded-2xl h-20" />
+        <div className="anim-shimmer rounded-2xl h-20" />
+        <div className="anim-shimmer rounded-2xl h-20" />
+      </div>
+    </div>
+  );
+}
 
 export default function App() {
   const { isAuthenticated, isOnboarded, currentTab, theme, toasts, dismissToast } = useAppStore();
@@ -94,7 +109,9 @@ export default function App() {
           transition={pageTransition.transition}
           className="h-full"
         >
-          {renderTab()}
+          <Suspense fallback={<PageSkeleton />}>
+            {renderTab()}
+          </Suspense>
         </motion.div>
       </AnimatePresence>
 

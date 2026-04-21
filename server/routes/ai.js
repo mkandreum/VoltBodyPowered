@@ -166,35 +166,49 @@ const EXERCISEDB_BASE = 'https://oss.exercisedb.dev/api/v1';
 function toEnglishSearchTerm(nameEs = '') {
   const lower = nameEs.toLowerCase();
   const map = [
-    [/sentadill/,        'squat'],
-    [/press.*banca/,     'bench press'],
-    [/press.*inclin/,    'incline dumbbell press'],
-    [/press.*militar|press.*hombro|press.*shoulder/, 'shoulder press'],
-    [/press.*mancuerna/, 'dumbbell press'],
-    [/curl.*b.?ceps|curl.*barra/, 'barbell curl'],
-    [/curl.*martillo/,   'hammer curl'],
-    [/curl.*mancuerna/,  'dumbbell curl'],
-    [/remo.*barra/,      'barbell row'],
-    [/remo.*mancuerna/,  'dumbbell row'],
-    [/remo.*cable/,      'cable row'],
-    [/remo/,             'row'],
-    [/jalón|jalon/,      'lat pulldown'],
-    [/dominada/,         'pull up'],
-    [/fondos/,           'dips'],
-    [/apertura/,         'fly'],
-    [/peso muerto rumano/, 'romanian deadlift'],
-    [/peso muerto/,      'deadlift'],
-    [/zancada|lunge/,    'lunge'],
-    [/prensa.*pierna/,   'leg press'],
-    [/extensi.?n.*tri/,  'tricep extension'],
-    [/press.*franc.?s/,  'skull crusher'],
-    [/elevaci.?n lateral/, 'lateral raise'],
-    [/p.?jaro|face pull/, 'face pull'],
-    [/plancha/,          'plank'],
-    [/burpee/,           'burpee'],
-    [/hip thrust/,       'hip thrust'],
-    [/glut/,             'glute bridge'],
-    [/cardio|trote|corr/, 'run'],
+    [/sentadilla goblet/,   'goblet squat'],
+    [/sentadill/,           'squat'],
+    [/press.*banca.*inclin|press.*inclin.*banca/, 'incline bench press'],
+    [/press.*banca/,        'bench press'],
+    [/press.*inclin.*mancuerna|press.*mancuerna.*inclin/, 'incline dumbbell press'],
+    [/press.*inclin/,       'incline dumbbell press'],
+    [/press.*militar|press.*overhead|press.*hombro/, 'overhead press'],
+    [/press.*mancuerna/,    'dumbbell press'],
+    [/curl.*barra.*z|curl.*z/,  'ez bar curl'],
+    [/curl.*b.?ceps.*barra|curl.*barra.*b.?ceps/, 'barbell curl'],
+    [/curl.*b.?ceps|bicep curl/, 'bicep curl'],
+    [/curl.*martillo/,      'hammer curl'],
+    [/curl.*mancuerna/,     'dumbbell curl'],
+    [/remo.*barra/,         'barbell row'],
+    [/remo.*mancuerna/,     'dumbbell row'],
+    [/remo.*cable|remo.*polea/, 'cable row'],
+    [/remo/,                'row'],
+    [/jalón.*pecho|jalon.*pecho|lat pulldown/, 'lat pulldown'],
+    [/jalón|jalon/,         'lat pulldown'],
+    [/dominada/,            'pull up'],
+    [/fondos/,              'dips'],
+    [/apertura.*polea|cable.*fly/, 'cable fly'],
+    [/apertura/,            'dumbbell fly'],
+    [/peso muerto rumano|peso muerto rum/, 'romanian deadlift'],
+    [/peso muerto/,         'deadlift'],
+    [/zancada caminando|lunge caminando/, 'walking lunge'],
+    [/zancada|lunge/,       'lunge'],
+    [/prensa.*pierna|leg press/, 'leg press'],
+    [/curl.*femoral|curl.*pierna/, 'leg curl'],
+    [/extensi.?n.*cuadricep|extensi.?n.*pierna/, 'leg extension'],
+    [/extensi.?n.*tri/,     'tricep extension'],
+    [/press.*franc.?s|skull crusher/, 'skull crusher'],
+    [/elevaci.?n lateral/,  'lateral raise'],
+    [/elevaci.?n frontal/,  'front raise'],
+    [/p.?jaro inclinado/,   'bent over lateral raise'],
+    [/face pull/,           'face pull'],
+    [/plancha/,             'plank'],
+    [/burpee/,              'burpee'],
+    [/hip thrust/,          'hip thrust'],
+    [/glut/,                'glute bridge'],
+    [/cardio|trote|corr/,   'run'],
+    [/pull.*over|pullover/,  'pullover'],
+    [/remo.*sentado/,        'seated cable row'],
   ];
   for (const [pattern, term] of map) {
     if (pattern.test(lower)) return term;
@@ -203,8 +217,23 @@ function toEnglishSearchTerm(nameEs = '') {
 }
 
 /**
+ * Scores how well an ExerciseDB result name matches the English search term.
+ * Returns a value in [0, 1]: 1 means every word in the term appears in the result name.
+ */
+function scoreExerciseMatch(resultName, searchTerm) {
+  const normalize = (s) => s.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
+  const rName = normalize(resultName);
+  const terms = normalize(searchTerm).split(/\s+/).filter(Boolean);
+  if (!terms.length) return 0;
+  const hits = terms.filter((t) => rName.includes(t));
+  return hits.length / terms.length;
+}
+
+/**
  * Enriches an array of exercises with GIF URLs from the free ExerciseDB API.
  * Only fills gifUrl when it is empty ('') — never overwrites existing URLs.
+ * Fetches up to 10 candidates and selects the one whose name best matches
+ * the English translation of the exercise name, to avoid mismatched GIFs.
  * No API key required.
  */
 async function enrichExercisesWithGifs(exercises = []) {
@@ -216,8 +245,8 @@ async function enrichExercisesWithGifs(exercises = []) {
       const timeoutId = setTimeout(() => controller.abort(), 3500); // 3.5s limit per exercise
 
       try {
-        const searchTerm = encodeURIComponent(toEnglishSearchTerm(ex.name));
-        const url = `${EXERCISEDB_BASE}/exercises?name=${searchTerm}&limit=1`;
+        const englishTerm = toEnglishSearchTerm(ex.name);
+        const url = `${EXERCISEDB_BASE}/exercises?name=${encodeURIComponent(englishTerm)}&limit=10`;
         
         const resp = await fetch(url, {
           headers: { 'Accept': 'application/json' },
@@ -229,8 +258,18 @@ async function enrichExercisesWithGifs(exercises = []) {
         if (!resp.ok) return ex;
         const data = await resp.json();
         const list = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : []);
-        const gifUrl = list[0]?.gifUrl || '';
-        return { ...ex, gifUrl };
+        if (!list.length) return ex;
+
+        // Pick the candidate whose name best matches the English search term
+        const best = list.reduce(
+          (top, item) => {
+            const score = scoreExerciseMatch(item.name || '', englishTerm);
+            return score > top.score ? { score, gifUrl: item.gifUrl || '' } : top;
+          },
+          { score: -1, gifUrl: list[0]?.gifUrl || '' }
+        );
+
+        return { ...ex, gifUrl: best.gifUrl };
       } catch (err) {
         clearTimeout(timeoutId);
         // Silently log timeout or network error to avoid blocking the user

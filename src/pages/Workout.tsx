@@ -5,7 +5,7 @@ import { ChevronLeft, Play, CheckCircle2, Dumbbell, PlusCircle, Trash2, Star, Ca
 import { workoutService } from '../services/workoutService';
 import { authService } from '../services/authService';
 import { enrichRoutine, routineNeedsEnrichment } from '../services/exerciseImageService';
-import { AppCard, SectionHeader, StatPill } from '../components/ui';
+import { AppCard, SectionHeader, StatPill, LazyImage } from '../components/ui';
 import { listStagger, slideUpSheet, checkBounce, successBurst, completionGlow, tapPulse, timelineStagger } from '../lib/motion';
 import { WEEKDAY_LABELS, getMondayFirstIndex, mapRoutineByWeekday } from '../lib/routineWeek';
 import { format } from 'date-fns';
@@ -428,12 +428,12 @@ export default function Workout() {
             }`}
           >
             <div className="w-16 h-16 rounded-2xl overflow-hidden bg-[var(--app-surface)] flex-shrink-0 relative">
-              <img 
+              <LazyImage 
                 src={exercise.gifUrl || 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=400&auto=format&fit=crop'} 
                 alt={exercise.name} 
                 onError={handleImageError}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
-                referrerPolicy="no-referrer" 
+                referrerPolicy="no-referrer"
               />
               <div className="absolute inset-0 flex items-center justify-center bg-black/40 group-hover:bg-transparent transition-colors">
                 <AnimatePresence mode="wait" initial={false}>
@@ -568,8 +568,7 @@ export default function Workout() {
           >
             <div className="relative h-2/5 bg-[var(--app-surface)] overflow-hidden flex items-center justify-center">
               {/* Main sharp GIF */}
-              <img 
-                key={selectedExercise.exerciseId}
+              <LazyImage 
                 src={selectedExercise.gifUrl || 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=400&auto=format&fit=crop'} 
                 alt={selectedExercise.name} 
                 onError={handleImageError}
