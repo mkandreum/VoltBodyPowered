@@ -32,7 +32,14 @@ export default defineConfig(() => {
         workbox: {
           cleanupOutdatedCaches: true,
           skipWaiting: true,
-          clientsClaim: true
+          clientsClaim: true,
+          exclude: [/\.map$/, /manifest\.webmanifest$/, /index\.html/],
+          runtimeCaching: [
+            {
+              urlPattern: /index\.html/,
+              handler: 'NetworkFirst',
+            }
+          ]
         }
       })
     ],
