@@ -210,21 +210,32 @@ function toEnglishSearchTerm(nameEs = '') {
 async function enrichExercisesWithGifs(exercises = []) {
   return Promise.all(
     exercises.map(async (ex) => {
-      if (ex.gifUrl) return ex; // already has a GIF, skip
+      if (ex.gifUrl) return ex;
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3500); // 3.5s limit per exercise
+
       try {
         const searchTerm = encodeURIComponent(toEnglishSearchTerm(ex.name));
         const url = `${EXERCISEDB_BASE}/exercises?name=${searchTerm}&limit=1`;
+        
         const resp = await fetch(url, {
           headers: { 'Accept': 'application/json' },
+          signal: controller.signal
         });
+        
+        clearTimeout(timeoutId);
+        
         if (!resp.ok) return ex;
         const data = await resp.json();
-        // Response is { data: [...] } or directly an array
         const list = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : []);
         const gifUrl = list[0]?.gifUrl || '';
         return { ...ex, gifUrl };
-      } catch {
-        return ex; // silently degrade — no GIF is better than a crash
+      } catch (err) {
+        clearTimeout(timeoutId);
+        // Silently log timeout or network error to avoid blocking the user
+        logInfo('ai.enrich_gifs.skip', { exercise: ex.name, reason: err.name === 'AbortError' ? 'timeout' : 'error' });
+        return ex; 
       }
     })
   );
