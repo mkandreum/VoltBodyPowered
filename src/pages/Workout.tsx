@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore, Exercise, WorkoutDay } from '../store/useAppStore';
-import { ChevronLeft, Play, CheckCircle2, Dumbbell, PlusCircle, Trash2, Star, CalendarClock, Flame, BookOpen, Share2, Trophy } from 'lucide-react';
+import { ChevronLeft, Play, CheckCircle2, Dumbbell, PlusCircle, Trash2, Star, CalendarClock, Flame, BookOpen, Share2, Trophy, TrendingUp, History } from 'lucide-react';
 import { workoutService } from '../services/workoutService';
 import { authService } from '../services/authService';
 import { enrichRoutine, routineNeedsEnrichment } from '../services/exerciseImageService';
@@ -11,6 +11,8 @@ import { WEEKDAY_LABELS, getMondayFirstIndex, mapRoutineByWeekday } from '../lib
 import { format } from 'date-fns';
 import WeightCalculator from '../components/WeightCalculator';
 import { checkNewAchievements } from '../lib/achievements';
+import { getProgressiveSuggestion, getExerciseHistory } from '../lib/progressiveOverload';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 
 
@@ -36,6 +38,7 @@ export default function Workout() {
 
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
   const [showTechnique, setShowTechnique] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [weightInput, setWeightInput] = useState<number>(0);
   const [repsInput, setRepsInput] = useState<number>(0);
   const [setsInput, setSetsInput] = useState<number>(1);
@@ -58,6 +61,7 @@ export default function Workout() {
   const closeExercise = useCallback(() => {
     setSelectedExercise(null);
     setShowTechnique(false);
+    setShowHistory(false);
     if (historyPushedRef.current) {
       historyPushedRef.current = false;
       window.history.back();
@@ -143,6 +147,18 @@ export default function Workout() {
       .sort((a, b) => b.date.localeCompare(a.date));
     return past[0] ?? null;
   }, [selectedExercise, logs, todayDateKey]);
+
+  // Progressive overload suggestion for the selected exercise
+  const progressiveSuggestion = useMemo(
+    () => (selectedExercise ? getProgressiveSuggestion(selectedExercise.id, logs) : null),
+    [selectedExercise, logs],
+  );
+
+  // Historical sessions for the selected exercise (for the chart)
+  const exerciseHistory = useMemo(
+    () => (selectedExercise ? getExerciseHistory(selectedExercise.id, logs) : []),
+    [selectedExercise, logs],
+  );
 
   // Best weight ever logged per exerciseId
   const personalRecords = useMemo(() => {
@@ -753,6 +769,30 @@ export default function Workout() {
                 )}
               </div>
 
+              {/* Progressive overload suggestion */}
+              {progressiveSuggestion && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mb-5 flex items-center gap-3 neuro-inset rounded-2xl p-4 border border-[color:var(--app-accent)]/30"
+                >
+                  <TrendingUp className="app-accent shrink-0" size={18} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-[var(--app-accent)]">📈 Sobrecarga progresiva</p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      Completaste {progressiveSuggestion.currentWeight} kg las últimas {progressiveSuggestion.sessionsAnalyzed} sesiones → prueba <strong className="text-white">{progressiveSuggestion.suggestedWeight} kg</strong>
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setWeightInput(progressiveSuggestion.suggestedWeight)}
+                    className="tap-target shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold primary-btn"
+                  >
+                    Usar
+                  </button>
+                </motion.div>
+              )}
+
               {/* Técnica */}
               {(() => {
                 const libEntry = exerciseLibrary.find((e) => e.id === selectedExercise.id);
@@ -873,6 +913,96 @@ export default function Workout() {
                     </span>
                   </p>
                 )}
+              </div>
+
+              {/* Exercise history */}
+              <div className="mt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowHistory((v) => !v)}
+                  className="tap-target flex items-center gap-2 text-sm font-semibold app-accent mb-3"
+                >
+                  <History size={15} />
+                  {showHistory ? 'Ocultar historial' : 'Ver historial'}
+                  {exerciseHistory.length > 0 && (
+                    <span className="text-gray-500 font-normal">({exerciseHistory.length} sesiones)</span>
+                  )}
+                </button>
+                <AnimatePresence>
+                  {showHistory && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.25 }}
+                      className="overflow-hidden"
+                    >
+                      {exerciseHistory.length === 0 ? (
+                        <p className="text-gray-500 text-sm text-center py-4">Sin registros anteriores.</p>
+                      ) : (
+                        <div className="neuro-inset rounded-2xl p-4">
+                          {/* PR summary */}
+                          {(() => {
+                            const prWeight = Math.max(...exerciseHistory.map((s) => s.maxWeight));
+                            const prReps = Math.max(...exerciseHistory.map((s) => s.maxReps));
+                            return (
+                              <div className="flex gap-3 mb-4">
+                                <div className="flex-1 neuro-raised rounded-xl p-3 text-center">
+                                  <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">🥇 PR Peso</p>
+                                  <p className="text-lg font-black text-yellow-400">{prWeight} kg</p>
+                                </div>
+                                <div className="flex-1 neuro-raised rounded-xl p-3 text-center">
+                                  <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">🔁 PR Reps</p>
+                                  <p className="text-lg font-black text-yellow-400">{prReps}</p>
+                                </div>
+                              </div>
+                            );
+                          })()}
+
+                          {/* Weight progression chart */}
+                          <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-2">Progresión de peso</p>
+                          <ResponsiveContainer width="100%" height={120}>
+                            <LineChart data={exerciseHistory} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                              <XAxis
+                                dataKey="date"
+                                tick={{ fill: '#6b7280', fontSize: 9 }}
+                                tickFormatter={(d: string) => d.slice(5)}
+                                interval="preserveStartEnd"
+                              />
+                              <YAxis tick={{ fill: '#6b7280', fontSize: 9 }} domain={['auto', 'auto']} />
+                              <Tooltip
+                                contentStyle={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)', borderRadius: 8, fontSize: 11 }}
+                                labelFormatter={(d: string) => d}
+                                formatter={(v: number) => [`${v} kg`, 'Peso']}
+                              />
+                              <Line
+                                type="monotone"
+                                dataKey="maxWeight"
+                                stroke="var(--app-accent)"
+                                strokeWidth={2}
+                                dot={{ fill: 'var(--app-accent)', r: 3 }}
+                                activeDot={{ r: 5 }}
+                              />
+                            </LineChart>
+                          </ResponsiveContainer>
+
+                          {/* Recent sessions list */}
+                          <p className="text-[10px] uppercase tracking-wider text-gray-500 mt-4 mb-2">Últimas sesiones</p>
+                          <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                            {[...exerciseHistory].reverse().map((s) => (
+                              <div key={s.date} className="flex items-center justify-between text-xs">
+                                <span className="text-gray-400 font-mono">{s.date}</span>
+                                <span className="text-white font-medium">{s.maxWeight} kg</span>
+                                <span className="text-gray-500">{s.sets} sets</span>
+                                <span className="text-gray-500">Vol: {Math.round(s.totalVolume)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </div>
 

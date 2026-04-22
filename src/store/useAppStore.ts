@@ -162,6 +162,7 @@ interface AppState {
   mealEatenRecord: Record<string, string[]>;
   weeklyGoals: WeeklyGoal[];
   achievements: Achievement[];
+  notificationsEnabled: boolean;
 
   // Auth actions
   setAuthToken: (token: string | null) => void;
@@ -196,6 +197,7 @@ interface AppState {
   completeOnboarding: () => void;
   resetApp: () => void;
   addAchievement: (achievement: Achievement) => void;
+  setNotificationsEnabled: (v: boolean) => void;
 }
 
 const defaultExerciseLibrary: ExerciseLibraryEntry[] = [
@@ -317,6 +319,7 @@ export const useAppStore = create<AppState>()(
         { id: 'habit-3', label: 'Cumplir proteina diaria 5 dias', done: false },
       ],
       achievements: [],
+      notificationsEnabled: false,
 
       // Auth actions
       setAuthToken: (token) => set({ authToken: token, isAuthenticated: !!token }),
@@ -461,6 +464,7 @@ export const useAppStore = create<AppState>()(
           { id: 'habit-3', label: 'Cumplir proteina diaria 5 dias', done: false },
         ],
       }),
+      setNotificationsEnabled: (v) => set({ notificationsEnabled: v }),
     }),
     {
       name: 'voltbody-storage',

@@ -15,32 +15,41 @@ export default defineConfig(() => {
         manifest: {
           name: 'VoltBody Powered',
           short_name: 'VoltBody',
-          theme_color: '#000000',
+          description: 'Entrenamiento y nutrición con IA',
+          start_url: '/',
+          scope: '/',
+          display: 'standalone',
+          background_color: '#050505',
+          theme_color: '#050505',
+          lang: 'es',
           icons: [
             {
-              src: '/icon-192.png',
+              src: '/icon-192.svg',
               sizes: '192x192',
-              type: 'image/png'
+              type: 'image/svg+xml',
+              purpose: 'any maskable',
             },
             {
-              src: '/icon-512.png',
+              src: '/icon-512.svg',
               sizes: '512x512',
-              type: 'image/png'
-            }
-          ]
+              type: 'image/svg+xml',
+              purpose: 'any maskable',
+            },
+          ],
         },
         workbox: {
           cleanupOutdatedCaches: true,
           skipWaiting: true,
           clientsClaim: true,
           globIgnores: ['**/index.html', '**/manifest.webmanifest', '**/*.map'],
+          importScripts: ['/sw-notifications.js'],
           runtimeCaching: [
             {
               urlPattern: /index\.html/,
               handler: 'NetworkFirst',
-            }
-          ]
-        }
+            },
+          ],
+        },
       })
     ],
     define: {},

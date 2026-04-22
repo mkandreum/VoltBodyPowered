@@ -3,10 +3,11 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore } from '../store/useAppStore';
 import { authService } from '../services/authService';
 import { workoutService } from '../services/workoutService';
-import { User, LogOut, Activity, Target, Clock, Scale, Ruler, Camera, Plus, Edit2, Check, Palette, Quote, TrendingUp, Trophy } from 'lucide-react';
+import { User, LogOut, Activity, Target, Clock, Scale, Ruler, Camera, Plus, Edit2, Check, Palette, Quote, TrendingUp, Trophy, Bell } from 'lucide-react';
 import { listStagger, checkBounce, tapPulse, numberRoll } from '../lib/motion';
 import { format, subWeeks, startOfWeek } from 'date-fns';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { notificationService } from '../services/notificationService';
 
 export default function Profile() {
   const {
@@ -32,6 +33,8 @@ export default function Profile() {
     addWeightLog,
     weeklyGoals,
     toggleWeeklyGoal,
+    notificationsEnabled,
+    setNotificationsEnabled,
   } = useAppStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const progressInputRef = useRef<HTMLInputElement>(null);
@@ -606,6 +609,54 @@ export default function Profile() {
             );
           })}
         </div>
+      </div>
+
+      {/* ── Notification settings ────────────────────────────── */}
+      <div className="glass-panel border border-[var(--app-border)] rounded-3xl p-6 mb-8">
+        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+          <Bell className="app-accent" size={20} />
+          🔔 Notificaciones
+        </h3>
+        {'Notification' in window ? (
+          <>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-white font-medium">Recordatorios activos</p>
+                <p className="text-xs text-gray-500">Comidas, entrenamientos y racha semanal</p>
+              </div>
+              <button
+                type="button"
+                aria-pressed={notificationsEnabled}
+                onClick={async () => {
+                  if (!notificationsEnabled) {
+                    const granted = await notificationService.requestPermission();
+                    if (granted) {
+                      setNotificationsEnabled(true);
+                    } else {
+                      showToast({ type: 'error', title: 'Permiso denegado', message: 'Activa las notificaciones en la configuración del navegador.' });
+                    }
+                  } else {
+                    setNotificationsEnabled(false);
+                    notificationService.clearAll();
+                  }
+                }}
+                className={`relative w-12 h-6 rounded-full transition-colors focus:outline-none ${notificationsEnabled ? 'bg-[var(--app-accent)]' : 'bg-gray-600'}`}
+              >
+                <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${notificationsEnabled ? 'right-1' : 'left-1'}`} />
+              </button>
+            </div>
+            {Notification.permission === 'denied' && (
+              <p className="text-amber-400 text-xs mt-3">
+                ⚠️ Notificaciones bloqueadas. Actívalas en la configuración de tu navegador.
+              </p>
+            )}
+            {notificationsEnabled && Notification.permission === 'granted' && (
+              <p className="text-emerald-400 text-xs mt-3">✅ Recordatorios programados para hoy.</p>
+            )}
+          </>
+        ) : (
+          <p className="text-gray-500 text-sm">Tu navegador no soporta notificaciones push.</p>
+        )}
       </div>
 
       <motion.button

@@ -7,6 +7,7 @@ import SplashScreen from './components/SplashScreen';
 import { AnimatePresence, motion } from 'motion/react';
 import { pageTransition, fadeSlideUp } from './lib/motion';
 import { CheckCircle2, AlertCircle, Info } from 'lucide-react';
+import { notificationService } from './services/notificationService';
 
 const Home = lazy(() => import('./pages/Home'));
 const Workout = lazy(() => import('./pages/Workout'));
@@ -36,8 +37,18 @@ function PageSkeleton() {
 }
 
 export default function App() {
-  const { isAuthenticated, isOnboarded, currentTab, theme, toasts, dismissToast, _hasHydrated } = useAppStore();
+  const { isAuthenticated, isOnboarded, currentTab, theme, toasts, dismissToast, _hasHydrated, notificationsEnabled, profile, logs, weightLogs } = useAppStore();
   const scrollPositions = useRef<Record<string, number>>({});
+
+  // Schedule notification reminders when notifications are enabled and user is onboarded
+  useEffect(() => {
+    if (!notificationsEnabled || !isOnboarded || !profile) {
+      notificationService.clearAll();
+      return;
+    }
+    notificationService.scheduleAll(profile, logs, weightLogs);
+    return () => notificationService.clearAll();
+  }, [notificationsEnabled, isOnboarded, profile, logs, weightLogs]);
 
   // Disable overscroll on mobile
   useEffect(() => {
