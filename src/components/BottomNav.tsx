@@ -92,20 +92,8 @@ export default function BottomNav() {
               triggerHaptic();
               setTab('home');
             }}
-            className={clsx(
-              'relative overflow-hidden tap-target px-2 flex-1 max-w-[140px] min-w-[100px] h-12 rounded-full border transition-all text-center',
-              isHomeActive
-                ? 'border-[color:var(--app-accent)]/40 shadow-[inset_3px_3px_8px_var(--neuro-shadow-dark),inset_-2px_-2px_6px_var(--neuro-shadow-light),0_0_14px_color-mix(in_srgb,var(--app-accent)_22%,transparent)]'
-                : 'border-[color:var(--neuro-shadow-light)]/60 hover:border-[color:var(--neuro-shadow-light)]/80 shadow-[4px_4px_12px_var(--neuro-shadow-dark),-2px_-2px_8px_var(--neuro-shadow-light)]'
-            )}
+            className="relative overflow-hidden tap-target px-2 flex-1 max-w-[140px] min-w-[100px] h-12 rounded-full border border-transparent transition-all text-center"
           >
-            {isHomeActive && (
-              <motion.span
-                layoutId="nav-tab-glow"
-                transition={springTransition}
-                className="tab-switch-glow absolute -inset-2"
-              />
-            )}
             <span className="inline-flex items-center gap-1.5 text-[11px] font-black tracking-[0.18em] uppercase relative z-[1]">
               <motion.span
                 key={isHomeActive ? 'bolt-active' : 'bolt-idle'}
@@ -131,13 +119,6 @@ export default function BottomNav() {
                 VoltBody
               </span>
             </span>
-            {isHomeActive && (
-              <motion.span
-                layoutId="nav-active-dot"
-                transition={springTransition}
-                className="nav-dot-indicator"
-              />
-            )}
           </motion.button>
 
           {navItems.slice(2).map((item) => {
