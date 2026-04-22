@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore, Exercise, WorkoutDay } from '../store/useAppStore';
 import { ChevronLeft, Play, CheckCircle2, Dumbbell, PlusCircle, Trash2, Star, CalendarClock, Flame, BookOpen, Share2, Trophy, TrendingUp, History } from 'lucide-react';
@@ -719,6 +720,7 @@ export default function Workout() {
         </AppCard>
       )}
 
+      {createPortal(
       <AnimatePresence>
         {selectedExercise && (
           <motion.div
@@ -726,7 +728,7 @@ export default function Workout() {
             className="fixed inset-0 z-[60] bg-[var(--app-bg)] flex flex-col"
           >
             {/* Header with shared-element image transition */}
-            <div className="relative h-[25%] sm:h-2/5 bg-[var(--app-surface)] overflow-hidden flex items-center justify-center">
+            <div className="relative h-[30%] shrink-0 bg-[var(--app-surface)] overflow-hidden flex items-center justify-center">
               <motion.div
                 layoutId={`ex-img-${selectedExercise.id}`}
                 className="w-full h-full"
@@ -736,7 +738,7 @@ export default function Workout() {
                   src={selectedExercise.gifUrl || 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=400&auto=format&fit=crop'} 
                   alt={selectedExercise.name} 
                   onError={handleImageError}
-                  className="w-full h-full object-contain z-10" 
+                  className="w-full h-full object-cover z-10" 
                   referrerPolicy="no-referrer"
                   loading="eager"
                 />
@@ -750,7 +752,7 @@ export default function Workout() {
               </button>
             </div>
 
-            <div className="flex-1 px-4 py-3 sm:p-6 flex flex-col overflow-y-auto">
+            <div className="flex-1 min-h-0 px-4 py-3 sm:p-6 flex flex-col overflow-y-auto">
               <h2 className="text-xl sm:text-3xl font-bold text-white mb-1 sm:mb-2">{selectedExercise.name}</h2>
               {(() => {
                 const prWeight = personalRecords.get(selectedExercise.id);
@@ -1037,7 +1039,9 @@ export default function Workout() {
             </div>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence>,
+      document.body
+      )}
 
       {/* Floating rest timer pill */}
       <AnimatePresence>
