@@ -2,18 +2,19 @@ import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore, Exercise, WorkoutDay } from '../store/useAppStore';
-import { ChevronLeft, Play, CheckCircle2, Dumbbell, PlusCircle, Trash2, Star, CalendarClock, Flame, BookOpen, Share2, Trophy, TrendingUp, History } from 'lucide-react';
+import { ChevronLeft, Play, CheckCircle2, Dumbbell, PlusCircle, Trash2, Star, CalendarClock, Flame, BookOpen, Share2, Trophy, TrendingUp, History, Loader2 } from 'lucide-react';
 import { workoutService } from '../services/workoutService';
 import { authService } from '../services/authService';
 import { enrichRoutine, routineNeedsEnrichment } from '../services/exerciseImageService';
 import { AppCard, SectionHeader, StatPill, LazyImage } from '../components/ui';
 import { listStagger, slideUpSheet, checkBounce, successBurst, completionGlow, tapPulse, timelineStagger } from '../lib/motion';
 import { WEEKDAY_LABELS, getMondayFirstIndex, mapRoutineByWeekday } from '../lib/routineWeek';
-import { format } from 'date-fns';
+import { format, subDays, isValid } from 'date-fns';
 import WeightCalculator from '../components/WeightCalculator';
 import { checkNewAchievements } from '../lib/achievements';
 import { getProgressiveSuggestion, getExerciseHistory } from '../lib/progressiveOverload';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import WorkoutSummaryCard from '../components/WorkoutSummaryCard';
 
 
 
@@ -55,6 +56,9 @@ export default function Workout() {
   const restIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // Completion celebration
   const [showCompletion, setShowCompletion] = useState(false);
+  // Share card state
+  const [isSharing, setIsSharing] = useState(false);
+  const summaryCardRef = useRef<HTMLDivElement>(null);
   // State for editing a previously logged set
   const [editingSet, setEditingSet] = useState<{ logIndex: number; weight: number; reps: number } | null>(null);
 
@@ -144,6 +148,30 @@ export default function Workout() {
     });
   }, [todayRoutine, setsByExercise]);
 
+  // Current streak for share card
+  const currentStreak = useMemo(() => {
+    if (logs.length === 0) return 0;
+    const dateSet = new Set(
+      logs.filter((log) => isValid(new Date(log.date))).map((log) => format(new Date(log.date), 'yyyy-MM-dd'))
+    );
+    let streak = 0;
+    let cursor = new Date();
+    while (dateSet.has(format(cursor, 'yyyy-MM-dd'))) {
+      streak += 1;
+      cursor = subDays(cursor, 1);
+    }
+    return streak;
+  }, [logs]);
+
+  // XP & level for share card
+  const XP_PER_LOG = 12;
+  const XP_PER_STREAK_DAY = 8;
+  const XP_PER_LEVEL = 250;
+  const totalXP = useMemo(() => logs.length * XP_PER_LOG + currentStreak * XP_PER_STREAK_DAY, [logs.length, currentStreak]);
+  const level = Math.floor(totalXP / XP_PER_LEVEL) + 1;
+  // XP gained today
+  const todayXP = useMemo(() => todayLogs.length * XP_PER_LOG, [todayLogs.length]);
+
   // Last session log for the selected exercise (most recent entry before today)
   const lastSessionLog = useMemo(() => {
     if (!selectedExercise) return null;
@@ -215,8 +243,6 @@ export default function Workout() {
   useEffect(() => {
     if (allExercisesDone && !showCompletion) {
       setShowCompletion(true);
-      const timer = setTimeout(() => setShowCompletion(false), 4000);
-      return () => clearTimeout(timer);
     }
   }, [allExercisesDone, showCompletion]);
 
@@ -394,6 +420,46 @@ export default function Workout() {
 
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     e.currentTarget.src = 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=400&auto=format&fit=crop';
+  };
+
+  const handleShare = async () => {
+    if (isSharing) return;
+    setIsSharing(true);
+    try {
+      // Dynamically import html2canvas to avoid bundle bloat
+      const { default: html2canvas } = await import('html2canvas');
+      if (!summaryCardRef.current) throw new Error('No card ref');
+      const canvas = await html2canvas(summaryCardRef.current, {
+        backgroundColor: null,
+        scale: 2,
+        useCORS: true,
+        logging: false,
+      });
+      const blob: Blob = await new Promise((resolve, reject) =>
+        canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('canvas toBlob failed'))), 'image/png')
+      );
+      const file = new File([blob], 'voltbody-sesion.png', { type: 'image/png' });
+      const shareText = `Acabo de completar "${todayRoutine?.focus || 'Entrenamiento'}" (${totalTodayExercises} ejercicios) en VoltBody 🔥`;
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: '💪 VoltBody – Sesión completada', text: shareText });
+      } else if (navigator.share) {
+        await navigator.share({ title: '💪 VoltBody – Sesión completada', text: shareText });
+      } else {
+        // Fallback: trigger download
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'voltbody-sesion.png';
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    } catch (err) {
+      if ((err as Error)?.name !== 'AbortError') {
+        showToast({ type: 'error', title: 'Error al compartir', message: 'No se pudo generar la imagen.' });
+      }
+    } finally {
+      setIsSharing(false);
+    }
   };
 
   return (
@@ -1173,49 +1239,127 @@ export default function Workout() {
         )}
       </AnimatePresence>
 
-      {/* Completion celebration banner */}
+      {/* Completion celebration modal */}
       <AnimatePresence>
         {showCompletion && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8, y: -20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.8, y: -20 }}
-            transition={{ type: 'spring', stiffness: 350, damping: 25 }}
-            className="fixed top-[max(1.5rem,env(safe-area-inset-top))] left-1/2 -translate-x-1/2 z-[70] flex items-center gap-3 px-6 py-3 rounded-2xl border border-[color:var(--app-accent)]/40 bg-[color:var(--app-accent)]/10 backdrop-blur-xl shadow-[0_8px_32px_color-mix(in_srgb,var(--app-accent)_30%,transparent)]"
-          >
-            <motion.span
-              animate={{ rotate: [0, -10, 10, -6, 6, 0], scale: [1, 1.2, 1] }}
-              transition={{ duration: 0.6, ease: 'easeInOut' }}
-              className="text-2xl"
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              className="fixed inset-0 z-[68] bg-black/60 backdrop-blur-sm"
+              onClick={() => setShowCompletion(false)}
+            />
+            {/* Modal card */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.85, y: 32 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.85, y: 32 }}
+              transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+              className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[70] w-[min(340px,calc(100vw-2rem))] rounded-3xl border border-[color:var(--app-accent)]/30 bg-[var(--app-surface)] backdrop-blur-xl shadow-[0_16px_48px_color-mix(in_srgb,var(--app-accent)_24%,transparent)] overflow-hidden"
             >
-              🏆
-            </motion.span>
-            <div>
-              <p className="text-white font-bold text-sm leading-none">¡Sesión completada!</p>
-              <p className="text-[color:var(--app-accent)] text-xs mt-0.5">Todos los ejercicios en verde ⚡</p>
-            </div>
-            {navigator.canShare?.({ text: 'test' }) || navigator.share ? (
-              <motion.button
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.4 }}
-                onClick={() => {
-                  const focus = todayRoutine?.focus || 'Entrenamiento';
-                  const exCount = todayRoutine?.exercises?.length || 0;
-                  navigator.share?.({
-                    title: '💪 VoltBody – Sesión completada',
-                    text: `Acabo de completar "${focus}" (${exCount} ejercicios) en VoltBody 🔥`,
-                  }).catch(() => {});
-                }}
-                className="tap-target flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-[color:var(--app-accent)]/20 border border-[color:var(--app-accent)]/40 text-[var(--app-accent)] text-xs font-semibold"
-              >
-                <Share2 size={12} />
-                Compartir
-              </motion.button>
-            ) : null}
-          </motion.div>
+              {/* Glow top strip */}
+              <div className="h-1 w-full bg-gradient-to-r from-[color:var(--app-accent)]/40 via-[color:var(--app-accent)] to-[color:var(--app-accent)]/40" />
+
+              <div className="px-6 pt-6 pb-7">
+                {/* Trophy animation */}
+                <div className="flex justify-center mb-4">
+                  <motion.span
+                    animate={{ rotate: [0, -12, 12, -7, 7, 0], scale: [1, 1.25, 1] }}
+                    transition={{ duration: 0.7, ease: 'easeInOut' }}
+                    className="text-5xl"
+                  >
+                    🏆
+                  </motion.span>
+                </div>
+
+                <p className="text-center text-xs uppercase tracking-[0.2em] text-[color:var(--app-accent)] mb-1 font-semibold">
+                  ¡Sesión completada!
+                </p>
+                <h3 className="text-center text-2xl font-black text-white tracking-tight mb-1">
+                  {todayRoutine?.focus || 'Entrenamiento'}
+                </h3>
+                <p className="text-center text-sm text-gray-400 mb-5">
+                  Todos los ejercicios en verde ⚡
+                </p>
+
+                {/* Quick stats */}
+                <div className="grid grid-cols-3 gap-2 mb-5">
+                  {[
+                    { icon: '💪', label: 'Ejercicios', value: String(totalTodayExercises) },
+                    { icon: '✅', label: 'Series', value: `${completedSets}/${plannedSets}` },
+                    { icon: '🔥', label: 'Racha', value: `${currentStreak}d` },
+                  ].map(({ icon, label, value }) => (
+                    <div key={label} className="neuro-inset rounded-2xl p-3 text-center">
+                      <p className="text-lg mb-0.5">{icon}</p>
+                      <p className="text-base font-black text-white">{value}</p>
+                      <p className="text-[9px] uppercase tracking-wider text-gray-500">{label}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* XP gained pill */}
+                <div className="flex items-center justify-center gap-2 mb-5">
+                  <span className="px-3 py-1.5 rounded-full bg-[color:var(--app-accent)]/10 border border-[color:var(--app-accent)]/30 text-[color:var(--app-accent)] text-xs font-bold flex items-center gap-1.5">
+                    <span>⚡</span>
+                    <span>+{todayXP} XP · Nv. {level}</span>
+                  </span>
+                </div>
+
+                {/* Action buttons */}
+                <div className="flex gap-2">
+                  <motion.button
+                    whileTap={{ scale: 0.96 }}
+                    onClick={() => setShowCompletion(false)}
+                    className="flex-1 tap-target secondary-btn rounded-xl py-3 text-sm font-semibold text-white"
+                  >
+                    Cerrar
+                  </motion.button>
+                  <motion.button
+                    whileTap={{ scale: 0.96 }}
+                    onClick={() => void handleShare()}
+                    disabled={isSharing}
+                    className="flex-[2] tap-target pressable primary-btn rounded-xl py-3 text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-70"
+                  >
+                    {isSharing ? (
+                      <>
+                        <Loader2 size={14} className="animate-spin" />
+                        Generando...
+                      </>
+                    ) : (
+                      <>
+                        <Share2 size={14} />
+                        Compartir 🎉
+                      </>
+                    )}
+                  </motion.button>
+                </div>
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
+
+      {/* Off-screen workout summary card rendered for html2canvas capture */}
+      <div style={{ position: 'fixed', bottom: 0, left: 0, transform: 'translateX(-9999px)', opacity: 0, pointerEvents: 'none', zIndex: -1 }} aria-hidden="true">
+        <WorkoutSummaryCard
+          ref={summaryCardRef}
+          data={{
+            focus: todayRoutine?.focus || 'Entrenamiento',
+            exerciseCount: totalTodayExercises,
+            completedSets,
+            plannedSets,
+            streak: currentStreak,
+            level,
+            totalXP,
+            xpGained: todayXP,
+            userName: profile?.name,
+            exercises: (todayRoutine?.exercises || []).map((ex) => ({ name: ex.name, sets: Number(ex.sets), reps: ex.reps })),
+          }}
+        />
+      </div>
       </div>
     </div>
   );
