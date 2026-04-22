@@ -2,10 +2,12 @@ import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authMiddleware } from '../middleware/auth.js';
 import { validateWorkoutLogPayload, validateProgressPhotoPayload, validateWeightLogPayload } from '../middleware/validators.js';
+import { createRateLimiter } from '../middleware/rateLimit.js';
 import { logError } from '../utils/logger.js';
 
 const router = express.Router();
 const prisma = new PrismaClient();
+const weightLogLimiter = createRateLimiter({ windowMs: 60 * 1000, max: 20, keyPrefix: 'weight-log' });
 
 // Get workout logs
 router.get('/logs', authMiddleware, async (req, res) => {
@@ -80,7 +82,7 @@ router.post('/photos', authMiddleware, validateProgressPhotoPayload, async (req,
 });
 
 // Get weight logs
-router.get('/weight-logs', authMiddleware, async (req, res) => {
+router.get('/weight-logs', authMiddleware, weightLogLimiter, async (req, res) => {
   try {
     const logs = await prisma.weightLog.findMany({
       where: { userId: req.userId },
@@ -94,7 +96,7 @@ router.get('/weight-logs', authMiddleware, async (req, res) => {
 });
 
 // Upsert weight log (one per day per user)
-router.post('/weight-logs', authMiddleware, validateWeightLogPayload, async (req, res) => {
+router.post('/weight-logs', authMiddleware, weightLogLimiter, validateWeightLogPayload, async (req, res) => {
   try {
     const { date, weight } = req.body;
     const dayStart = new Date(date);
