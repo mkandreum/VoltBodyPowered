@@ -168,8 +168,9 @@ export default function Home() {
     const todayStr = format(new Date(), 'yyyy-MM-dd');
     let streak = 0;
     let cursor = new Date();
+    const MAX_STREAK_DAYS = 365; // look back at most one year
 
-    for (let i = 0; i < 365; i++) {
+    for (let i = 0; i < MAX_STREAK_DAYS; i++) {
       const dateStr = format(cursor, 'yyyy-MM-dd');
       const weekdayIdx = getMondayFirstIndex(cursor);
       const isTrainingDay = trainingDayIndices.has(weekdayIdx);
