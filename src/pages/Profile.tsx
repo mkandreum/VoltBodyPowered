@@ -647,7 +647,7 @@ export default function Profile() {
             </div>
             {Notification.permission === 'denied' && (
               <p className="text-amber-400 text-xs mt-3">
-                ⚠️ Notificaciones bloqueadas en el navegador. Actívalas en Configuración → Privacidad → Notificaciones.
+                ⚠️ Notificaciones bloqueadas. Actívalas en la configuración de tu navegador.
               </p>
             )}
             {notificationsEnabled && Notification.permission === 'granted' && (

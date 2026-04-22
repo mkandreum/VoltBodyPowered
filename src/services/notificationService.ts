@@ -1,6 +1,13 @@
 import type { UserProfile, WorkoutLog, WeightLog } from '../store/useAppStore';
 
 const NOTIFICATION_ICON = '/icon-192.svg';
+/** Minimum ms from now before a notification is worth scheduling. */
+const MIN_SCHEDULE_THRESHOLD_MS = 60_000; // 1 minute
+/** Delay before showing the streak-danger notification after app open. */
+const STREAK_NOTIFICATION_DELAY_MS = 8_000;
+/** Delay before showing the weekly-weight notification after app open. */
+const WEIGHT_NOTIFICATION_DELAY_MS = 15_000;
+
 let scheduledTimers: ReturnType<typeof setTimeout>[] = [];
 
 async function showNotification(title: string, options?: NotificationOptions): Promise<void> {
@@ -33,7 +40,7 @@ function msUntilTime(timeStr: string): number | null {
   const target = new Date();
   target.setHours(h, m, 0, 0);
   const ms = target.getTime() - Date.now();
-  return ms > 60_000 ? ms : null; // only schedule if >1 min away
+  return ms > MIN_SCHEDULE_THRESHOLD_MS ? ms : null; // only schedule if far enough away
 }
 
 export const notificationService = {
@@ -96,8 +103,10 @@ export const notificationService = {
         .map((l) => l.date.slice(0, 10))
         .sort()
         .at(-1)!;
+      // Use noon UTC to avoid off-by-one errors from timezone shifts
+      const lastMs = new Date(lastDate + 'T12:00:00Z').getTime();
       const daysSince = Math.floor(
-        (Date.now() - new Date(lastDate + 'T12:00:00').getTime()) / 86_400_000,
+        (Date.now() - lastMs) / 86_400_000,
       );
       if (daysSince >= 3) {
         const t = setTimeout(
@@ -106,7 +115,7 @@ export const notificationService = {
               body: `Llevas ${daysSince} días sin entrenar. ¡Hoy es el día!`,
               tag: 'streak-danger',
             }),
-          8_000,
+          STREAK_NOTIFICATION_DELAY_MS,
         );
         scheduledTimers.push(t);
       }
@@ -126,7 +135,7 @@ export const notificationService = {
             body: 'Aún no has registrado tu peso esta semana. ¡Solo tarda 5 segundos!',
             tag: 'weekly-weight',
           }),
-        15_000,
+        WEIGHT_NOTIFICATION_DELAY_MS,
       );
       scheduledTimers.push(t);
     }

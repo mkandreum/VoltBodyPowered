@@ -47,6 +47,7 @@ export function getProgressiveSuggestion(
   if (currentWeight <= 0) return null;
 
   const increment = 2.5;
+  // Round to nearest 0.5 kg (standard gym plate increment)
   const suggestedWeight = Math.round((currentWeight + increment) * 2) / 2;
 
   return { suggestedWeight, currentWeight, sessionsAnalyzed: sessions.length, increment };

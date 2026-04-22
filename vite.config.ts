@@ -15,7 +15,7 @@ export default defineConfig(() => {
         manifest: {
           name: 'VoltBody Powered',
           short_name: 'VoltBody',
-          description: 'Entrenamiento y nutricion con IA',
+          description: 'Entrenamiento y nutrición con IA',
           start_url: '/',
           scope: '/',
           display: 'standalone',
