@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore, Exercise, WorkoutDay } from '../store/useAppStore';
-import { ChevronLeft, Play, CheckCircle2, Dumbbell, PlusCircle, Trash2, Star, CalendarClock, Flame, BookOpen, Share2, Trophy, TrendingUp, History, Loader2 } from 'lucide-react';
+import { ChevronLeft, Play, CheckCircle2, Dumbbell, PlusCircle, Trash2, Star, CalendarClock, Flame, BookOpen, Share2, Trophy, TrendingUp, History, Loader2, X } from 'lucide-react';
 import { workoutService } from '../services/workoutService';
 import { authService } from '../services/authService';
 import { enrichRoutine, routineNeedsEnrichment } from '../services/exerciseImageService';
@@ -56,6 +56,7 @@ export default function Workout() {
   const restIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // Completion celebration
   const [showCompletion, setShowCompletion] = useState(false);
+  const completionShownRef = useRef(false);
   // Share card state
   const [isSharing, setIsSharing] = useState(false);
   const summaryCardRef = useRef<HTMLDivElement>(null);
@@ -239,12 +240,16 @@ export default function Workout() {
   // Cleanup on unmount
   useEffect(() => () => { if (restIntervalRef.current) clearInterval(restIntervalRef.current); }, []);
 
-  // Fire completion celebration when all exercises are done (guard with showCompletion to avoid repeated timers)
+  // Fire completion celebration once when all exercises are done; reset when session changes
   useEffect(() => {
-    if (allExercisesDone && !showCompletion) {
+    if (allExercisesDone && !completionShownRef.current) {
+      completionShownRef.current = true;
       setShowCompletion(true);
     }
-  }, [allExercisesDone, showCompletion]);
+    if (!allExercisesDone) {
+      completionShownRef.current = false;
+    }
+  }, [allExercisesDone]);
 
   useEffect(() => {
     if (routinesByDay[selectedDayIndex]) return;
@@ -1239,106 +1244,83 @@ export default function Workout() {
         )}
       </AnimatePresence>
 
-      {/* Completion celebration modal */}
+      {/* Completion celebration – top banner */}
       <AnimatePresence>
         {showCompletion && (
-          <>
-            {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.25 }}
-              className="fixed inset-0 z-[68] bg-black/60 backdrop-blur-sm"
-              onClick={() => setShowCompletion(false)}
-            />
-            {/* Modal card */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.85, y: 32 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.85, y: 32 }}
-              transition={{ type: 'spring', stiffness: 320, damping: 28 }}
-              className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[70] w-[min(340px,calc(100vw-2rem))] rounded-3xl border border-[color:var(--app-accent)]/30 bg-[var(--app-surface)] backdrop-blur-xl shadow-[0_16px_48px_color-mix(in_srgb,var(--app-accent)_24%,transparent)] overflow-hidden"
-            >
-              {/* Glow top strip */}
-              <div className="h-1 w-full bg-gradient-to-r from-[color:var(--app-accent)]/40 via-[color:var(--app-accent)] to-[color:var(--app-accent)]/40" />
+          <motion.div
+            initial={{ opacity: 0, y: -100 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -100 }}
+            transition={{ type: 'spring', stiffness: 340, damping: 30 }}
+            className="fixed top-0 left-0 right-0 z-[80] border-b border-[color:var(--app-accent)]/30 bg-[var(--app-surface)]/95 backdrop-blur-xl shadow-[0_4px_32px_color-mix(in_srgb,var(--app-accent)_20%,transparent)]"
+          >
+            {/* Accent line at very top */}
+            <div className="h-[3px] w-full bg-gradient-to-r from-transparent via-[color:var(--app-accent)] to-transparent" />
 
-              <div className="px-6 pt-6 pb-7">
-                {/* Trophy animation */}
-                <div className="flex justify-center mb-4">
-                  <motion.span
-                    animate={{ rotate: [0, -12, 12, -7, 7, 0], scale: [1, 1.25, 1] }}
-                    transition={{ duration: 0.7, ease: 'easeInOut' }}
-                    className="text-5xl"
-                  >
-                    🏆
-                  </motion.span>
+            <div className="px-4 py-3">
+              {/* Row 1: icon + title + close */}
+              <div className="flex items-center gap-3">
+                <motion.span
+                  animate={{ rotate: [0, -12, 12, -7, 7, 0], scale: [1, 1.2, 1] }}
+                  transition={{ duration: 0.7, ease: 'easeInOut' }}
+                  className="text-3xl shrink-0"
+                >
+                  🏆
+                </motion.span>
+
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--app-accent)] font-bold leading-none mb-0.5">
+                    ¡Sesión completada!
+                  </p>
+                  <p className="text-base font-black text-white truncate leading-tight">
+                    {todayRoutine?.focus || 'Entrenamiento'}
+                  </p>
                 </div>
 
-                <p className="text-center text-xs uppercase tracking-[0.2em] text-[color:var(--app-accent)] mb-1 font-semibold">
-                  ¡Sesión completada!
-                </p>
-                <h3 className="text-center text-2xl font-black text-white tracking-tight mb-1">
-                  {todayRoutine?.focus || 'Entrenamiento'}
-                </h3>
-                <p className="text-center text-sm text-gray-400 mb-5">
-                  Todos los ejercicios en verde ⚡
-                </p>
+                {/* Close X */}
+                <button
+                  type="button"
+                  onClick={() => setShowCompletion(false)}
+                  className="shrink-0 tap-target w-8 h-8 flex items-center justify-center rounded-full bg-white/10 text-gray-300 hover:bg-white/20 hover:text-white transition-colors"
+                  aria-label="Cerrar"
+                >
+                  <X size={16} />
+                </button>
+              </div>
 
-                {/* Quick stats */}
-                <div className="grid grid-cols-3 gap-2 mb-5">
+              {/* Row 2: quick stats + share */}
+              <div className="flex items-center gap-2 mt-2.5">
+                {/* Stats pills */}
+                <div className="flex gap-1.5 flex-1 min-w-0">
                   {[
-                    { icon: '💪', label: 'Ejercicios', value: String(totalTodayExercises) },
-                    { icon: '✅', label: 'Series', value: `${completedSets}/${plannedSets}` },
-                    { icon: '🔥', label: 'Racha', value: `${currentStreak}d` },
-                  ].map(({ icon, label, value }) => (
-                    <div key={label} className="neuro-inset rounded-2xl p-3 text-center">
-                      <p className="text-lg mb-0.5">{icon}</p>
-                      <p className="text-base font-black text-white">{value}</p>
-                      <p className="text-[9px] uppercase tracking-wider text-gray-500">{label}</p>
-                    </div>
+                    { icon: '💪', value: String(totalTodayExercises) },
+                    { icon: '✅', value: `${completedSets}/${plannedSets}` },
+                    { icon: '⚡', value: `+${todayXP} XP` },
+                    { icon: '🔥', value: `${currentStreak}d` },
+                  ].map(({ icon, value }) => (
+                    <span key={icon} className="flex items-center gap-1 px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-white text-[11px] font-semibold whitespace-nowrap">
+                      <span>{icon}</span>
+                      <span>{value}</span>
+                    </span>
                   ))}
                 </div>
 
-                {/* XP gained pill */}
-                <div className="flex items-center justify-center gap-2 mb-5">
-                  <span className="px-3 py-1.5 rounded-full bg-[color:var(--app-accent)]/10 border border-[color:var(--app-accent)]/30 text-[color:var(--app-accent)] text-xs font-bold flex items-center gap-1.5">
-                    <span>⚡</span>
-                    <span>+{todayXP} XP · Nv. {level}</span>
-                  </span>
-                </div>
-
-                {/* Action buttons */}
-                <div className="flex gap-2">
-                  <motion.button
-                    whileTap={{ scale: 0.96 }}
-                    onClick={() => setShowCompletion(false)}
-                    className="flex-1 tap-target secondary-btn rounded-xl py-3 text-sm font-semibold text-white"
-                  >
-                    Cerrar
-                  </motion.button>
-                  <motion.button
-                    whileTap={{ scale: 0.96 }}
-                    onClick={() => void handleShare()}
-                    disabled={isSharing}
-                    className="flex-[2] tap-target pressable primary-btn rounded-xl py-3 text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-70"
-                  >
-                    {isSharing ? (
-                      <>
-                        <Loader2 size={14} className="animate-spin" />
-                        Generando...
-                      </>
-                    ) : (
-                      <>
-                        <Share2 size={14} />
-                        Compartir 🎉
-                      </>
-                    )}
-                  </motion.button>
-                </div>
+                {/* Share button */}
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => void handleShare()}
+                  disabled={isSharing}
+                  className="shrink-0 tap-target primary-btn rounded-xl px-3 py-2 text-xs font-bold flex items-center gap-1.5 disabled:opacity-70"
+                >
+                  {isSharing ? (
+                    <><Loader2 size={13} className="animate-spin" /> Generando...</>
+                  ) : (
+                    <><Share2 size={13} /> Compartir</>
+                  )}
+                </motion.button>
               </div>
-            </motion.div>
-          </>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
 

@@ -70,27 +70,25 @@ const WorkoutSummaryCard = forwardRef<HTMLDivElement, WorkoutSummaryCardProps>((
       </div>
 
       {/* Trophy + title */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
-        <span style={{ fontSize: 36 }}>🏆</span>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 6, background: 'rgba(57,255,20,0.07)', border: '1px solid rgba(57,255,20,0.18)', borderRadius: 16, padding: '12px 14px' }}>
+        <span style={{ fontSize: 38, lineHeight: 1 }}>🏆</span>
         <div>
-          <p style={{ fontSize: 11, color: '#39ff14', textTransform: 'uppercase', letterSpacing: '0.18em', margin: 0 }}>
+          <p style={{ fontSize: 10, color: '#39ff14', textTransform: 'uppercase', letterSpacing: '0.2em', margin: 0, fontWeight: 700 }}>
             Sesión completada
           </p>
-          <h2 style={{ fontSize: 26, fontWeight: 900, margin: '2px 0 0', lineHeight: 1.1, background: 'linear-gradient(135deg,#39ff14,#7fff7f)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', color: '#39ff14' }}>
+          <h2 style={{ fontSize: 24, fontWeight: 900, margin: '4px 0 0', lineHeight: 1.15, color: '#ffffff' }}>
             {data.focus}
           </h2>
+          {data.userName && (
+            <p style={{ fontSize: 12, color: '#9ca3af', margin: '4px 0 0' }}>
+              por <span style={{ color: '#e5e7eb', fontWeight: 600 }}>{data.userName}</span>
+            </p>
+          )}
         </div>
       </div>
 
-      {/* Name */}
-      {data.userName && (
-        <p style={{ fontSize: 13, color: '#9ca3af', marginBottom: 16, marginTop: 4 }}>
-          por <span style={{ color: '#e5e7eb', fontWeight: 600 }}>{data.userName}</span>
-        </p>
-      )}
-
       {/* Stats row */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16, marginTop: data.userName ? 0 : 16 }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, marginTop: 12 }}>
         {[
           { icon: '💪', label: 'Ejercicios', value: String(data.exerciseCount) },
           { icon: '✅', label: 'Series', value: `${data.completedSets}/${data.plannedSets}` },
