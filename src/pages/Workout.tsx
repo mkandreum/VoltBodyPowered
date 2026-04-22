@@ -169,6 +169,15 @@ export default function Workout() {
     }, new Map());
   }, [logs]);
 
+  // Most recently logged weight per exerciseId
+  const lastWeights = useMemo(() => {
+    return logs.reduce<Map<string, { weight: number; date: string }>>((acc, log) => {
+      const prev = acc.get(log.exerciseId);
+      if (!prev || log.date > prev.date) acc.set(log.exerciseId, { weight: log.weight, date: log.date });
+      return acc;
+    }, new Map());
+  }, [logs]);
+
   // Rest timer helpers
   const startRestTimer = useCallback((seconds = REST_TIMER_SECONDS) => {
     if (restIntervalRef.current) clearInterval(restIntervalRef.current);
@@ -745,13 +754,21 @@ export default function Workout() {
               <h2 className="text-3xl font-bold text-white mb-2">{selectedExercise.name}</h2>
               {(() => {
                 const prWeight = personalRecords.get(selectedExercise.id);
-                if (!prWeight) return null;
+                const lastEntry = lastWeights.get(selectedExercise.id);
+                if (!prWeight && !lastEntry) return null;
                 return (
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-xs font-mono text-yellow-400 flex items-center gap-1">
-                      <Trophy size={12} />
-                      Mejor marca: {prWeight}kg
-                    </span>
+                  <div className="flex flex-col gap-1 mb-2">
+                    {prWeight && (
+                      <span className="text-xs font-mono text-yellow-400 flex items-center gap-1">
+                        <Trophy size={12} />
+                        Mejor marca: {prWeight}kg
+                      </span>
+                    )}
+                    {lastEntry && (
+                      <span className="text-xs font-mono text-gray-400 flex items-center gap-1">
+                        Último peso registrado: {lastEntry.weight}kg
+                      </span>
+                    )}
                   </div>
                 );
               })()}
