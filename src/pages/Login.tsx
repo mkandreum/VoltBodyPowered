@@ -4,6 +4,7 @@ import { Zap, Mail, Lock, User, LogIn } from 'lucide-react';
 import { authService } from '../services/authService';
 import { workoutService } from '../services/workoutService';
 import { useAppStore } from '../store/useAppStore';
+import SplashScreen from '../components/SplashScreen';
 
 export default function Login() {
   const {
@@ -52,16 +53,31 @@ export default function Login() {
         });
       }
 
-      setAuthToken(response.token);
-      setUser(response.user);
-
       // If logging in (not registering), try to restore saved plan from backend
+      // before updating ANY auth state so there is no intermediate render of
+      // Onboarding or the Login form.
       if (isLogin) {
         try {
           const profile = await authService.getProfile(response.token);
           if (profile && profile.routine && profile.diet) {
             const appPreferences = profile.insights?.appPreferences || {};
 
+            let logs: any[] = [], photos: any[] = [], weightLogs: any[] = [];
+            try {
+              [logs, photos, weightLogs] = await Promise.all([
+                workoutService.getLogs(response.token),
+                workoutService.getPhotos(response.token),
+                workoutService.getWeightLogs(response.token),
+              ]);
+            } catch (syncError) {
+              console.error('Could not sync logs/photos from backend:', syncError);
+            }
+
+            // All data ready — update everything at once so the app transitions
+            // directly from the loading screen to the main view without flashing
+            // through the Onboarding steps.
+            setAuthToken(response.token);
+            setUser(response.user);
             setProfile({
               name: response.user.name || '',
               age: profile.age,
@@ -114,32 +130,32 @@ export default function Login() {
             if (profile.profilePhoto) {
               setProfilePhoto(profile.profilePhoto);
             }
-
-            try {
-              const [logs, photos, weightLogs] = await Promise.all([
-                workoutService.getLogs(response.token),
-                workoutService.getPhotos(response.token),
-                workoutService.getWeightLogs(response.token),
-              ]);
-              setLogs(logs);
-              setProgressPhotos(photos);
-              setWeightLogs(weightLogs);
-            } catch (syncError) {
-              console.error('Could not sync logs/photos from backend:', syncError);
-            }
-
+            setLogs(logs);
+            setProgressPhotos(photos);
+            setWeightLogs(weightLogs);
             completeOnboarding();
+            return;
           }
         } catch (err) {
           console.error('Could not restore saved plan, proceeding to onboarding:', err);
         }
       }
+
+      // New registration or no saved profile: set auth and proceed to onboarding
+      setAuthToken(response.token);
+      setUser(response.user);
     } catch (err: any) {
       setError(err.message || 'Ha ocurrido un error');
     } finally {
       setLoading(false);
     }
   };
+
+  // While login/register API calls are in flight, show the splash screen so the
+  // user never sees the form flicker or the Onboarding steps appear.
+  if (loading) {
+    return <SplashScreen />;
+  }
 
   return (
     <div className="min-h-screen app-shell flex items-center justify-center p-4 relative overflow-hidden">
@@ -270,24 +286,10 @@ export default function Login() {
 
             <button
               type="submit"
-              disabled={loading}
-              className="pulse-surface pressable primary-btn w-full py-3.5 rounded-xl font-semibold transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
+              className="pulse-surface pressable primary-btn w-full py-3.5 rounded-xl font-semibold transition-opacity flex items-center justify-center gap-2"
             >
-              {loading ? (
-                <>
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                    className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
-                  />
-                  Procesando...
-                </>
-              ) : (
-                <>
-                  <LogIn className="w-5 h-5" />
-                  {isLogin ? 'Iniciar Sesión' : 'Crear Cuenta'}
-                </>
-              )}
+              <LogIn className="w-5 h-5" />
+              {isLogin ? 'Iniciar Sesión' : 'Crear Cuenta'}
             </button>
           </form>
         </motion.div>
