@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore } from '../store/useAppStore';
 import { Dumbbell, Utensils, Flame, Moon, Activity, Sparkles, Quote, Clock3, Camera, Zap } from 'lucide-react';
@@ -64,6 +64,8 @@ function parseMealHour(time: string): number {
 export default function Home() {
   const { profile, routine, diet, logs, insights, setTab, motivationPhrase, motivationPhoto, showToast, addLog, authToken, mealEatenRecord, progressPhotos } = useAppStore();
   const [syncState, setSyncState] = useState<'idle' | 'local' | 'syncing' | 'synced' | 'error'>('idle');
+  // Track whether the chart has animated once — avoid re-animating on every state update
+  const chartAnimatedRef = useRef(false);
 
   const today = new Date().toLocaleDateString('es-ES', { weekday: 'long' });
   const routineByDay = useMemo(() => mapRoutineByWeekday(routine), [routine]);
@@ -471,9 +473,10 @@ export default function Home() {
                     fill="url(#voltGradient)"
                     dot={false}
                     activeDot={{ r: 5, fill: 'var(--app-accent)', strokeWidth: 0 }}
-                    isAnimationActive={true}
+                    isAnimationActive={!chartAnimatedRef.current}
                     animationDuration={900}
                     animationEasing="ease-out"
+                    onAnimationEnd={() => { chartAnimatedRef.current = true; }}
                   />
                 </AreaChart>
               </ResponsiveContainer>
@@ -591,15 +594,13 @@ export default function Home() {
             Subir progreso 📸
           </motion.button>
         </div>
-        <div className="mt-3 text-[11px] text-gray-400">
-          Estado sync:{' '}
-          <span className={syncState === 'synced' ? 'text-emerald-400' : syncState === 'error' ? 'text-amber-300' : 'text-gray-300'}>
-            {syncState === 'idle' && 'sin actividad'}
-            {syncState === 'local' && 'guardado local'}
-            {syncState === 'syncing' && 'sincronizando...'}
-            {syncState === 'synced' && 'sincronizado'}
-            {syncState === 'error' && 'error de sincronizacion'}
-          </span>
+        <div className="mt-3 text-xs text-gray-400 flex items-center gap-1.5">
+          <span>Sync:</span>
+          {syncState === 'idle' && <span className="text-gray-500">⏸ sin actividad</span>}
+          {syncState === 'local' && <span className="text-gray-300">💾 guardado local</span>}
+          {syncState === 'syncing' && <span className="text-gray-300">⟳ sincronizando...</span>}
+          {syncState === 'synced' && <span className="text-emerald-400">✓ sincronizado</span>}
+          {syncState === 'error' && <span className="text-amber-300">⚠ error de sincronización</span>}
         </div>
       </AppCard>
       </motion.div>
@@ -607,7 +608,14 @@ export default function Home() {
       <AppCard className="mb-4 p-0 overflow-hidden glass-panel" accent>
         <div className="relative min-h-[170px]">
           {motivationPhoto ? (
-            <img src={motivationPhoto} alt="Motivación" className="w-full h-[170px] object-cover" />
+            <img
+              src={motivationPhoto}
+              alt="Motivación"
+              width={600}
+              height={170}
+              className="w-full h-[170px] object-cover"
+              style={{ aspectRatio: '600/170' }}
+            />
           ) : (
             <div className="w-full h-[170px] bg-gradient-to-br from-[color:var(--app-accent)]/20 to-black" />
           )}

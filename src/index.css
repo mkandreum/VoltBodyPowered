@@ -21,7 +21,7 @@
   --app-border: rgba(255, 255, 255, 0.08);
   --app-surface-elevated: #1a1a20;
   --app-surface-contrast: #202028;
-  --app-text-muted: #a1a1aa;
+  --app-text-muted: #b8b8c0;
   --app-shadow-soft: 0 16px 48px rgba(0, 0, 0, 0.6);
   --app-shadow-accent: 0 12px 40px var(--app-accent-dim);
   --app-glass: color-mix(in srgb, var(--app-surface) 60%, transparent);
@@ -205,8 +205,8 @@ body[data-theme="ocaso-negro"] {
   overflow: hidden;
   border-radius: 1.5rem;
   background: var(--neuro-surface);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--app-border);
   box-shadow:
     0 12px 32px var(--neuro-shadow-dark),
@@ -229,8 +229,8 @@ body[data-theme="ocaso-negro"] {
 
 .glass-panel {
   background: var(--neuro-surface) !important;
-  backdrop-filter: blur(24px) !important;
-  -webkit-backdrop-filter: blur(24px) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
   border: 1px solid var(--app-border) !important;
   box-shadow:
     0 16px 40px var(--neuro-shadow-dark),
@@ -285,8 +285,13 @@ body[data-theme="ocaso-negro"] {
   transition: transform var(--motion-fast) cubic-bezier(0.22, 1, 0.36, 1),
     filter var(--motion-fast),
     box-shadow var(--motion-fast);
-  will-change: transform;
   backface-visibility: hidden;
+}
+
+.pressable:hover,
+.pressable:active,
+.pressable:focus-visible {
+  will-change: transform;
 }
 
 button,
@@ -711,7 +716,7 @@ button:active {
   0%   { transform: scale(1); }
   40%  { transform: scale(0.96) translateY(1px); }
   68%  { transform: scale(1.005); }
-  100% { transform: scale(0.99); }
+  100% { transform: scale(1); }
 }
 
 @keyframes press-danger {
@@ -722,7 +727,7 @@ button:active {
 }
 
 .safe-bottom {
-  padding-bottom: calc(8rem + env(safe-area-inset-bottom));
+  padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
 }
 
 .safe-top {
@@ -848,6 +853,19 @@ button:active {
 
 @keyframes avatar-ring-spin {
   to { --avatar-angle: 360deg; }
+}
+
+/* Fallback for browsers that don't support CSS Houdini @property */
+@supports not (background: paint(x)) {
+  .avatar-ring-animated {
+    animation: none;
+    background: conic-gradient(
+      var(--app-accent) 0%,
+      color-mix(in srgb, var(--app-accent) 20%, black) 25%,
+      #000 45%,
+      var(--app-accent) 100%
+    );
+  }
 }
 
 /* ─── Primary button shimmer sweep ───────────────────────── */
@@ -980,8 +998,13 @@ button:active {
     rgba(255, 255, 255, 0.22),
     transparent
   );
-  animation: btn-shimmer-sweep 2.8s ease-in-out infinite;
+  animation: none;
   pointer-events: none;
+}
+
+.primary-btn:hover::after,
+.primary-btn:focus-visible::after {
+  animation: btn-shimmer-sweep 1.4s ease-in-out 1;
 }
 
 /* ─── XP progress bar with glow ─────────────────────────── */
@@ -1056,3 +1079,31 @@ button:active {
   filter: drop-shadow(0 0 4px color-mix(in srgb, var(--app-accent) 60%, transparent));
 }
 
+/* ─── prefers-reduced-motion: disable all non-essential animations ── */
+@media (prefers-reduced-motion: reduce) {
+  /* Pause all infinite / decorative animations */
+  .liquid-indicator,
+  .tab-switch-glow,
+  .avatar-ring-animated,
+  .xp-bar-fill,
+  .dynamic-glow-card::after,
+  .anim-shimmer,
+  .anim-glow-pulse {
+    animation: none !important;
+  }
+
+  /* Remove the shimmer sweep from primary buttons */
+  .primary-btn::after {
+    display: none;
+  }
+
+  /* Reduce all transition & animation durations to near-instant */
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

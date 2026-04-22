@@ -36,7 +36,7 @@ export const listStagger = (index: number) => ({
   initial: { opacity: 0, y: 16 },
   animate: { opacity: 1, y: 0 },
   transition: {
-    delay: index * 0.055,
+    delay: Math.min(index * 0.035, 0.12),
     duration: 0.26,
     ease: easeOut,
   },
@@ -47,7 +47,7 @@ export const timelineStagger = (index: number) => ({
   initial: { opacity: 0, x: -12, y: 4 },
   animate: { opacity: 1, x: 0, y: 0 },
   transition: {
-    delay: index * 0.08 + 0.1,
+    delay: Math.min(index * 0.05 + 0.06, 0.18),
     duration: 0.3,
     ease: easeSettle,
   },

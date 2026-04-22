@@ -17,7 +17,15 @@ export default function Diet() {
   const todayDateKey = format(new Date(), 'yyyy-MM-dd');
   const eatenToday = mealEatenRecord[todayDateKey] ?? [];
 
-  if (!diet) return null;
+  if (!diet) return (
+    <div className="min-h-screen app-shell flex items-center justify-center px-6 safe-top safe-bottom">
+      <div className="text-center max-w-xs">
+        <p className="text-4xl mb-4">🥗</p>
+        <h2 className="text-xl font-bold text-white mb-2">Sin plan nutricional</h2>
+        <p className="text-gray-400 text-sm">Completa el onboarding para que la IA genere tu dieta personalizada.</p>
+      </div>
+    </div>
+  );
 
   const handleSwap = async (meal: Meal) => {
     if (!profile) return;
