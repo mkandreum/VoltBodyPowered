@@ -3,6 +3,7 @@ import { useAppStore } from './store/useAppStore';
 import Login from './pages/Login';
 import Onboarding from './pages/Onboarding';
 import BottomNav from './components/BottomNav';
+import SplashScreen from './components/SplashScreen';
 import { AnimatePresence, motion } from 'motion/react';
 import { pageTransition, fadeSlideUp } from './lib/motion';
 import { CheckCircle2, AlertCircle, Info } from 'lucide-react';
@@ -35,7 +36,7 @@ function PageSkeleton() {
 }
 
 export default function App() {
-  const { isAuthenticated, isOnboarded, currentTab, theme, toasts, dismissToast } = useAppStore();
+  const { isAuthenticated, isOnboarded, currentTab, theme, toasts, dismissToast, _hasHydrated } = useAppStore();
   const scrollPositions = useRef<Record<string, number>>({});
 
   // Disable overscroll on mobile
@@ -89,6 +90,11 @@ export default function App() {
     };
   }, [currentTab]);
 
+  // While Zustand is rehydrating from localStorage, show a splash instead of the login form
+  if (!_hasHydrated) {
+    return <SplashScreen />;
+  }
+
   // Show login if not authenticated
   if (!isAuthenticated) {
     return <Login />;
@@ -118,13 +124,14 @@ export default function App() {
 
   return (
     <div className="app-shell min-h-[100dvh] text-white overflow-x-hidden safe-bottom">
-      <AnimatePresence mode="wait">
+      <AnimatePresence>
         <motion.div
           key={currentTab}
           initial={pageTransition.initial}
           animate={pageTransition.animate}
           exit={pageTransition.exit}
           transition={pageTransition.transition}
+          style={{ willChange: 'opacity, transform' }}
           className="h-full"
         >
           <Suspense fallback={<PageSkeleton />}>

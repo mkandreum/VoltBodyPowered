@@ -18,10 +18,10 @@ export const easings = { easeOut, easeOvershoot, easeSpring, easeSettle };
 
 // ── Page & Tab Transitions ───────────────────────────────────
 export const pageTransition = {
-  initial: { opacity: 0, y: 8, scale: 0.992 },
-  animate: { opacity: 1, y: 0, scale: 1 },
-  exit: { opacity: 0, y: -6, scale: 0.996 },
-  transition: { duration: 0.26, ease: easeSettle },
+  initial: { opacity: 0, y: 6 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -4 },
+  transition: { duration: 0.18, ease: easeOut },
 };
 
 export const fadeSlideUp = {

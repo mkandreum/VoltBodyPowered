@@ -121,6 +121,10 @@ export type AppToast = {
 };
 
 interface AppState {
+  // Hydration guard — true once Zustand has rehydrated from localStorage
+  _hasHydrated: boolean;
+  _setHasHydrated: (v: boolean) => void;
+
   // Auth
   authToken: string | null;
   user: { id: string; email: string; name: string | null } | null;
@@ -211,6 +215,10 @@ const defaultExerciseLibrary: ExerciseLibraryEntry[] = [
 export const useAppStore = create<AppState>()(
   persist(
     (set) => ({
+      // Hydration guard
+      _hasHydrated: false,
+      _setHasHydrated: (v) => set({ _hasHydrated: v }),
+
       // Auth state
       authToken: null,
       user: null,
@@ -379,6 +387,9 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: 'voltbody-storage',
+      onRehydrateStorage: () => (state) => {
+        state?._setHasHydrated(true);
+      },
     }
   )
 );
