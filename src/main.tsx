@@ -7,10 +7,31 @@ console.log('[VoltBody] main.tsx loaded');
 
 import { registerSW } from 'virtual:pwa-register';
 
+// En desarrollo, destruimos el Service Worker y la caché para que los cambios se vean a la primera
+if (import.meta.env.DEV) {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then((registrations) => {
+      for (const registration of registrations) {
+        registration.unregister();
+        console.log('[VoltBody] Service Worker de desarrollo eliminado');
+      }
+    });
+  }
+  if ('caches' in window) {
+    caches.keys().then((names) => {
+      for (const name of names) {
+        caches.delete(name);
+      }
+    });
+  }
+}
+
 // Register PWA Service Worker with auto-update
-registerSW({
+const updateSW = registerSW({
+  immediate: true,
   onNeedRefresh() {
     console.log('[VoltBody] New version available, reloading...');
+    updateSW(true);
     window.location.reload();
   },
   onOfflineReady() {
