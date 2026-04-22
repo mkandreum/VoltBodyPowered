@@ -102,4 +102,18 @@ process.on('SIGTERM', async () => {
   process.exit(0);
 });
 
+// Safety net: log and exit cleanly so the container restarts with a clear error
+process.on('uncaughtException', (err) => {
+  logError('process.uncaught_exception', { message: err.message, stack: err.stack });
+  // Give async logging a moment to flush before exiting
+  setTimeout(() => process.exit(1), 200);
+});
+
+process.on('unhandledRejection', (reason) => {
+  const message = reason instanceof Error ? reason.message : String(reason);
+  const stack = reason instanceof Error ? reason.stack : undefined;
+  logError('process.unhandled_rejection', { message, stack });
+  setTimeout(() => process.exit(1), 200);
+});
+
 export { prisma };

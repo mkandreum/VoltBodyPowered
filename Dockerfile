@@ -47,5 +47,8 @@ RUN mkdir -p uploads
 # Expose port
 EXPOSE 3000
 
-# Start command: run safe production migrations and auto-baseline if DB already has schema (P3005)
-CMD ["sh", "-c", "echo 'Starting server...'; MIGRATE_OUTPUT=$(npx prisma migrate deploy 2>&1); MIGRATE_STATUS=$?; echo \"$MIGRATE_OUTPUT\"; if [ $MIGRATE_STATUS -ne 0 ]; then if echo \"$MIGRATE_OUTPUT\" | grep -q 'P3005'; then echo 'Detected existing non-empty schema. Running Prisma baseline...'; for dir in /app/prisma/migrations/*; do if [ -d \"$dir\" ]; then migration_name=$(basename \"$dir\"); echo \"Marking migration as applied: $migration_name\"; npx prisma migrate resolve --applied \"$migration_name\" || true; fi; done; echo 'Re-running migrate deploy after baseline...'; npx prisma migrate deploy; else echo 'Migration failed with non-recoverable error.'; exit $MIGRATE_STATUS; fi; fi; echo 'Migrations complete'; node server/index.js"]
+# Start command: run safe production migrations and auto-baseline if DB already has schema (P3005).
+# Migrations run with a 90s timeout so a hung DB connection never blocks server startup.
+# On any non-P3005 failure the server still starts — static files and health check remain
+# available while the DB recovers, preventing a 504 restart loop.
+CMD ["sh", "-c", "echo 'Starting server...'; MIGRATE_OUTPUT=$(timeout 90 npx prisma migrate deploy 2>&1); MIGRATE_STATUS=$?; echo \"$MIGRATE_OUTPUT\"; if [ $MIGRATE_STATUS -ne 0 ]; then if echo \"$MIGRATE_OUTPUT\" | grep -q 'P3005'; then echo 'Detected existing non-empty schema. Running Prisma baseline...'; for dir in /app/prisma/migrations/*; do if [ -d \"$dir\" ]; then migration_name=$(basename \"$dir\"); echo \"Marking migration as applied: $migration_name\"; npx prisma migrate resolve --applied \"$migration_name\" || true; fi; done; echo 'Re-running migrate deploy after baseline...'; timeout 90 npx prisma migrate deploy; else echo 'Warning: migrations failed or timed out — starting server anyway to preserve availability.'; fi; fi; echo 'Starting Node.js server...'; node server/index.js"]
