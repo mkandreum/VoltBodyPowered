@@ -49,6 +49,7 @@ export type Exercise = {
   weight: number;
   gifUrl: string;
   muscleGroup: string;
+  technique?: string;
 };
 
 export type WorkoutDay = {
