@@ -1298,7 +1298,7 @@ export default function Workout() {
                     { icon: '⚡', value: `+${todayXP} XP` },
                     { icon: '🔥', value: `${currentStreak}d` },
                   ].map(({ icon, value }) => (
-                    <span key={value} className="flex items-center gap-1 px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-white text-[11px] font-semibold whitespace-nowrap">
+                    <span key={icon} className="flex items-center gap-1 px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-white text-[11px] font-semibold whitespace-nowrap">
                       <span>{icon}</span>
                       <span>{value}</span>
                     </span>
