@@ -104,6 +104,10 @@ function isProviderUnavailableError(error) {
 }
 
 async function generateContentWithRetry({ model, prompt, requestId, eventBase }) {
+  if (!ai) {
+    throw new Error('GEMINI_API_KEY is not configured');
+  }
+
   const maxAttempts = 2;
   let lastError = null;
 
@@ -145,15 +149,17 @@ function extractJsonBlock(rawText = '') {
   return trimmed;
 }
 
-// Initialize Gemini client
+// Initialize Gemini client — only when the API key is present.
+// GoogleGenAI v1.43+ throws at construction time if the key is missing,
+// which would crash the server before it can serve any requests.
 const apiKey = process.env.GEMINI_API_KEY;
+let ai = null;
 if (!apiKey) {
   logError('ai.config.missing_key');
 } else {
   logInfo('ai.config.key_detected');
+  ai = new GoogleGenAI({ apiKey });
 }
-
-const ai = new GoogleGenAI({ apiKey });
 
 // ExerciseDB free open-source API — no API key required
 // Docs: https://oss.exercisedb.dev
