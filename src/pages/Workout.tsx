@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore, Exercise, WorkoutDay } from '../store/useAppStore';
-import { ChevronLeft, Play, CheckCircle2, Dumbbell, PlusCircle, Trash2, Star, CalendarClock, Flame } from 'lucide-react';
+import { ChevronLeft, Play, CheckCircle2, Dumbbell, PlusCircle, Trash2, Star, CalendarClock, Flame, BookOpen, Share2, Trophy } from 'lucide-react';
 import { workoutService } from '../services/workoutService';
 import { authService } from '../services/authService';
 import { enrichRoutine, routineNeedsEnrichment } from '../services/exerciseImageService';
@@ -10,6 +10,7 @@ import { listStagger, slideUpSheet, checkBounce, successBurst, completionGlow, t
 import { WEEKDAY_LABELS, getMondayFirstIndex, mapRoutineByWeekday } from '../lib/routineWeek';
 import { format } from 'date-fns';
 import WeightCalculator from '../components/WeightCalculator';
+import { checkNewAchievements } from '../lib/achievements';
 
 
 
@@ -26,12 +27,15 @@ export default function Workout() {
     authToken,
     showToast,
     logs,
+    achievements,
+    addAchievement,
   } = useAppStore();
   // SVG circle circumference for rest timer ring: 2π × r=10
   const TIMER_CIRCUMFERENCE = 2 * Math.PI * 10;
   const REST_TIMER_SECONDS = 90;
 
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
+  const [showTechnique, setShowTechnique] = useState(false);
   const [weightInput, setWeightInput] = useState<number>(0);
   const [repsInput, setRepsInput] = useState<number>(0);
   const [setsInput, setSetsInput] = useState<number>(1);
@@ -53,6 +57,7 @@ export default function Workout() {
   // Close exercise detail and clean up history state
   const closeExercise = useCallback(() => {
     setSelectedExercise(null);
+    setShowTechnique(false);
     if (historyPushedRef.current) {
       historyPushedRef.current = false;
       window.history.back();
@@ -138,6 +143,15 @@ export default function Workout() {
       .sort((a, b) => b.date.localeCompare(a.date));
     return past[0] ?? null;
   }, [selectedExercise, logs, todayDateKey]);
+
+  // Best weight ever logged per exerciseId
+  const personalRecords = useMemo(() => {
+    return logs.reduce<Map<string, number>>((acc, log) => {
+      const prev = acc.get(log.exerciseId) ?? 0;
+      if (log.weight > prev) acc.set(log.exerciseId, log.weight);
+      return acc;
+    }, new Map());
+  }, [logs]);
 
   // Rest timer helpers
   const startRestTimer = useCallback((seconds = REST_TIMER_SECONDS) => {
@@ -308,6 +322,31 @@ export default function Workout() {
         title: count > 1 ? `${count} series guardadas 💪` : 'Serie guardada 💪',
         message: `${weightInput}kg x ${repsInput} reps`,
       });
+
+      // Check achievements (use logs before this save + newLogs for combined state)
+      const newAchievements = checkNewAchievements(
+        [...logs, ...newLogs],
+        achievements.map((a) => a.id),
+        selectedExercise.id,
+        weightInput,
+      );
+      newAchievements.forEach((a) => {
+        addAchievement(a);
+        showToast({ type: 'success', title: `🏅 Logro desbloqueado: ${a.label}`, message: a.description });
+      });
+
+      // Progressive overload suggestion
+      const totalDone = (setsByExercise.get(selectedExercise.id) ?? 0) + count;
+      const targetSets = Math.max(1, Number(selectedExercise.sets || 0));
+      if (totalDone >= targetSets && weightInput >= selectedExercise.weight && selectedExercise.weight > 0) {
+        const nextWeight = Math.round((weightInput + 2.5) * 2) / 2;
+        showToast({
+          type: 'info',
+          title: '📈 ¡Objetivo cumplido!',
+          message: `Considera subir a ${nextWeight}kg la próxima sesión.`,
+        });
+      }
+
       setWeightInput(0);
       setRepsInput(0);
       setSetsInput(1);
@@ -688,6 +727,18 @@ export default function Workout() {
 
             <div className="flex-1 p-6 flex flex-col overflow-y-auto">
               <h2 className="text-3xl font-bold text-white mb-2">{selectedExercise.name}</h2>
+              {(() => {
+                const prWeight = personalRecords.get(selectedExercise.id);
+                if (!prWeight) return null;
+                return (
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xs font-mono text-yellow-400 flex items-center gap-1">
+                      <Trophy size={12} />
+                      Mejor marca: {prWeight}kg
+                    </span>
+                  </div>
+                );
+              })()}
               <div className="flex flex-wrap gap-2 mb-6">
                 <span className="neuro-inset px-4 py-2 rounded-full text-sm app-accent font-mono glow-box">
                   {selectedExercise.muscleGroup}
@@ -702,11 +753,69 @@ export default function Workout() {
                 )}
               </div>
 
+              {/* Técnica */}
+              {(() => {
+                const libEntry = exerciseLibrary.find((e) => e.id === selectedExercise.id);
+                const technique = libEntry?.technique ?? selectedExercise.technique;
+                if (!technique) return null;
+                return (
+                  <div className="mb-6">
+                    <button
+                      type="button"
+                      onClick={() => setShowTechnique((v) => !v)}
+                      className="tap-target flex items-center gap-2 text-sm font-semibold app-accent mb-2"
+                    >
+                      <BookOpen size={15} />
+                      {showTechnique ? 'Ocultar técnica' : 'Ver técnica'}
+                    </button>
+                    <AnimatePresence>
+                      {showTechnique && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="neuro-inset rounded-2xl p-4 space-y-2">
+                            {technique.split('\n').map((step, i) => (
+                              <p key={i} className="text-sm text-gray-300 leading-relaxed">{step}</p>
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                );
+              })()}
+
               <div className="neuro-raised rounded-3xl p-6">
                 <h3 className="text-base font-semibold text-white/90 mb-4 flex items-center gap-2">
                   <CheckCircle2 className="app-accent" size={16} />
                   Registrar Series
                 </h3>
+
+                {/* Set dots */}
+                {(() => {
+                  const targetSets = Math.max(1, Number(selectedExercise.sets || 0));
+                  const doneSets = setsByExercise.get(selectedExercise.id) ?? 0;
+                  return (
+                    <div className="flex gap-2 mb-4 flex-wrap">
+                      {Array.from({ length: targetSets }, (_, i) => (
+                        <div
+                          key={i}
+                          className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold transition-all ${
+                            i < doneSets
+                              ? 'bg-[color:var(--app-accent)] text-black'
+                              : 'neuro-inset text-gray-500'
+                          }`}
+                        >
+                          {i < doneSets ? '✓' : i + 1}
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
 
                 {/* Smart Weight Calculator */}
                 <WeightCalculator
@@ -840,6 +949,25 @@ export default function Workout() {
               <p className="text-white font-bold text-sm leading-none">¡Sesión completada!</p>
               <p className="text-[color:var(--app-accent)] text-xs mt-0.5">Todos los ejercicios en verde ⚡</p>
             </div>
+            {navigator.canShare?.({ text: 'test' }) || navigator.share ? (
+              <motion.button
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.4 }}
+                onClick={() => {
+                  const focus = todayRoutine?.focus || 'Entrenamiento';
+                  const exCount = todayRoutine?.exercises?.length || 0;
+                  navigator.share?.({
+                    title: '💪 VoltBody – Sesión completada',
+                    text: `Acabo de completar "${focus}" (${exCount} ejercicios) en VoltBody 🔥`,
+                  }).catch(() => {});
+                }}
+                className="tap-target flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-[color:var(--app-accent)]/20 border border-[color:var(--app-accent)]/40 text-[var(--app-accent)] text-xs font-semibold"
+              >
+                <Share2 size={12} />
+                Compartir
+              </motion.button>
+            ) : null}
           </motion.div>
         )}
       </AnimatePresence>

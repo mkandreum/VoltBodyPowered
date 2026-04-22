@@ -9,6 +9,7 @@ import { fadeSlideUp, listStagger, timelineStagger, checkBounce } from '../lib/m
 import { getMondayFirstIndex, mapRoutineByWeekday } from '../lib/routineWeek';
 import { workoutService } from '../services/workoutService';
 import { generateProgressReport, ProgressReport } from '../services/geminiService';
+import { ACHIEVEMENTS_CATALOG } from '../lib/achievements';
 
 /** Circular SVG progress ring */
 function CircularProgress({ value, size = 64 }: { value: number; size?: number }) {
@@ -63,7 +64,7 @@ function parseMealHour(time: string): number {
 }
 
 export default function Home() {
-  const { profile, routine, diet, logs, insights, setTab, motivationPhrase, motivationPhoto, showToast, addLog, authToken, mealEatenRecord, progressPhotos } = useAppStore();
+  const { profile, routine, diet, logs, insights, setTab, motivationPhrase, motivationPhoto, showToast, addLog, authToken, mealEatenRecord, progressPhotos, achievements } = useAppStore();
   const [syncState, setSyncState] = useState<'idle' | 'local' | 'syncing' | 'synced' | 'error'>('idle');
   const [reportLoading, setReportLoading] = useState(false);
   const [report, setReport] = useState<ProgressReport | null>(null);
@@ -479,6 +480,31 @@ export default function Home() {
           </div>
         </AppCard>
       </motion.div>
+
+      {achievements.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.26, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
+          className="mb-8"
+        >
+          <AppCard className="p-4 glass-panel">
+            <SectionHeader title="🏅 Logros desbloqueados" subtitle={`${achievements.length} de ${ACHIEVEMENTS_CATALOG.length}`} />
+            <div className="flex flex-wrap gap-2 mt-3">
+              {achievements.map((a) => (
+                <div
+                  key={a.id}
+                  title={a.description}
+                  className="flex items-center gap-1.5 px-3 py-1.5 neuro-inset rounded-full text-xs font-semibold text-white"
+                >
+                  <span>{a.icon}</span>
+                  <span>{a.label}</span>
+                </div>
+              ))}
+            </div>
+          </AppCard>
+        </motion.div>
+      )}
 
       <div className="bento-grid mb-8">
         <motion.div {...listStagger(0)} className="bento-primary">

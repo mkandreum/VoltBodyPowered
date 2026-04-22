@@ -209,6 +209,10 @@ function toEnglishSearchTerm(nameEs = '') {
     [/cardio|trote|corr/,   'run'],
     [/pull.*over|pullover/,  'pullover'],
     [/remo.*sentado/,        'seated cable row'],
+    [/extensi.?n.*tr.?ceps.*polea|tr.?ceps.*polea/, 'cable tricep extension'],
+    [/fondos.*paralelas|fondos en paralelas/, 'chest dips'],
+    [/dominadas.*asistidas/, 'assisted pull up'],
+    [/press.*militar.*mancuerna|press.*mancuerna.*militar/, 'dumbbell overhead press'],
   ];
   for (const [pattern, term] of map) {
     if (pattern.test(lower)) return term;
