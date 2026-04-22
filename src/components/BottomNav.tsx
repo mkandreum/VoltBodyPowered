@@ -73,13 +73,18 @@ export default function BottomNav() {
                     </motion.span>
                   )}
                 </AnimatePresence>
-                {isActive && (
-                  <motion.span
-                    layoutId="nav-active-dot"
-                    transition={springTransition}
-                    className="nav-dot-indicator"
-                  />
-                )}
+                <AnimatePresence>
+                  {isActive && (
+                    <motion.span
+                      key={`dot-${item.id}`}
+                      initial={{ opacity: 0, scale: 0.5 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.5 }}
+                      transition={{ duration: 0.15, ease: [0.22, 1, 0.36, 1] }}
+                      className="nav-dot-indicator"
+                    />
+                  )}
+                </AnimatePresence>
               </button>
             );
           })}
@@ -160,13 +165,18 @@ export default function BottomNav() {
                     </motion.span>
                   )}
                 </AnimatePresence>
-                {isActive && (
-                  <motion.span
-                    layoutId="nav-active-dot"
-                    transition={springTransition}
-                    className="nav-dot-indicator"
-                  />
-                )}
+                <AnimatePresence>
+                  {isActive && (
+                    <motion.span
+                      key={`dot-${item.id}`}
+                      initial={{ opacity: 0, scale: 0.5 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.5 }}
+                      transition={{ duration: 0.15, ease: [0.22, 1, 0.36, 1] }}
+                      className="nav-dot-indicator"
+                    />
+                  )}
+                </AnimatePresence>
               </button>
             );
           })}
