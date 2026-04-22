@@ -1,4 +1,4 @@
-import { useEffect, lazy, Suspense } from 'react';
+import { useEffect, useRef, lazy, Suspense } from 'react';
 import { useAppStore } from './store/useAppStore';
 import Login from './pages/Login';
 import Onboarding from './pages/Onboarding';
@@ -17,11 +17,18 @@ function PageSkeleton() {
   return (
     <div className="min-h-screen app-shell px-4 safe-top safe-bottom">
       <div className="page-wrap space-y-4 pt-6">
-        <div className="anim-shimmer rounded-2xl h-28" />
-        <div className="anim-shimmer rounded-2xl h-48" />
+        {/* Matches hero card (~h-44) */}
+        <div className="anim-shimmer rounded-2xl h-44" />
+        {/* Matches XP bar card (~h-20) */}
         <div className="anim-shimmer rounded-2xl h-20" />
-        <div className="anim-shimmer rounded-2xl h-20" />
-        <div className="anim-shimmer rounded-2xl h-20" />
+        {/* Matches bento grid (2 rows of 2 cards) */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="anim-shimmer rounded-2xl h-40 col-span-2" />
+          <div className="anim-shimmer rounded-2xl h-28" />
+          <div className="anim-shimmer rounded-2xl h-28" />
+        </div>
+        {/* Matches timeline card (~h-44) */}
+        <div className="anim-shimmer rounded-2xl h-44" />
       </div>
     </div>
   );
@@ -29,6 +36,7 @@ function PageSkeleton() {
 
 export default function App() {
   const { isAuthenticated, isOnboarded, currentTab, theme, toasts, dismissToast } = useAppStore();
+  const scrollPositions = useRef<Record<string, number>>({});
 
   // Disable overscroll on mobile
   useEffect(() => {
@@ -68,7 +76,17 @@ export default function App() {
   }, [toasts[0]?.id, dismissToast]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Save the scroll position for the tab we're leaving, then restore for the new tab
+    const savedY = scrollPositions.current[currentTab] ?? 0;
+    // Defer scroll restore until after the transition starts
+    const raf = requestAnimationFrame(() => {
+      window.scrollTo({ top: savedY, behavior: 'instant' });
+    });
+    return () => {
+      // Save current position when tab changes
+      scrollPositions.current[currentTab] = window.scrollY;
+      cancelAnimationFrame(raf);
+    };
   }, [currentTab]);
 
   // Show login if not authenticated
@@ -142,9 +160,10 @@ export default function App() {
 
                   <button
                     onClick={() => dismissToast(toast.id)}
+                    aria-label="Cerrar notificación"
                     className="text-gray-500 hover:text-white text-xs"
                   >
-                    cerrar
+                    ✕
                   </button>
                 </div>
               </motion.div>

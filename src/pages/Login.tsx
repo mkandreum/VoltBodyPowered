@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Zap, Mail, Lock, User, LogIn } from 'lucide-react';
 import { authService } from '../services/authService';
 import { workoutService } from '../services/workoutService';
@@ -187,14 +187,22 @@ export default function Login() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            <AnimatePresence initial={false}>
             {!isLogin && (
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+              <motion.div
+                key="name-field"
+                initial={{ height: 0, opacity: 0, overflow: 'hidden' }}
+                animate={{ height: 'auto', opacity: 1, overflow: 'hidden' }}
+                exit={{ height: 0, opacity: 0, overflow: 'hidden' }}
+                transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <label htmlFor="register-name" className="block text-sm font-medium text-gray-300 mb-2">
                   Nombre
                 </label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
                   <input
+                    id="register-name"
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -202,16 +210,18 @@ export default function Login() {
                     placeholder="Tu nombre"
                   />
                 </div>
-              </div>
+              </motion.div>
             )}
+            </AnimatePresence>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label htmlFor="login-email" className="block text-sm font-medium text-gray-300 mb-2">
                 Email
               </label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
                 <input
+                  id="login-email"
                   type="email"
                   required
                   value={formData.email}
@@ -223,12 +233,13 @@ export default function Login() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label htmlFor="login-password" className="block text-sm font-medium text-gray-300 mb-2">
                 Contraseña
               </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
                 <input
+                  id="login-password"
                   type="password"
                   required
                   value={formData.password}
