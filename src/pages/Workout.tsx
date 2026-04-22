@@ -21,6 +21,7 @@ export default function Workout() {
   const {
     routine,
     addLog,
+    updateLog,
     customWorkout,
     exerciseLibrary,
     addToCustomWorkout,
@@ -54,6 +55,8 @@ export default function Workout() {
   const restIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // Completion celebration
   const [showCompletion, setShowCompletion] = useState(false);
+  // State for editing a previously logged set
+  const [editingSet, setEditingSet] = useState<{ logIndex: number; weight: number; reps: number } | null>(null);
 
   // Stable callback passed to WeightCalculator — avoids stale-closure issue with onWeightChange
   const handleCalculatorWeightChange = useCallback((w: number) => setWeightInput(w), []);
@@ -63,6 +66,7 @@ export default function Workout() {
     setSelectedExercise(null);
     setShowTechnique(false);
     setShowHistory(false);
+    setEditingSet(null);
     if (historyPushedRef.current) {
       historyPushedRef.current = false;
       window.history.back();
@@ -178,6 +182,15 @@ export default function Workout() {
       return acc;
     }, new Map());
   }, [logs]);
+
+  // Global indices (in `logs` array) of today's logs for the currently selected exercise, in order
+  const todayExerciseLogIndices = useMemo(() => {
+    if (!selectedExercise) return [];
+    return logs
+      .map((l, idx) => ({ l, idx }))
+      .filter(({ l }) => l.exerciseId === selectedExercise.id && l.date.slice(0, 10) === todayDateKey)
+      .map(({ idx }) => idx);
+  }, [selectedExercise, logs, todayDateKey]);
 
   // Rest timer helpers
   const startRestTimer = useCallback((seconds = REST_TIMER_SECONDS) => {
@@ -860,21 +873,102 @@ export default function Workout() {
                   const doneSets = setsByExercise.get(selectedExercise.id) ?? 0;
                   return (
                     <div className="flex gap-2 mb-2 sm:mb-4 flex-wrap">
-                      {Array.from({ length: targetSets }, (_, i) => (
-                        <div
-                          key={i}
-                          className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold transition-all ${
-                            i < doneSets
-                              ? 'bg-[color:var(--app-accent)] text-black'
-                              : 'neuro-inset text-gray-500'
-                          }`}
-                        >
-                          {i < doneSets ? '✓' : i + 1}
-                        </div>
-                      ))}
+                      {Array.from({ length: targetSets }, (_, i) => {
+                        if (i < doneSets) {
+                          const logIndex = todayExerciseLogIndices[i];
+                          return (
+                            <button
+                              key={i}
+                              type="button"
+                              title="Editar serie"
+                              onClick={() => {
+                                if (logIndex === undefined) return;
+                                const log = logs[logIndex];
+                                setEditingSet({ logIndex, weight: log.weight, reps: log.reps });
+                              }}
+                              className="w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold transition-all bg-[color:var(--app-accent)] text-black hover:opacity-80 active:scale-95 cursor-pointer"
+                            >
+                              ✓
+                            </button>
+                          );
+                        }
+                        return (
+                          <div
+                            key={i}
+                            className="w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold transition-all neuro-inset text-gray-500"
+                          >
+                            {i + 1}
+                          </div>
+                        );
+                      })}
                     </div>
                   );
                 })()}
+
+                {/* Inline edit form for a logged set */}
+                <AnimatePresence>
+                  {editingSet && (
+                    <motion.div
+                      key="edit-set"
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 8 }}
+                      transition={{ duration: 0.2 }}
+                      className="mb-3 sm:mb-4 neuro-inset rounded-2xl p-4"
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-sm font-semibold text-white flex items-center gap-1">
+                          ✏️ Editar serie
+                        </h4>
+                        <button
+                          type="button"
+                          onClick={() => setEditingSet(null)}
+                          className="tap-target text-gray-400 hover:text-white text-base leading-none px-1"
+                          aria-label="Cerrar edición"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3 mb-3">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider">Peso (kg)</label>
+                          <input
+                            type="number"
+                            inputMode="decimal"
+                            value={editingSet.weight || ''}
+                            onChange={(e) => setEditingSet((prev) => prev ? { ...prev, weight: Number(e.target.value) } : null)}
+                            className="w-full input-field rounded-2xl p-2.5 text-lg font-semibold text-center"
+                            placeholder="0"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider">Reps</label>
+                          <input
+                            type="number"
+                            inputMode="numeric"
+                            value={editingSet.reps || ''}
+                            onChange={(e) => setEditingSet((prev) => prev ? { ...prev, reps: Number(e.target.value) } : null)}
+                            className="w-full input-field rounded-2xl p-2.5 text-lg font-semibold text-center"
+                            placeholder="0"
+                          />
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={!editingSet.weight || !editingSet.reps}
+                        onClick={() => {
+                          if (!editingSet) return;
+                          updateLog(editingSet.logIndex, { weight: editingSet.weight, reps: editingSet.reps });
+                          showToast({ type: 'success', title: 'Serie actualizada ✏️', message: `${editingSet.weight}kg × ${editingSet.reps} reps` });
+                          setEditingSet(null);
+                        }}
+                        className="w-full primary-btn font-bold py-2.5 rounded-xl tap-target disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Guardar cambios
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 {/* Smart Weight Calculator */}
                 <WeightCalculator

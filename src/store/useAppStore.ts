@@ -179,6 +179,7 @@ interface AppState {
   setInsights: (insights: Insights) => void;
   swapMeal: (mealId: string, newMeal: Meal) => void;
   addLog: (log: WorkoutLog) => void;
+  updateLog: (index: number, updates: Partial<WorkoutLog>) => void;
   setLogs: (logs: WorkoutLog[]) => void;
   setProgressPhotos: (photos: ProgressPhoto[]) => void;
   setTab: (tab: 'home' | 'workout' | 'diet' | 'calendar' | 'profile') => void;
@@ -368,6 +369,10 @@ export const useAppStore = create<AppState>()(
         };
       }),
       addLog: (log) => set((state) => ({ logs: [...state.logs, log] })),
+      updateLog: (index, updates) =>
+        set((state) => ({
+          logs: state.logs.map((log, i) => (i === index ? { ...log, ...updates } : log)),
+        })),
       setLogs: (logs) => set({ logs }),
       setProgressPhotos: (progressPhotos) => set({ progressPhotos }),
       setTab: (tab) => set({ currentTab: tab }),
