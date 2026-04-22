@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef } from 'react';
+import { useMemo, useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore } from '../store/useAppStore';
 import { Dumbbell, Utensils, Flame, Moon, Activity, Sparkles, Quote, Clock3, Camera, Zap } from 'lucide-react';
@@ -66,9 +66,45 @@ export default function Home() {
   const { profile, routine, diet, logs, insights, setTab, motivationPhrase, motivationPhoto, showToast, addLog, authToken, mealEatenRecord, progressPhotos } = useAppStore();
   const [syncState, setSyncState] = useState<'idle' | 'local' | 'syncing' | 'synced' | 'error'>('idle');
   const [reportLoading, setReportLoading] = useState(false);
+  const [reportProgress, setReportProgress] = useState(0);
+  const reportProgressRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [report, setReport] = useState<ProgressReport | null>(null);
   // Track whether the chart has animated once — avoid re-animating on every state update
   const chartAnimatedRef = useRef(false);
+
+  // Simulate progress bar while report is loading
+  useEffect(() => {
+    if (reportLoading) {
+      setReportProgress(0);
+      let current = 0;
+      reportProgressRef.current = setInterval(() => {
+        current += Math.random() * 6 + 2; // random step 2–8%
+        if (current >= 85) {
+          current = 85;
+          if (reportProgressRef.current) {
+            clearInterval(reportProgressRef.current);
+            reportProgressRef.current = null;
+          }
+        }
+        setReportProgress(Math.round(current));
+      }, 400);
+    } else {
+      if (reportProgressRef.current) {
+        clearInterval(reportProgressRef.current);
+        reportProgressRef.current = null;
+      }
+      // Jump to 100 briefly, then reset
+      setReportProgress((prev) => (prev > 0 ? 100 : 0));
+      const timeout = setTimeout(() => setReportProgress(0), 600);
+      return () => clearTimeout(timeout);
+    }
+    return () => {
+      if (reportProgressRef.current) {
+        clearInterval(reportProgressRef.current);
+        reportProgressRef.current = null;
+      }
+    };
+  }, [reportLoading]);
 
   const today = new Date().toLocaleDateString('es-ES', { weekday: 'long' });
   const routineByDay = useMemo(() => mapRoutineByWeekday(routine), [routine]);
@@ -553,6 +589,31 @@ export default function Home() {
         >
           {reportLoading ? 'Generando informe...' : 'Generar informe con IA'}
         </button>
+        <AnimatePresence>
+          {reportLoading && (
+            <motion.div
+              key="report-progress"
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="mt-3 space-y-1"
+            >
+              <div className="flex justify-between text-[10px] font-mono text-gray-500">
+                <span>Analizando datos con IA…</span>
+                <span>{reportProgress}%</span>
+              </div>
+              <div className="h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
+                <motion.div
+                  className="h-full rounded-full"
+                  style={{ background: 'var(--app-accent)' }}
+                  initial={{ width: '0%' }}
+                  animate={{ width: `${reportProgress}%` }}
+                  transition={{ duration: 0.35, ease: 'easeOut' }}
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
         {report && (
           <div className="mt-5 space-y-3">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
