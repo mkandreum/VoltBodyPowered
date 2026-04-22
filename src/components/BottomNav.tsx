@@ -86,9 +86,9 @@ export default function BottomNav() {
               triggerHaptic();
               setTab('home');
             }}
-            className="relative overflow-hidden tap-target px-2 flex-1 max-w-[140px] min-w-[100px] h-12 rounded-full border border-transparent transition-all text-center"
+            className="relative overflow-hidden tap-target px-3 flex-1 max-w-[180px] min-w-[120px] h-14 rounded-full border border-transparent transition-all text-center"
           >
-            <span className="inline-flex items-center gap-1.5 text-[14px] font-black tracking-[0.18em] uppercase relative z-[1]">
+            <span className="inline-flex items-center gap-2 text-[16px] font-black tracking-[0.15em] uppercase relative z-[1]">
               <motion.span
                 key={isHomeActive ? 'bolt-active' : 'bolt-idle'}
                 animate={isHomeActive ? { scale: [1, 1.35, 1], rotate: [0, -10, 8, 0] } : { scale: 1, rotate: 0 }}
@@ -96,7 +96,7 @@ export default function BottomNav() {
                 className="inline-flex"
               >
                 <Zap
-                  size={18}
+                  size={24}
                   className={clsx(
                     'transition-all duration-200',
                     isHomeActive
