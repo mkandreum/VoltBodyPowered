@@ -10,6 +10,7 @@ export default function Login() {
     setAuthToken,
     setUser,
     setProfile,
+    setProfilePhoto,
     setRoutine,
     setDiet,
     setInsights,
@@ -108,6 +109,9 @@ export default function Login() {
             }
             if (profile.motivationPhoto) {
               setMotivationPhoto(profile.motivationPhoto);
+            }
+            if (profile.profilePhoto) {
+              setProfilePhoto(profile.profilePhoto);
             }
 
             try {

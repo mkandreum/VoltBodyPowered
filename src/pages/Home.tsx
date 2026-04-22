@@ -8,6 +8,7 @@ import { AppCard, SectionHeader, StatPill } from '../components/ui';
 import { fadeSlideUp, listStagger, timelineStagger, checkBounce } from '../lib/motion';
 import { getMondayFirstIndex, mapRoutineByWeekday } from '../lib/routineWeek';
 import { workoutService } from '../services/workoutService';
+import { generateProgressReport, ProgressReport } from '../services/geminiService';
 
 /** Circular SVG progress ring */
 function CircularProgress({ value, size = 64 }: { value: number; size?: number }) {
@@ -64,6 +65,8 @@ function parseMealHour(time: string): number {
 export default function Home() {
   const { profile, routine, diet, logs, insights, setTab, motivationPhrase, motivationPhoto, showToast, addLog, authToken, mealEatenRecord, progressPhotos } = useAppStore();
   const [syncState, setSyncState] = useState<'idle' | 'local' | 'syncing' | 'synced' | 'error'>('idle');
+  const [reportLoading, setReportLoading] = useState(false);
+  const [report, setReport] = useState<ProgressReport | null>(null);
   // Track whether the chart has animated once — avoid re-animating on every state update
   const chartAnimatedRef = useRef(false);
 
@@ -331,6 +334,34 @@ export default function Home() {
     },
   ];
 
+  const handleGenerateReport = async () => {
+    setReportLoading(true);
+    try {
+      const response = await generateProgressReport({
+        profile,
+        logs,
+        routine,
+        diet,
+        progressPhotos: progressPhotos.map((p) => ({ date: p.date })),
+      }, authToken);
+      setReport(response);
+      showToast({
+        type: 'success',
+        title: 'Informe generado',
+        message: 'Revisa tu estado actual y los siguientes pasos recomendados.',
+      });
+    } catch (error) {
+      console.error('Error generating progress report:', error);
+      showToast({
+        type: 'error',
+        title: 'No se pudo generar el informe',
+        message: error instanceof Error ? error.message : 'Intentalo de nuevo en unos segundos.',
+      });
+    } finally {
+      setReportLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen app-shell px-4 safe-top md:px-6 safe-bottom">
       <div className="page-wrap">
@@ -501,15 +532,63 @@ export default function Home() {
 
       <AppCard className="mb-8 p-5 glass-panel" accent>
         <SectionHeader title={aiCoachCopy.title} icon={Sparkles} subtitle="AI Coach en tiempo real" />
-        <p className="text-sm text-gray-200 mb-4">{aiCoachCopy.subtitle}</p>
-        <motion.button
-          whileTap={{ scale: 0.98 }}
-          onTapStart={triggerHaptic}
-          onClick={() => setTab('workout')}
-          className="pressable pulse-surface rounded-xl border border-[var(--app-accent)]/40 px-4 py-3 text-sm font-bold text-white"
+        <p className="text-sm text-gray-200">{aiCoachCopy.subtitle}</p>
+      </AppCard>
+
+      <AppCard className="mb-8 p-5 glass-panel">
+        <SectionHeader title="🤖 Informe IA de progreso" icon={Activity} />
+        <p className="text-sm text-gray-400 mb-4">
+          Analiza tus historiales (entrenos, rutina, dieta y fotos) y te dice cómo vas, porcentaje de avance y cuánto te falta para verte mejor.
+        </p>
+        <button
+          type="button"
+          onClick={() => void handleGenerateReport()}
+          disabled={reportLoading}
+          className="tap-target pressable primary-btn w-full rounded-xl py-3 px-4 font-bold disabled:opacity-60"
         >
-          {aiCoachCopy.cta}
-        </motion.button>
+          {reportLoading ? 'Generando informe...' : 'Generar informe con IA'}
+        </button>
+        {report && (
+          <div className="mt-5 space-y-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="neuro-inset p-3">
+                <p className="text-[10px] uppercase tracking-wider text-gray-500">Score total</p>
+                <p className="text-xl font-black text-white">{report.overallScore}%</p>
+              </div>
+              <div className="neuro-inset p-3">
+                <p className="text-[10px] uppercase tracking-wider text-gray-500">Progreso</p>
+                <p className="text-xl font-black text-white">{report.progressPercent}%</p>
+              </div>
+              <div className="neuro-inset p-3">
+                <p className="text-[10px] uppercase tracking-wider text-gray-500">Consistencia</p>
+                <p className="text-xl font-black text-white">{report.consistencyPercent}%</p>
+              </div>
+              <div className="neuro-inset p-3">
+                <p className="text-[10px] uppercase tracking-wider text-gray-500">Te falta</p>
+                <p className="text-xl font-black text-white">{report.weeksToVisibleChange} sem</p>
+              </div>
+            </div>
+            <div className="neuro-inset p-3">
+              <p className="text-sm text-gray-200">{report.summary}</p>
+            </div>
+            <div className="neuro-inset p-3">
+              <p className="mb-2 text-xs uppercase tracking-wider text-gray-500">Que puedes mejorar</p>
+              <ul className="space-y-1 text-sm text-gray-300">
+                {report.improvements?.map((item, index) => (
+                  <li key={`imp-${index}`}>• {item}</li>
+                ))}
+              </ul>
+            </div>
+            <div className="neuro-inset p-3">
+              <p className="mb-2 text-xs uppercase tracking-wider text-gray-500">Siguientes pasos</p>
+              <ul className="space-y-1 text-sm text-gray-300">
+                {report.nextActions?.map((item, index) => (
+                  <li key={`next-${index}`}>• {item}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
       </AppCard>
 
       <motion.div {...listStagger(2)}>
