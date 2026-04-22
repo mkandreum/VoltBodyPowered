@@ -1343,7 +1343,7 @@ export default function Workout() {
       </AnimatePresence>
 
       {/* Off-screen workout summary card rendered for html2canvas capture */}
-      <div style={{ position: 'fixed', top: -9999, left: -9999, pointerEvents: 'none', zIndex: -1 }} aria-hidden="true">
+      <div style={{ position: 'fixed', bottom: 0, left: 0, transform: 'translateX(-9999px)', opacity: 0, pointerEvents: 'none', zIndex: -1 }} aria-hidden="true">
         <WorkoutSummaryCard
           ref={summaryCardRef}
           data={{

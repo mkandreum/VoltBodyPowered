@@ -32,7 +32,7 @@ const WorkoutSummaryCard = forwardRef<HTMLDivElement, WorkoutSummaryCardProps>((
         background: 'linear-gradient(145deg, #0d0d0d 0%, #111 50%, #0a1a0a 100%)',
         borderRadius: 24,
         padding: '28px 24px 24px',
-        fontFamily: "'Inter', 'system-ui', sans-serif",
+        fontFamily: "'Inter', 'system-ui', 'Arial', sans-serif",
         color: '#ffffff',
         position: 'relative',
         overflow: 'hidden',
@@ -76,7 +76,7 @@ const WorkoutSummaryCard = forwardRef<HTMLDivElement, WorkoutSummaryCardProps>((
           <p style={{ fontSize: 11, color: '#39ff14', textTransform: 'uppercase', letterSpacing: '0.18em', margin: 0 }}>
             Sesión completada
           </p>
-          <h2 style={{ fontSize: 26, fontWeight: 900, margin: '2px 0 0', lineHeight: 1.1, background: 'linear-gradient(135deg,#39ff14,#7fff7f)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          <h2 style={{ fontSize: 26, fontWeight: 900, margin: '2px 0 0', lineHeight: 1.1, background: 'linear-gradient(135deg,#39ff14,#7fff7f)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', color: '#39ff14' }}>
             {data.focus}
           </h2>
         </div>
