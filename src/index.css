@@ -645,11 +645,7 @@ button:active {
   backdrop-filter: blur(24px) saturate(1.5);
   -webkit-backdrop-filter: blur(24px) saturate(1.5);
   border: 1px solid rgba(255, 255, 255, 0.10);
-  border-top: 2px solid color-mix(in srgb, var(--app-accent) 50%, transparent);
   box-shadow:
-    /* Upward glow from accent line */
-    0 -4px 20px color-mix(in srgb, var(--app-accent) 18%, transparent),
-    0 -1px 8px color-mix(in srgb, var(--app-accent) 30%, transparent),
     /* Depth below */
     0 8px 32px rgba(0, 0, 0, 0.7),
     /* Inner top highlight */
