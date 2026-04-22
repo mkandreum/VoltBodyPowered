@@ -726,7 +726,7 @@ export default function Workout() {
             className="fixed inset-0 z-[60] bg-[var(--app-bg)] flex flex-col"
           >
             {/* Header with shared-element image transition */}
-            <div className="relative h-2/5 bg-[var(--app-surface)] overflow-hidden flex items-center justify-center">
+            <div className="relative h-[25%] sm:h-2/5 bg-[var(--app-surface)] overflow-hidden flex items-center justify-center">
               <motion.div
                 layoutId={`ex-img-${selectedExercise.id}`}
                 className="w-full h-full"
@@ -750,8 +750,8 @@ export default function Workout() {
               </button>
             </div>
 
-            <div className="flex-1 p-6 flex flex-col overflow-y-auto">
-              <h2 className="text-3xl font-bold text-white mb-2">{selectedExercise.name}</h2>
+            <div className="flex-1 px-4 py-3 sm:p-6 flex flex-col overflow-y-auto">
+              <h2 className="text-xl sm:text-3xl font-bold text-white mb-1 sm:mb-2">{selectedExercise.name}</h2>
               {(() => {
                 const prWeight = personalRecords.get(selectedExercise.id);
                 const lastEntry = lastWeights.get(selectedExercise.id);
@@ -772,7 +772,7 @@ export default function Workout() {
                   </div>
                 );
               })()}
-              <div className="flex flex-wrap gap-2 mb-6">
+              <div className="flex flex-wrap gap-2 mb-3 sm:mb-6">
                 <span className="neuro-inset px-4 py-2 rounded-full text-sm app-accent font-mono glow-box">
                   {selectedExercise.muscleGroup}
                 </span>
@@ -791,7 +791,7 @@ export default function Workout() {
                 <motion.div
                   initial={{ opacity: 0, y: -8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="mb-5 flex items-center gap-3 neuro-inset rounded-2xl p-4 border border-[color:var(--app-accent)]/30"
+                  className="mb-3 sm:mb-5 flex items-center gap-3 neuro-inset rounded-2xl p-3 sm:p-4 border border-[color:var(--app-accent)]/30"
                 >
                   <TrendingUp className="app-accent shrink-0" size={18} />
                   <div className="flex-1 min-w-0">
@@ -816,7 +816,7 @@ export default function Workout() {
                 const technique = libEntry?.technique ?? selectedExercise.technique;
                 if (!technique) return null;
                 return (
-                  <div className="mb-6">
+                  <div className="mb-3 sm:mb-6">
                     <button
                       type="button"
                       onClick={() => setShowTechnique((v) => !v)}
@@ -846,8 +846,8 @@ export default function Workout() {
                 );
               })()}
 
-              <div className="neuro-raised rounded-3xl p-6">
-                <h3 className="text-base font-semibold text-white/90 mb-4 flex items-center gap-2">
+              <div className="neuro-raised rounded-3xl p-4 sm:p-6">
+                <h3 className="text-base font-semibold text-white/90 mb-2 sm:mb-4 flex items-center gap-2">
                   <CheckCircle2 className="app-accent" size={16} />
                   Registrar Series
                 </h3>
@@ -857,7 +857,7 @@ export default function Workout() {
                   const targetSets = Math.max(1, Number(selectedExercise.sets || 0));
                   const doneSets = setsByExercise.get(selectedExercise.id) ?? 0;
                   return (
-                    <div className="flex gap-2 mb-4 flex-wrap">
+                    <div className="flex gap-2 mb-2 sm:mb-4 flex-wrap">
                       {Array.from({ length: targetSets }, (_, i) => (
                         <div
                           key={i}
@@ -883,31 +883,31 @@ export default function Workout() {
                   onWeightChange={handleCalculatorWeightChange}
                 />
                 
-                <div className="grid grid-cols-3 gap-3 mb-3">
+                <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-2 uppercase tracking-wider">Peso (kg)</label>
+                    <label className="block text-xs font-medium text-gray-500 mb-1 sm:mb-2 uppercase tracking-wider">Peso (kg)</label>
                     <input
                       type="number"
                       inputMode="decimal"
                       value={weightInput || ''}
                       onChange={(e) => setWeightInput(Number(e.target.value))}
-                      className="w-full input-field rounded-2xl p-4 text-2xl font-semibold text-center"
+                      className="w-full input-field rounded-2xl p-2.5 sm:p-4 text-lg sm:text-2xl font-semibold text-center"
                       placeholder="0"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-2 uppercase tracking-wider">Reps</label>
+                    <label className="block text-xs font-medium text-gray-500 mb-1 sm:mb-2 uppercase tracking-wider">Reps</label>
                     <input
                       type="number"
                       inputMode="numeric"
                       value={repsInput || ''}
                       onChange={(e) => setRepsInput(Number(e.target.value))}
-                      className="w-full input-field rounded-2xl p-4 text-2xl font-semibold text-center"
+                      className="w-full input-field rounded-2xl p-2.5 sm:p-4 text-lg sm:text-2xl font-semibold text-center"
                       placeholder="0"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-2 uppercase tracking-wider">Series</label>
+                    <label className="block text-xs font-medium text-gray-500 mb-1 sm:mb-2 uppercase tracking-wider">Series</label>
                     <input
                       type="number"
                       inputMode="numeric"
@@ -915,7 +915,7 @@ export default function Workout() {
                       max={10}
                       value={setsInput || ''}
                       onChange={(e) => setSetsInput(Math.max(1, Number(e.target.value)))}
-                      className="w-full input-field rounded-2xl p-4 text-2xl font-semibold text-center"
+                      className="w-full input-field rounded-2xl p-2.5 sm:p-4 text-lg sm:text-2xl font-semibold text-center"
                       placeholder="1"
                     />
                   </div>
