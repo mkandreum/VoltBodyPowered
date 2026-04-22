@@ -474,6 +474,22 @@ button:active {
   color: transparent;
 }
 
+/* Ensure emojis inside gradient or display-font containers keep their native colour */
+.headline-gradient .emoji,
+.brutal-title .emoji,
+.gym-heading .emoji {
+  color: initial;
+  background: none;
+  -webkit-background-clip: unset;
+  background-clip: unset;
+  -webkit-text-fill-color: initial;
+}
+
+/* Force emoji presentation for characters that have both text and emoji variants */
+body {
+  font-variant-emoji: emoji;
+}
+
 .section-stack {
   display: flex;
   flex-direction: column;

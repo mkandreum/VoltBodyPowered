@@ -70,7 +70,7 @@ const WorkoutSummaryCard = forwardRef<HTMLDivElement, WorkoutSummaryCardProps>((
       </div>
 
       {/* Trophy + title */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 6, background: 'rgba(57,255,20,0.07)', border: '1px solid rgba(57,255,20,0.18)', borderRadius: 16, padding: '12px 14px' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 6, padding: '4px 0' }}>
         <span style={{ fontSize: 38, lineHeight: 1 }}>🏆</span>
         <div>
           <p style={{ fontSize: 10, color: '#39ff14', textTransform: 'uppercase', letterSpacing: '0.2em', margin: 0, fontWeight: 700 }}>

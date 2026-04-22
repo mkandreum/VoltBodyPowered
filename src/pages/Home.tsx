@@ -140,21 +140,57 @@ export default function Home() {
   const currentStreak = useMemo(() => {
     if (logs.length === 0) return 0;
 
+    const routinesByWeekday = mapRoutineByWeekday(routine);
+    const trainingDayIndices = new Set(
+      routinesByWeekday.map((r, idx) => (r ? idx : -1)).filter((idx) => idx >= 0)
+    );
+
+    // If no training days are configured, fall back to counting any logged day
+    if (trainingDayIndices.size === 0) {
+      const dateSet = new Set(
+        logs.filter((log) => isValid(new Date(log.date))).map((log) => format(new Date(log.date), 'yyyy-MM-dd'))
+      );
+      let streak = 0;
+      let cursor = new Date();
+      while (dateSet.has(format(cursor, 'yyyy-MM-dd'))) {
+        streak += 1;
+        cursor = subDays(cursor, 1);
+      }
+      return streak;
+    }
+
     const dateSet = new Set(
       logs
         .filter((log) => isValid(new Date(log.date)))
         .map((log) => format(new Date(log.date), 'yyyy-MM-dd'))
     );
+
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
     let streak = 0;
     let cursor = new Date();
 
-    while (dateSet.has(format(cursor, 'yyyy-MM-dd'))) {
-      streak += 1;
+    for (let i = 0; i < 365; i++) {
+      const dateStr = format(cursor, 'yyyy-MM-dd');
+      const weekdayIdx = getMondayFirstIndex(cursor);
+      const isTrainingDay = trainingDayIndices.has(weekdayIdx);
+
+      if (isTrainingDay) {
+        if (dateSet.has(dateStr)) {
+          streak += 1;
+        } else if (dateStr === todayStr) {
+          // Today is a training day but not yet trained — grace period, don't break
+        } else {
+          // Missed a scheduled training day — streak ends
+          break;
+        }
+      }
+      // Rest day: skip without counting or breaking
+
       cursor = subDays(cursor, 1);
     }
 
     return streak;
-  }, [logs]);
+  }, [logs, routine]);
 
   const chartData = useMemo(() => {
     const data = [];
@@ -446,7 +482,7 @@ export default function Home() {
               <p className="text-xs uppercase tracking-[0.18em] text-gray-400 mb-2">🏆 Hoy conquistas</p>
               <h2 className="text-3xl font-black leading-none tracking-tight headline-gradient">
                 {todayRoutine?.focus
-                  ? `${todayRoutine.focus} 💀🔥`
+                  ? <>{todayRoutine.focus} <span className="emoji">💀🔥</span></>
                   : 'Recuperación activa'}
               </h2>
               <p className="text-sm text-gray-300 mt-3">
