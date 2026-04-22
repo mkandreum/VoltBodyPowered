@@ -60,6 +60,31 @@ export default function Profile() {
     });
   }, [weightLogs]);
 
+  const personalRecordsList = useMemo(() => {
+    const exerciseNames = new Map<string, string>();
+    for (const day of routine) {
+      for (const ex of day.exercises ?? []) {
+        exerciseNames.set(ex.id, ex.name);
+      }
+    }
+    const prMap = new Map<string, { weight: number; reps: number; date: string; name: string }>();
+    for (const log of logs) {
+      const existing = prMap.get(log.exerciseId);
+      if (!existing || log.weight > existing.weight) {
+        prMap.set(log.exerciseId, {
+          weight: log.weight,
+          reps: log.reps,
+          date: log.date.slice(0, 10),
+          name: exerciseNames.get(log.exerciseId) || log.exerciseId,
+        });
+      }
+    }
+    return Array.from(prMap.values())
+      .filter((p) => p.weight > 0)
+      .sort((a, b) => b.weight - a.weight)
+      .slice(0, 10);
+  }, [logs, routine]);
+
   if (!profile) return null;
 
   const handleLogWeight = async () => {
@@ -438,53 +463,30 @@ export default function Profile() {
       </div>
 
       {/* ── Personal Records ───────────────────────────────── */}
-      {(() => {
-        // Compute PR per exercise from logs
-        const prMap = new Map<string, { weight: number; reps: number; date: string; name: string }>();
-        const exerciseNames = new Map<string, string>();
-        for (const day of routine) {
-          for (const ex of day.exercises ?? []) {
-            exerciseNames.set(ex.id, ex.name);
-          }
-        }
-        for (const log of logs) {
-          const existing = prMap.get(log.exerciseId);
-          if (!existing || log.weight > existing.weight) {
-            prMap.set(log.exerciseId, {
-              weight: log.weight,
-              reps: log.reps,
-              date: log.date.slice(0, 10),
-              name: exerciseNames.get(log.exerciseId) || log.exerciseId,
-            });
-          }
-        }
-        const prs = Array.from(prMap.values()).filter((p) => p.weight > 0).sort((a, b) => b.weight - a.weight).slice(0, 10);
-        if (!prs.length) return null;
-        return (
-          <motion.div {...listStagger(3)} className="mb-6">
-            <div className="neuro-raised rounded-3xl p-5">
-              <h3 className="text-sm font-semibold text-white/90 mb-4 flex items-center gap-2">
-                <Trophy size={16} className="app-accent" />
-                🏆 Récords personales
-              </h3>
-              <div className="space-y-2">
-                {prs.map((pr, i) => (
-                  <div key={pr.name + i} className="flex items-center justify-between neuro-inset p-3 rounded-2xl">
-                    <div>
-                      <p className="text-sm text-white font-medium">{pr.name}</p>
-                      <p className="text-xs text-gray-500">{pr.date}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-bold app-accent">{pr.weight}kg</p>
-                      <p className="text-xs text-gray-500">× {pr.reps} reps</p>
-                    </div>
+      {personalRecordsList.length > 0 && (
+        <motion.div {...listStagger(3)} className="mb-6">
+          <div className="neuro-raised rounded-3xl p-5">
+            <h3 className="text-sm font-semibold text-white/90 mb-4 flex items-center gap-2">
+              <Trophy size={16} className="app-accent" />
+              🏆 Récords personales
+            </h3>
+            <div className="space-y-2">
+              {personalRecordsList.map((pr, i) => (
+                <div key={pr.name + i} className="flex items-center justify-between neuro-inset p-3 rounded-2xl">
+                  <div>
+                    <p className="text-sm text-white font-medium">{pr.name}</p>
+                    <p className="text-xs text-gray-500">{pr.date}</p>
                   </div>
-                ))}
-              </div>
+                  <div className="text-right">
+                    <p className="text-sm font-bold app-accent">{pr.weight}kg</p>
+                    <p className="text-xs text-gray-500">× {pr.reps} reps</p>
+                  </div>
+                </div>
+              ))}
             </div>
-          </motion.div>
-        );
-      })()}
+          </div>
+        </motion.div>
+      )}
 
       <motion.div {...listStagger(2)} className="panel-soft rounded-3xl p-6 mb-8">
         <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
