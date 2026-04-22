@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore } from '../store/useAppStore';
 import { Dumbbell, Utensils, Flame, Moon, Activity, Sparkles, Quote, Clock3, Camera, Zap } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { format, subDays, isValid } from 'date-fns';
+import { format, subDays, isValid, startOfWeek, endOfWeek } from 'date-fns';
 import { AppCard, SectionHeader, StatPill } from '../components/ui';
 import { fadeSlideUp, listStagger, timelineStagger, checkBounce } from '../lib/motion';
 import { getMondayFirstIndex, mapRoutineByWeekday } from '../lib/routineWeek';
@@ -87,9 +87,14 @@ export default function Home() {
   };
 
   const completedDays = useMemo(() => {
+    const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+    const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 });
     const uniqueDates = new Set(
       logs
-        .filter((log) => isValid(new Date(log.date)))
+        .filter((log) => {
+          const d = new Date(log.date);
+          return isValid(d) && d >= weekStart && d <= weekEnd;
+        })
         .map((log) => format(new Date(log.date), 'yyyy-MM-dd'))
     );
     return uniqueDates.size;

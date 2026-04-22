@@ -174,6 +174,7 @@ interface AppState {
   dismissToast: (id: string) => void;
   clearToasts: () => void;
   addWeightLog: (log: WeightLog) => void;
+  setWeightLogs: (logs: WeightLog[]) => void;
   toggleMealEaten: (mealId: string, date: string) => void;
   toggleWeeklyGoal: (id: string) => void;
   completeOnboarding: () => void;
@@ -335,6 +336,12 @@ export const useAppStore = create<AppState>()(
           weightLogs: [...state.weightLogs.filter((l) => l.date !== log.date), log]
             .sort((a, b) => a.date.localeCompare(b.date)),
         })),
+      setWeightLogs: (logs) =>
+        set({
+          weightLogs: [...logs]
+            .map((l) => ({ date: typeof l.date === 'string' ? l.date.slice(0, 10) : String(l.date), weight: l.weight }))
+            .sort((a, b) => a.date.localeCompare(b.date)),
+        }),
       toggleMealEaten: (mealId, date) =>
         set((state) => {
           const existing = state.mealEatenRecord[date] ?? [];

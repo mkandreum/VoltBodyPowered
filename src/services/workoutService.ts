@@ -12,6 +12,11 @@ export interface ProgressPhotoDTO {
   url: string;
 }
 
+export interface WeightLogDTO {
+  date: string;
+  weight: number;
+}
+
 function getHeaders(token: string) {
   return {
     'Content-Type': 'application/json',
@@ -67,6 +72,32 @@ export const workoutService = {
 
     if (!response.ok) {
       throw new Error('Failed to add progress photo');
+    }
+
+    return response.json();
+  },
+
+  async getWeightLogs(token: string) {
+    const response = await fetch(`${API_URL}/workout/weight-logs`, {
+      headers: getHeaders(token),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to get weight logs');
+    }
+
+    return response.json();
+  },
+
+  async saveWeightLog(token: string, data: WeightLogDTO) {
+    const response = await fetch(`${API_URL}/workout/weight-logs`, {
+      method: 'POST',
+      headers: getHeaders(token),
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to save weight log');
     }
 
     return response.json();

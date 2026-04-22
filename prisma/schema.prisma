@@ -20,6 +20,7 @@ model User {
   profile       UserProfile?
   workoutLogs   WorkoutLog[]
   progressPhotos ProgressPhoto[]
+  weightLogs    WeightLog[]
 }
 
 model UserProfile {
@@ -85,5 +86,19 @@ model ProgressPhoto {
   
   createdAt DateTime @default(now())
   
+  @@index([userId, date])
+}
+
+model WeightLog {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  date      DateTime
+  weight    Float
+  
+  createdAt DateTime @default(now())
+  
+  @@unique([userId, date])
   @@index([userId, date])
 }

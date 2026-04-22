@@ -62,12 +62,19 @@ export default function Profile() {
 
   if (!profile) return null;
 
-  const handleLogWeight = () => {
+  const handleLogWeight = async () => {
     const val = Number(weightInput);
     if (!val || val < 20 || val > 400) return;
     addWeightLog({ date: todayDateKey, weight: val });
     setWeightInput('');
     showToast({ type: 'success', title: `Peso registrado: ${val} kg ⚖️` });
+    if (authToken) {
+      try {
+        await workoutService.saveWeightLog(authToken, { date: todayDateKey, weight: val });
+      } catch (error) {
+        console.error('Error syncing weight log:', error);
+      }
+    }
   };
 
   const persistProfilePatch = async (patch: Record<string, unknown>, silent = true) => {
@@ -367,7 +374,7 @@ export default function Profile() {
             className="input-field flex-1"
           />
           <button
-            onClick={handleLogWeight}
+            onClick={() => void handleLogWeight()}
             disabled={!weightInput || alreadyLoggedThisWeek}
             className="tap-target pressable primary-btn px-5 py-2 rounded-xl font-bold disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
           >

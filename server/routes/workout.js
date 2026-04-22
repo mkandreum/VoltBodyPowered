@@ -1,7 +1,7 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authMiddleware } from '../middleware/auth.js';
-import { validateWorkoutLogPayload, validateProgressPhotoPayload } from '../middleware/validators.js';
+import { validateWorkoutLogPayload, validateProgressPhotoPayload, validateWeightLogPayload } from '../middleware/validators.js';
 import { logError } from '../utils/logger.js';
 
 const router = express.Router();
@@ -76,6 +76,39 @@ router.post('/photos', authMiddleware, validateProgressPhotoPayload, async (req,
   } catch (error) {
     logError('workout.add_photo.error', { requestId: req.requestId, message: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to add photo' });
+  }
+});
+
+// Get weight logs
+router.get('/weight-logs', authMiddleware, async (req, res) => {
+  try {
+    const logs = await prisma.weightLog.findMany({
+      where: { userId: req.userId },
+      orderBy: { date: 'asc' }
+    });
+    res.json(logs);
+  } catch (error) {
+    logError('workout.get_weight_logs.error', { requestId: req.requestId, message: error.message, stack: error.stack });
+    res.status(500).json({ error: 'Failed to get weight logs' });
+  }
+});
+
+// Upsert weight log (one per day per user)
+router.post('/weight-logs', authMiddleware, validateWeightLogPayload, async (req, res) => {
+  try {
+    const { date, weight } = req.body;
+    const dayStart = new Date(date);
+    dayStart.setUTCHours(0, 0, 0, 0);
+
+    const log = await prisma.weightLog.upsert({
+      where: { userId_date: { userId: req.userId, date: dayStart } },
+      create: { userId: req.userId, date: dayStart, weight },
+      update: { weight },
+    });
+    res.json(log);
+  } catch (error) {
+    logError('workout.add_weight_log.error', { requestId: req.requestId, message: error.message, stack: error.stack });
+    res.status(500).json({ error: 'Failed to save weight log' });
   }
 });
 
