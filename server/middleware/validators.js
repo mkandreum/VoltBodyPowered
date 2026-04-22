@@ -157,6 +157,21 @@ export function validateProgressPhotoPayload(req, res, next) {
   next();
 }
 
+export function validateWeightLogPayload(req, res, next) {
+  const { date, weight } = req.body || {};
+
+  if (!isValidDate(date)) {
+    return badRequest(res, 'Invalid date');
+  }
+
+  const parsedWeight = asNumber(weight);
+  if (parsedWeight === null || parsedWeight < 20 || parsedWeight > 400) {
+    return badRequest(res, 'Weight must be between 20 and 400');
+  }
+
+  next();
+}
+
 export function validateProfileUpdatePayload(req, res, next) {
   const { age, weight, height, workHours, goal, currentState, schedule, theme, motivationPhrase } = req.body || {};
 
@@ -203,6 +218,16 @@ export function validateProfileUpdatePayload(req, res, next) {
 
   if (motivationPhrase !== undefined && (typeof motivationPhrase !== 'string' || !hasMaxLength(motivationPhrase, 240))) {
     return badRequest(res, 'motivationPhrase has invalid format or length');
+  }
+
+  const { profilePhoto, motivationPhoto } = req.body || {};
+  // ~8 MB encoded as base64 ≈ 10.7 MB string; cap at 10 MB to stay inside the 12 MB JSON body limit
+  const PHOTO_MAX_BYTES = 10_000_000;
+  if (profilePhoto !== undefined && (typeof profilePhoto !== 'string' || profilePhoto.length > PHOTO_MAX_BYTES)) {
+    return badRequest(res, 'profilePhoto is too large or invalid');
+  }
+  if (motivationPhoto !== undefined && (typeof motivationPhoto !== 'string' || motivationPhoto.length > PHOTO_MAX_BYTES)) {
+    return badRequest(res, 'motivationPhoto is too large or invalid');
   }
 
   next();

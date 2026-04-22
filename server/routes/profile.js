@@ -37,7 +37,7 @@ router.put('/', authMiddleware, validateProfileUpdatePayload, async (req, res) =
       weeklySpecialSession, foodPreferences, specialDish
     } = req.body;
 
-    const mergedInsights = {
+    const mergedInsights = insights !== undefined ? {
       ...(insights || {}),
       appPreferences: {
         ...(insights?.appPreferences || {}),
@@ -52,36 +52,36 @@ router.put('/', authMiddleware, validateProfileUpdatePayload, async (req, res) =
         foodPreferences,
         specialDish,
       }
-    };
+    } : undefined;
 
     const profile = await prisma.userProfile.update({
       where: { userId: req.userId },
       data: {
-        age,
-        weight,
-        height,
-        gender,
-        goal,
-        goalDirection,
-        goalTargetKg,
-        goalTimelineMonths,
-        currentState,
-        schedule,
-        trainingDaysPerWeek,
-        sessionMinutes,
-        workHours,
-        theme,
-        motivationPhrase,
-        motivationPhoto,
-        mealTimes,
-        foodPreferences,
-        weeklySpecialSession,
-        specialDish,
-        avatarConfig,
-        routine,
-        diet,
-        insights: mergedInsights,
-        profilePhoto
+        ...(age !== undefined && { age }),
+        ...(weight !== undefined && { weight }),
+        ...(height !== undefined && { height }),
+        ...(gender !== undefined && { gender }),
+        ...(goal !== undefined && { goal }),
+        ...(goalDirection !== undefined && { goalDirection }),
+        ...(goalTargetKg !== undefined && { goalTargetKg }),
+        ...(goalTimelineMonths !== undefined && { goalTimelineMonths }),
+        ...(currentState !== undefined && { currentState }),
+        ...(schedule !== undefined && { schedule }),
+        ...(trainingDaysPerWeek !== undefined && { trainingDaysPerWeek }),
+        ...(sessionMinutes !== undefined && { sessionMinutes }),
+        ...(workHours !== undefined && { workHours }),
+        ...(theme !== undefined && { theme }),
+        ...(motivationPhrase !== undefined && { motivationPhrase }),
+        ...(motivationPhoto !== undefined && { motivationPhoto }),
+        ...(mealTimes !== undefined && { mealTimes }),
+        ...(foodPreferences !== undefined && { foodPreferences }),
+        ...(weeklySpecialSession !== undefined && { weeklySpecialSession }),
+        ...(specialDish !== undefined && { specialDish }),
+        ...(avatarConfig !== undefined && { avatarConfig }),
+        ...(routine !== undefined && { routine }),
+        ...(diet !== undefined && { diet }),
+        ...(mergedInsights !== undefined && { insights: mergedInsights }),
+        ...(profilePhoto !== undefined && { profilePhoto }),
       }
     });
 

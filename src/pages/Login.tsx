@@ -10,6 +10,7 @@ export default function Login() {
     setAuthToken,
     setUser,
     setProfile,
+    setProfilePhoto,
     setRoutine,
     setDiet,
     setInsights,
@@ -19,6 +20,7 @@ export default function Login() {
     setMotivationPhoto,
     setLogs,
     setProgressPhotos,
+    setWeightLogs,
   } = useAppStore();
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -109,14 +111,19 @@ export default function Login() {
             if (profile.motivationPhoto) {
               setMotivationPhoto(profile.motivationPhoto);
             }
+            if (profile.profilePhoto) {
+              setProfilePhoto(profile.profilePhoto);
+            }
 
             try {
-              const [logs, photos] = await Promise.all([
+              const [logs, photos, weightLogs] = await Promise.all([
                 workoutService.getLogs(response.token),
                 workoutService.getPhotos(response.token),
+                workoutService.getWeightLogs(response.token),
               ]);
               setLogs(logs);
               setProgressPhotos(photos);
+              setWeightLogs(weightLogs);
             } catch (syncError) {
               console.error('Could not sync logs/photos from backend:', syncError);
             }

@@ -121,6 +121,10 @@ export type AppToast = {
 };
 
 interface AppState {
+  // Hydration guard — true once Zustand has rehydrated from localStorage
+  _hasHydrated: boolean;
+  _setHasHydrated: (v: boolean) => void;
+
   // Auth
   authToken: string | null;
   user: { id: string; email: string; name: string | null } | null;
@@ -174,6 +178,7 @@ interface AppState {
   dismissToast: (id: string) => void;
   clearToasts: () => void;
   addWeightLog: (log: WeightLog) => void;
+  setWeightLogs: (logs: WeightLog[]) => void;
   toggleMealEaten: (mealId: string, date: string) => void;
   toggleWeeklyGoal: (id: string) => void;
   completeOnboarding: () => void;
@@ -210,6 +215,10 @@ const defaultExerciseLibrary: ExerciseLibraryEntry[] = [
 export const useAppStore = create<AppState>()(
   persist(
     (set) => ({
+      // Hydration guard
+      _hasHydrated: false,
+      _setHasHydrated: (v) => set({ _hasHydrated: v }),
+
       // Auth state
       authToken: null,
       user: null,
@@ -335,6 +344,12 @@ export const useAppStore = create<AppState>()(
           weightLogs: [...state.weightLogs.filter((l) => l.date !== log.date), log]
             .sort((a, b) => a.date.localeCompare(b.date)),
         })),
+      setWeightLogs: (logs) =>
+        set({
+          weightLogs: [...logs]
+            .map((l) => ({ date: typeof l.date === 'string' ? l.date.slice(0, 10) : String(l.date), weight: l.weight }))
+            .sort((a, b) => a.date.localeCompare(b.date)),
+        }),
       toggleMealEaten: (mealId, date) =>
         set((state) => {
           const existing = state.mealEatenRecord[date] ?? [];
@@ -372,6 +387,9 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: 'voltbody-storage',
+      onRehydrateStorage: () => (state) => {
+        state?._setHasHydrated(true);
+      },
     }
   )
 );

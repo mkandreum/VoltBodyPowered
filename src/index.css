@@ -205,8 +205,8 @@ body[data-theme="ocaso-negro"] {
   overflow: hidden;
   border-radius: 1.5rem;
   background: var(--neuro-surface);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   border: 1px solid var(--app-border);
   box-shadow:
     0 12px 32px var(--neuro-shadow-dark),
@@ -229,8 +229,8 @@ body[data-theme="ocaso-negro"] {
 
 .glass-panel {
   background: var(--neuro-surface) !important;
-  backdrop-filter: blur(12px) !important;
-  -webkit-backdrop-filter: blur(12px) !important;
+  backdrop-filter: blur(6px) !important;
+  -webkit-backdrop-filter: blur(6px) !important;
   border: 1px solid var(--app-border) !important;
   box-shadow:
     0 16px 40px var(--neuro-shadow-dark),
@@ -256,8 +256,8 @@ body[data-theme="ocaso-negro"] {
 
 .stat-pill {
   background: var(--neuro-surface);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   border: 1px solid var(--app-border);
   box-shadow:
     0 6px 16px var(--neuro-shadow-dark),
@@ -482,8 +482,8 @@ button:active {
 
 .panel-soft {
   background: var(--neuro-surface);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   border: 1px solid rgba(255, 255, 255, 0.09);
   box-shadow:
     0 8px 24px var(--neuro-shadow-dark),
@@ -495,8 +495,8 @@ button:active {
 .chip {
   border: 1px solid var(--app-border);
   background: var(--neuro-surface);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   box-shadow: 0 4px 12px var(--neuro-shadow-dark);
   border-radius: 9999px;
   padding: 0.34rem 0.7rem;
@@ -568,8 +568,8 @@ button:active {
   border-radius: 0.9rem;
   border: 1px solid var(--app-border);
   background: var(--neuro-surface);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   color: #fff;
   font-weight: 500;
   letter-spacing: -0.01em;
