@@ -614,7 +614,7 @@ export default function Home() {
               width={600}
               height={170}
               className="w-full h-[170px] object-cover"
-              style={{ aspectRatio: '600/170' }}
+              style={{ aspectRatio: '60/17' }}
             />
           ) : (
             <div className="w-full h-[170px] bg-gradient-to-br from-[color:var(--app-accent)]/20 to-black" />
