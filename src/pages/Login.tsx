@@ -176,7 +176,7 @@ export default function Login() {
             <Zap className="w-10 h-10 app-accent" />
           </motion.div>
           <p className="text-xs uppercase tracking-[0.2em] text-gray-500 mb-2">⚡ VoltBody OS</p>
-          <h1 className="brutal-title mb-1 headline-gradient">🦁 MODO BESTIA</h1>
+          <h1 className="brutal-title mb-1 headline-gradient"><span className="emoji">🦁</span> MODO BESTIA</h1>
           <p className="text-gray-400">🤖 Entrena, come y evoluciona con IA.</p>
         </div>
 

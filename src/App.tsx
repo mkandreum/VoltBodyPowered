@@ -1,4 +1,4 @@
-import { useEffect, useRef, lazy, Suspense } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import { useAppStore } from './store/useAppStore';
 import Login from './pages/Login';
 import Onboarding from './pages/Onboarding';
@@ -38,7 +38,7 @@ function PageSkeleton() {
 
 export default function App() {
   const { isAuthenticated, isOnboarded, currentTab, theme, toasts, dismissToast, _hasHydrated, notificationsEnabled, profile, logs, weightLogs } = useAppStore();
-  const scrollPositions = useRef<Record<string, number>>({});
+
 
   // Schedule notification reminders when notifications are enabled and user is onboarded
   useEffect(() => {
@@ -88,17 +88,7 @@ export default function App() {
   }, [toasts[0]?.id, dismissToast]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    // Save the scroll position for the tab we're leaving, then restore for the new tab
-    const savedY = scrollPositions.current[currentTab] ?? 0;
-    // Defer scroll restore until after the transition starts
-    const raf = requestAnimationFrame(() => {
-      window.scrollTo({ top: savedY, behavior: 'instant' });
-    });
-    return () => {
-      // Save current position when tab changes
-      scrollPositions.current[currentTab] = window.scrollY;
-      cancelAnimationFrame(raf);
-    };
+    window.scrollTo({ top: 0, behavior: 'instant' });
   }, [currentTab]);
 
   // While Zustand is rehydrating from localStorage, show a splash instead of the login form

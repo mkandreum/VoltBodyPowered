@@ -9,7 +9,7 @@ import { enrichRoutine, routineNeedsEnrichment } from '../services/exerciseImage
 import { AppCard, SectionHeader, StatPill, LazyImage } from '../components/ui';
 import { listStagger, slideUpSheet, checkBounce, successBurst, completionGlow, tapPulse, timelineStagger } from '../lib/motion';
 import { WEEKDAY_LABELS, getMondayFirstIndex, mapRoutineByWeekday } from '../lib/routineWeek';
-import { format, subDays, isValid } from 'date-fns';
+import { format, subDays, isValid, startOfWeek, addDays } from 'date-fns';
 import WeightCalculator from '../components/WeightCalculator';
 import { checkNewAchievements } from '../lib/achievements';
 import { getProgressiveSuggestion, getExerciseHistory } from '../lib/progressiveOverload';
@@ -114,7 +114,12 @@ export default function Workout() {
     : exerciseLibrary.filter((item) => item.muscleGroup === selectedMuscleGroup);
   const totalTodayExercises = todayRoutine?.exercises?.length || 0;
   const todayDateKey = format(new Date(), 'yyyy-MM-dd');
-  const todayLogs = useMemo(() => logs.filter((log) => log.date.slice(0, 10) === todayDateKey), [logs, todayDateKey]);
+  // Date key for the currently selected weekday in the current week
+  const selectedDateKey = useMemo(() => {
+    const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+    return format(addDays(weekStart, selectedDayIndex), 'yyyy-MM-dd');
+  }, [selectedDayIndex]);
+  const todayLogs = useMemo(() => logs.filter((log) => log.date.slice(0, 10) === selectedDateKey), [logs, selectedDateKey]);
   const setsByExercise = useMemo(() => {
     return todayLogs.reduce<Map<string, number>>((acc, log) => {
       acc.set(log.exerciseId, (acc.get(log.exerciseId) || 0) + 1);
@@ -152,17 +157,57 @@ export default function Workout() {
   // Current streak for share card
   const currentStreak = useMemo(() => {
     if (logs.length === 0) return 0;
+
+    const routinesByWeekday = mapRoutineByWeekday(routine);
+    const trainingDayIndices = new Set(
+      routinesByWeekday.map((r, idx) => (r ? idx : -1)).filter((idx) => idx >= 0)
+    );
+
+    // If no training days are configured, fall back to counting any logged day
+    if (trainingDayIndices.size === 0) {
+      const dateSet = new Set(
+        logs.filter((log) => isValid(new Date(log.date))).map((log) => format(new Date(log.date), 'yyyy-MM-dd'))
+      );
+      let streak = 0;
+      let cursor = new Date();
+      while (dateSet.has(format(cursor, 'yyyy-MM-dd'))) {
+        streak += 1;
+        cursor = subDays(cursor, 1);
+      }
+      return streak;
+    }
+
     const dateSet = new Set(
       logs.filter((log) => isValid(new Date(log.date))).map((log) => format(new Date(log.date), 'yyyy-MM-dd'))
     );
+
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
     let streak = 0;
     let cursor = new Date();
-    while (dateSet.has(format(cursor, 'yyyy-MM-dd'))) {
-      streak += 1;
+    const MAX_STREAK_DAYS = 365; // look back at most one year
+
+    for (let i = 0; i < MAX_STREAK_DAYS; i++) {
+      const dateStr = format(cursor, 'yyyy-MM-dd');
+      const weekdayIdx = getMondayFirstIndex(cursor);
+      const isTrainingDay = trainingDayIndices.has(weekdayIdx);
+
+      if (isTrainingDay) {
+        if (dateSet.has(dateStr)) {
+          streak += 1;
+        } else if (dateStr === todayStr) {
+          // Today is a training day but not yet trained — grace period, don't break
+        } else {
+          // Missed a scheduled training day — streak ends
+          break;
+        }
+      }
+      // Rest day: skip without counting or breaking
+
       cursor = subDays(cursor, 1);
     }
+
     return streak;
-  }, [logs]);
+  }, [logs, routine]);
 
   // XP & level for share card
   const XP_PER_LOG = 12;
@@ -212,14 +257,14 @@ export default function Workout() {
     }, new Map());
   }, [logs]);
 
-  // Global indices (in `logs` array) of today's logs for the currently selected exercise, in order
+  // Global indices (in `logs` array) of selected day's logs for the currently selected exercise, in order
   const todayExerciseLogIndices = useMemo(() => {
     if (!selectedExercise) return [];
     return logs
       .map((l, idx) => ({ l, idx }))
-      .filter(({ l }) => l.exerciseId === selectedExercise.id && l.date.slice(0, 10) === todayDateKey)
+      .filter(({ l }) => l.exerciseId === selectedExercise.id && l.date.slice(0, 10) === selectedDateKey)
       .map(({ idx }) => idx);
-  }, [selectedExercise, logs, todayDateKey]);
+  }, [selectedExercise, logs, selectedDateKey]);
 
   // Rest timer helpers
   const startRestTimer = useCallback((seconds = REST_TIMER_SECONDS) => {

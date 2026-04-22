@@ -122,7 +122,7 @@ export default function Diet() {
         <div className="flex items-start justify-between gap-4 mb-4">
           <div>
             <p className="text-xs uppercase tracking-[0.18em] text-gray-400 mb-2">📊 Resumen Nutricional</p>
-            <h2 className="text-3xl font-black leading-none tracking-tight headline-gradient">🍏 Hoy comes para rendir</h2>
+            <h2 className="text-3xl font-black leading-none tracking-tight headline-gradient"><span className="emoji">🍏</span> Hoy comes para rendir</h2>
             <p className="text-sm text-gray-300 mt-2">
               {diet.meals.length} comidas planificadas con foco en energía estable y recuperación.
             </p>
