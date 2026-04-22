@@ -639,13 +639,21 @@ button:active {
 
 .ios-pill-nav {
   position: relative;
-  background: rgba(10, 10, 14, 0.92);
-  backdrop-filter: blur(20px) saturate(1.4);
-  -webkit-backdrop-filter: blur(20px) saturate(1.4);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.04) 0%, transparent 40%),
+    rgba(8, 8, 12, 0.96);
+  backdrop-filter: blur(24px) saturate(1.5);
+  -webkit-backdrop-filter: blur(24px) saturate(1.5);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-top: 2px solid color-mix(in srgb, var(--app-accent) 50%, transparent);
   box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.55),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    /* Upward glow from accent line */
+    0 -4px 20px color-mix(in srgb, var(--app-accent) 18%, transparent),
+    0 -1px 8px color-mix(in srgb, var(--app-accent) 30%, transparent),
+    /* Depth below */
+    0 8px 32px rgba(0, 0, 0, 0.7),
+    /* Inner top highlight */
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
   will-change: transform;
   backface-visibility: hidden;
   contain: layout paint;
@@ -661,8 +669,24 @@ button:active {
   inset: -1px;
   border-radius: inherit;
   pointer-events: none;
-  box-shadow: 0 0 18px color-mix(in srgb, var(--app-accent) 18%, transparent);
-  opacity: 0.5;
+  box-shadow: 0 0 22px color-mix(in srgb, var(--app-accent) 22%, transparent);
+  opacity: 0.6;
+}
+
+/* Active tab dot indicator */
+.nav-dot-indicator {
+  position: absolute;
+  bottom: 5px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 5px;
+  height: 5px;
+  border-radius: 9999px;
+  background: var(--app-accent);
+  box-shadow:
+    0 0 8px color-mix(in srgb, var(--app-accent) 80%, transparent),
+    0 0 16px color-mix(in srgb, var(--app-accent) 35%, transparent);
+  z-index: 2;
 }
 
 .liquid-indicator {
