@@ -6,7 +6,7 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'rec
 import { format, subDays, isValid, startOfWeek, endOfWeek } from 'date-fns';
 import { AppCard, SectionHeader, StatPill } from '../components/ui';
 import { fadeSlideUp, listStagger, timelineStagger, checkBounce } from '../lib/motion';
-import { getMondayFirstIndex, mapRoutineByWeekday } from '../lib/routineWeek';
+import { getMondayFirstIndex, mapRoutineByWeekday, computeSmartStreak } from '../lib/routineWeek';
 import { workoutService } from '../services/workoutService';
 import { generateProgressReport, ProgressReport } from '../services/geminiService';
 import { ACHIEVEMENTS_CATALOG } from '../lib/achievements';
@@ -138,23 +138,8 @@ export default function Home() {
   }, [logs]);
 
   const currentStreak = useMemo(() => {
-    if (logs.length === 0) return 0;
-
-    const dateSet = new Set(
-      logs
-        .filter((log) => isValid(new Date(log.date)))
-        .map((log) => format(new Date(log.date), 'yyyy-MM-dd'))
-    );
-    let streak = 0;
-    let cursor = new Date();
-
-    while (dateSet.has(format(cursor, 'yyyy-MM-dd'))) {
-      streak += 1;
-      cursor = subDays(cursor, 1);
-    }
-
-    return streak;
-  }, [logs]);
+    return computeSmartStreak(logs, routine);
+  }, [logs, routine]);
 
   const chartData = useMemo(() => {
     const data = [];
@@ -444,10 +429,11 @@ export default function Home() {
           <div className="flex items-start justify-between gap-4 mb-5">
             <div className="flex-1 min-w-0">
               <p className="text-xs uppercase tracking-[0.18em] text-gray-400 mb-2">🏆 Hoy conquistas</p>
-              <h2 className="text-3xl font-black leading-none tracking-tight headline-gradient">
-                {todayRoutine?.focus
-                  ? `${todayRoutine.focus} 💀🔥`
-                  : 'Recuperación activa'}
+              <h2 className="text-3xl font-black leading-none tracking-tight">
+                <span className="headline-gradient">
+                  {todayRoutine?.focus || 'Recuperación activa'}
+                </span>
+                {todayRoutine?.focus && <span> 💀🔥</span>}
               </h2>
               <p className="text-sm text-gray-300 mt-3">
                 {todayRoutine

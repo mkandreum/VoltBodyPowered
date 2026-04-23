@@ -8,8 +8,8 @@ import { authService } from '../services/authService';
 import { enrichRoutine, routineNeedsEnrichment } from '../services/exerciseImageService';
 import { AppCard, SectionHeader, StatPill, LazyImage } from '../components/ui';
 import { listStagger, slideUpSheet, checkBounce, successBurst, completionGlow, tapPulse, timelineStagger } from '../lib/motion';
-import { WEEKDAY_LABELS, getMondayFirstIndex, mapRoutineByWeekday } from '../lib/routineWeek';
-import { format, subDays, isValid } from 'date-fns';
+import { WEEKDAY_LABELS, getMondayFirstIndex, mapRoutineByWeekday, computeSmartStreak } from '../lib/routineWeek';
+import { format, startOfWeek, addDays } from 'date-fns';
 import WeightCalculator from '../components/WeightCalculator';
 import { checkNewAchievements } from '../lib/achievements';
 import { getProgressiveSuggestion, getExerciseHistory } from '../lib/progressiveOverload';
@@ -114,7 +114,12 @@ export default function Workout() {
     : exerciseLibrary.filter((item) => item.muscleGroup === selectedMuscleGroup);
   const totalTodayExercises = todayRoutine?.exercises?.length || 0;
   const todayDateKey = format(new Date(), 'yyyy-MM-dd');
-  const todayLogs = useMemo(() => logs.filter((log) => log.date.slice(0, 10) === todayDateKey), [logs, todayDateKey]);
+  // Date key for the selected weekday in the current week (used for per-day log display)
+  const selectedDateKey = useMemo(() => {
+    const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+    return format(addDays(weekStart, selectedDayIndex), 'yyyy-MM-dd');
+  }, [selectedDayIndex]);
+  const todayLogs = useMemo(() => logs.filter((log) => log.date.slice(0, 10) === selectedDateKey), [logs, selectedDateKey]);
   const setsByExercise = useMemo(() => {
     return todayLogs.reduce<Map<string, number>>((acc, log) => {
       acc.set(log.exerciseId, (acc.get(log.exerciseId) || 0) + 1);
@@ -151,18 +156,8 @@ export default function Workout() {
 
   // Current streak for share card
   const currentStreak = useMemo(() => {
-    if (logs.length === 0) return 0;
-    const dateSet = new Set(
-      logs.filter((log) => isValid(new Date(log.date))).map((log) => format(new Date(log.date), 'yyyy-MM-dd'))
-    );
-    let streak = 0;
-    let cursor = new Date();
-    while (dateSet.has(format(cursor, 'yyyy-MM-dd'))) {
-      streak += 1;
-      cursor = subDays(cursor, 1);
-    }
-    return streak;
-  }, [logs]);
+    return computeSmartStreak(logs, routine);
+  }, [logs, routine]);
 
   // XP & level for share card
   const XP_PER_LOG = 12;
@@ -212,14 +207,14 @@ export default function Workout() {
     }, new Map());
   }, [logs]);
 
-  // Global indices (in `logs` array) of today's logs for the currently selected exercise, in order
+  // Global indices (in `logs` array) of the selected day's logs for the currently selected exercise, in order
   const todayExerciseLogIndices = useMemo(() => {
     if (!selectedExercise) return [];
     return logs
       .map((l, idx) => ({ l, idx }))
-      .filter(({ l }) => l.exerciseId === selectedExercise.id && l.date.slice(0, 10) === todayDateKey)
+      .filter(({ l }) => l.exerciseId === selectedExercise.id && l.date.slice(0, 10) === selectedDateKey)
       .map(({ idx }) => idx);
-  }, [selectedExercise, logs, todayDateKey]);
+  }, [selectedExercise, logs, selectedDateKey]);
 
   // Rest timer helpers
   const startRestTimer = useCallback((seconds = REST_TIMER_SECONDS) => {
@@ -240,16 +235,18 @@ export default function Workout() {
   // Cleanup on unmount
   useEffect(() => () => { if (restIntervalRef.current) clearInterval(restIntervalRef.current); }, []);
 
-  // Fire completion celebration once when all exercises are done; reset when session changes
+  // Fire completion celebration once when all exercises are done; reset when session changes.
+  // Only trigger for today's session (not when viewing a past completed day).
   useEffect(() => {
-    if (allExercisesDone && !completionShownRef.current) {
+    const isToday = selectedDateKey === todayDateKey;
+    if (allExercisesDone && !completionShownRef.current && isToday) {
       completionShownRef.current = true;
       setShowCompletion(true);
     }
     if (!allExercisesDone) {
       completionShownRef.current = false;
     }
-  }, [allExercisesDone]);
+  }, [allExercisesDone, selectedDateKey, todayDateKey]);
 
   useEffect(() => {
     if (routinesByDay[selectedDayIndex]) return;

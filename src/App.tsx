@@ -88,16 +88,15 @@ export default function App() {
   }, [toasts[0]?.id, dismissToast]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    // Save the scroll position for the tab we're leaving, then restore for the new tab
     const savedY = scrollPositions.current[currentTab] ?? 0;
-    // Defer scroll restore until after the transition starts
-    const raf = requestAnimationFrame(() => {
+    // Use a short timeout to allow the lazy-loaded page to render before scrolling.
+    const timer = setTimeout(() => {
       window.scrollTo({ top: savedY, behavior: 'instant' });
-    });
+    }, 50);
     return () => {
       // Save current position when tab changes
       scrollPositions.current[currentTab] = window.scrollY;
-      cancelAnimationFrame(raf);
+      clearTimeout(timer);
     };
   }, [currentTab]);
 

@@ -1,4 +1,5 @@
-import type { WorkoutDay } from '../store/useAppStore';
+import { format, subDays, isValid } from 'date-fns';
+import type { WorkoutDay, WorkoutLog } from '../store/useAppStore';
 
 export const WEEKDAY_KEYS = ['lun', 'mar', 'mie', 'jue', 'vie', 'sab', 'dom'] as const;
 
@@ -60,4 +61,53 @@ export function mapRoutineByWeekday(routine: WorkoutDay[]) {
   });
 
   return mapped;
+}
+
+/**
+ * Computes the current training streak, skipping rest days.
+ * A "rest day" is any weekday that has no exercises assigned in the routine.
+ * Only scheduled workout days that were missed (no logs) break the streak.
+ * Today's workout is not penalised if not yet done.
+ */
+export function computeSmartStreak(logs: WorkoutLog[], routine: WorkoutDay[]): number {
+  if (logs.length === 0) return 0;
+
+  const routineByDay = mapRoutineByWeekday(routine);
+  const workoutWeekdays = new Set<number>(
+    routineByDay
+      .map((entry, index) => (entry ? index : -1))
+      .filter((index) => index >= 0),
+  );
+
+  const dateSet = new Set(
+    logs
+      .filter((log) => isValid(new Date(log.date)))
+      .map((log) => format(new Date(log.date), 'yyyy-MM-dd')),
+  );
+
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
+  let streak = 0;
+  let cursor = new Date();
+
+  for (let i = 0; i < 365; i++) {
+    const dateStr = format(cursor, 'yyyy-MM-dd');
+    const weekdayIndex = getMondayFirstIndex(cursor);
+    // When no routine is defined every calendar day counts (original behaviour).
+    const isWorkoutDay = workoutWeekdays.size === 0 || workoutWeekdays.has(weekdayIndex);
+
+    if (isWorkoutDay) {
+      if (dateSet.has(dateStr)) {
+        streak += 1;
+      } else if (dateStr === todayStr) {
+        // Today's session not yet completed — don't penalise.
+      } else {
+        // Missed a past workout day — streak ends.
+        break;
+      }
+    }
+    // Rest day: skip without breaking streak.
+    cursor = subDays(cursor, 1);
+  }
+
+  return streak;
 }

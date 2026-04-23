@@ -113,12 +113,10 @@ const WorkoutSummaryCard = forwardRef<HTMLDivElement, WorkoutSummaryCardProps>((
       <div style={{ marginBottom: 16 }}>
         <p style={{ fontSize: 10, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: 8 }}>Ejercicios</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {data.exercises.slice(0, 6).map((ex, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '7px 12px' }}>
+          {data.exercises.slice(0, 6).map((ex, i, arr) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '5px 2px', borderBottom: i < arr.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ width: 20, height: 20, borderRadius: 6, background: 'rgba(57,255,20,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: '#39ff14', fontWeight: 700 }}>
-                  {i + 1}
-                </span>
+                <span style={{ fontSize: 10, color: '#4b5563', fontWeight: 700, minWidth: 14 }}>{i + 1}.</span>
                 <span style={{ fontSize: 12, color: '#e5e7eb', fontWeight: 500 }}>{ex.name}</span>
               </div>
               <span style={{ fontSize: 11, color: '#39ff14', fontFamily: 'monospace', fontWeight: 600 }}>{ex.sets}×{ex.reps}</span>
