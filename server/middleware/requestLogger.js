@@ -21,7 +21,7 @@ export function requestLogger(req, res, next) {
 
     recordRequest({
       method: req.method,
-      path: req.originalUrl,
+      path: req.path,
       statusCode: res.statusCode,
       durationMs,
     });

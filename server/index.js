@@ -1,6 +1,5 @@
 import express from 'express';
 import cors from 'cors';
-import { PrismaClient } from '@prisma/client';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/user.js';
 import profileRoutes from './routes/profile.js';
@@ -13,12 +12,12 @@ import { requestLogger } from './middleware/requestLogger.js';
 import { sanitizeRequestBody } from './middleware/sanitize.js';
 import { logError, logInfo } from './utils/logger.js';
 import { getMetricsSnapshot } from './utils/metrics.js';
+import prisma from './utils/prisma.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3000;
 
 app.set('trust proxy', 1);
