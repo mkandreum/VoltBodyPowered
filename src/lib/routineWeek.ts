@@ -40,6 +40,12 @@ export function getMondayFirstIndex(date: Date) {
   return day === 0 ? 6 : day - 1;
 }
 
+/** Weeks start on Monday (ISO-8601). */
+export const WEEK_STARTS_ON_MONDAY = 1 as const;
+
+/** Maximum number of past days to look back when computing streaks. */
+const MAX_STREAK_DAYS = 365;
+
 export function mapRoutineByWeekday(routine: WorkoutDay[]) {
   const mapped: Array<WorkoutDay | null> = new Array<WorkoutDay | null>(7).fill(null);
   const unresolved: WorkoutDay[] = [];
@@ -89,7 +95,7 @@ export function computeSmartStreak(logs: WorkoutLog[], routine: WorkoutDay[]): n
   let streak = 0;
   let cursor = new Date();
 
-  for (let i = 0; i < 365; i++) {
+  for (let i = 0; i < MAX_STREAK_DAYS; i++) {
     const dateStr = format(cursor, 'yyyy-MM-dd');
     const weekdayIndex = getMondayFirstIndex(cursor);
     // When no routine is defined every calendar day counts (original behaviour).

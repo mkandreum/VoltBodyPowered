@@ -8,7 +8,7 @@ import { authService } from '../services/authService';
 import { enrichRoutine, routineNeedsEnrichment } from '../services/exerciseImageService';
 import { AppCard, SectionHeader, StatPill, LazyImage } from '../components/ui';
 import { listStagger, slideUpSheet, checkBounce, successBurst, completionGlow, tapPulse, timelineStagger } from '../lib/motion';
-import { WEEKDAY_LABELS, getMondayFirstIndex, mapRoutineByWeekday, computeSmartStreak } from '../lib/routineWeek';
+import { WEEKDAY_LABELS, getMondayFirstIndex, mapRoutineByWeekday, computeSmartStreak, WEEK_STARTS_ON_MONDAY } from '../lib/routineWeek';
 import { format, startOfWeek, addDays } from 'date-fns';
 import WeightCalculator from '../components/WeightCalculator';
 import { checkNewAchievements } from '../lib/achievements';
@@ -116,7 +116,7 @@ export default function Workout() {
   const todayDateKey = format(new Date(), 'yyyy-MM-dd');
   // Date key for the selected weekday in the current week (used for per-day log display)
   const selectedDateKey = useMemo(() => {
-    const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+    const weekStart = startOfWeek(new Date(), { weekStartsOn: WEEK_STARTS_ON_MONDAY });
     return format(addDays(weekStart, selectedDayIndex), 'yyyy-MM-dd');
   }, [selectedDayIndex]);
   const todayLogs = useMemo(() => logs.filter((log) => log.date.slice(0, 10) === selectedDateKey), [logs, selectedDateKey]);
