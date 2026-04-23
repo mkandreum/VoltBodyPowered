@@ -5,7 +5,7 @@ import Onboarding from './pages/Onboarding';
 import BottomNav from './components/BottomNav';
 import SplashScreen from './components/SplashScreen';
 import { AnimatePresence, motion } from 'motion/react';
-import { pageTransition, fadeSlideUp } from './lib/motion';
+import { fadeSlideUp } from './lib/motion';
 import { CheckCircle2, AlertCircle, Info } from 'lucide-react';
 import { notificationService } from './services/notificationService';
 
@@ -134,21 +134,11 @@ export default function App() {
 
   return (
     <div className="app-shell min-h-[100dvh] text-white overflow-x-hidden safe-bottom">
-      <AnimatePresence>
-        <motion.div
-          key={currentTab}
-          initial={pageTransition.initial}
-          animate={pageTransition.animate}
-          exit={pageTransition.exit}
-          transition={pageTransition.transition}
-          style={{ willChange: 'opacity, transform' }}
-          className="h-full"
-        >
-          <Suspense fallback={<PageSkeleton />}>
-            {renderTab()}
-          </Suspense>
-        </motion.div>
-      </AnimatePresence>
+      <div className="page-transition-root h-full">
+        <Suspense fallback={<PageSkeleton />}>
+          {renderTab()}
+        </Suspense>
+      </div>
 
       <div className="fixed top-[max(0.8rem,env(safe-area-inset-top))] right-4 z-[60] w-[min(92vw,360px)] space-y-2 pointer-events-none">
         <AnimatePresence>

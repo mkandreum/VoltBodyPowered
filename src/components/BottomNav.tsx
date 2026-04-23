@@ -2,6 +2,8 @@ import { Dumbbell, Calendar, User, Utensils, Zap } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { motion, AnimatePresence } from 'motion/react';
 import clsx from 'clsx';
+import { useTransition } from 'react';
+import RiveIcon from './RiveIcon';
 
 type TabId = 'home' | 'workout' | 'diet' | 'calendar' | 'profile';
 
@@ -14,10 +16,20 @@ type NavItem = {
 export default function BottomNav() {
   const { currentTab, setTab } = useAppStore();
   const springTransition = { type: 'spring' as const, stiffness: 400, damping: 28 };
+  const [, startTransition] = useTransition();
 
   const triggerHaptic = () => {
     if (isSecureContext && typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
       navigator.vibrate(8);
+    }
+  };
+
+  const handleTabChange = (id: TabId) => {
+    triggerHaptic();
+    if (document.startViewTransition) {
+      document.startViewTransition(() => setTab(id));
+    } else {
+      startTransition(() => setTab(id));
     }
   };
 
@@ -41,10 +53,7 @@ export default function BottomNav() {
               <button
                 key={item.id}
                 type="button"
-                onClick={() => {
-                  triggerHaptic();
-                  setTab(item.id);
-                }}
+                onClick={() => handleTabChange(item.id)}
                 aria-label={item.label}
                 className={clsx(
                   'relative overflow-hidden tap-target pressable pulse-surface nav-soft-btn',
@@ -82,10 +91,7 @@ export default function BottomNav() {
           <motion.button
             type="button"
             whileTap={{ scale: 0.96 }}
-            onClick={() => {
-              triggerHaptic();
-              setTab('home');
-            }}
+            onClick={() => handleTabChange('home')}
             className="relative overflow-hidden tap-target px-2 sm:px-3 flex-1 max-w-[180px] min-w-[100px] sm:min-w-[120px] h-14 rounded-full border border-transparent transition-all text-center"
           >
             <span className="inline-flex items-center gap-1 sm:gap-2 text-[14px] sm:text-[18px] font-black tracking-[0.06em] sm:tracking-[0.15em] uppercase relative z-[1]">
@@ -95,15 +101,23 @@ export default function BottomNav() {
                 transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
                 className="inline-flex"
               >
-                <Zap
-                  size={22}
-                  className={clsx(
-                    'transition-all duration-200',
-                    isHomeActive
-                      ? 'text-amber-400 drop-shadow-[0_0_6px_#fbbf24]'
-                      : 'text-gray-500'
-                  )}
-                  fill={isHomeActive ? '#fbbf24' : 'none'}
+                <RiveIcon
+                  src="/animations/voltbody-bolt.riv"
+                  stateMachine="BoltState"
+                  width={22}
+                  height={22}
+                  fallback={
+                    <Zap
+                      size={22}
+                      className={clsx(
+                        'transition-all duration-200',
+                        isHomeActive
+                          ? 'text-amber-400 drop-shadow-[0_0_6px_#fbbf24]'
+                          : 'text-gray-500'
+                      )}
+                      fill={isHomeActive ? '#fbbf24' : 'none'}
+                    />
+                  }
                 />
               </motion.span>
               <span className={clsx(
@@ -122,10 +136,7 @@ export default function BottomNav() {
               <button
                 key={item.id}
                 type="button"
-                onClick={() => {
-                  triggerHaptic();
-                  setTab(item.id);
-                }}
+                onClick={() => handleTabChange(item.id)}
                 aria-label={item.label}
                 className={clsx(
                   'relative overflow-hidden tap-target pressable pulse-surface nav-soft-btn',
