@@ -245,7 +245,7 @@ export default function CalendarView() {
                       return (
                         <div
                           key={exercise.id}
-                          className="flex items-center justify-between rounded-xl border border-[var(--app-border)] bg-black/35 px-3 py-2"
+                          className="cv-auto flex items-center justify-between rounded-xl border border-[var(--app-border)] bg-black/35 px-3 py-2"
                         >
                           <div>
                             <p className="text-sm font-semibold text-white">{exercise.name}</p>
