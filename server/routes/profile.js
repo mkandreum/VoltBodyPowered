@@ -1,11 +1,10 @@
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
 import { authMiddleware } from '../middleware/auth.js';
 import { validateProfileUpdatePayload } from '../middleware/validators.js';
 import { logError } from '../utils/logger.js';
+import prisma from '../utils/prisma.js';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // Get profile
 router.get('/', authMiddleware, async (req, res) => {

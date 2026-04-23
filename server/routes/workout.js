@@ -1,12 +1,11 @@
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
 import { authMiddleware } from '../middleware/auth.js';
 import { validateWorkoutLogPayload, validateProgressPhotoPayload, validateWeightLogPayload } from '../middleware/validators.js';
 import { createRateLimiter } from '../middleware/rateLimit.js';
 import { logError } from '../utils/logger.js';
+import prisma from '../utils/prisma.js';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 const weightLogLimiter = createRateLimiter({ windowMs: 60 * 1000, max: 20, keyPrefix: 'weight-log' });
 
 // Get workout logs
