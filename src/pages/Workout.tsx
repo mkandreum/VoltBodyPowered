@@ -625,7 +625,7 @@ export default function Workout() {
             {...listStagger(index)}
             whileTap={{ scale: 0.985 }}
             onClick={() => setSelectedExercise(exercise)}
-            className={`cv-auto panel-soft interactive-tile rounded-3xl overflow-hidden cursor-pointer transition-all group ripple-host ${
+            className={`panel-soft interactive-tile rounded-3xl overflow-hidden cursor-pointer transition-all group ripple-host ${
               isCompleted
                 ? 'border-[color:var(--app-accent)]/60 bg-[color:var(--app-accent)]/5 anim-glow-pulse'
                 : 'hover:border-[color:var(--app-accent)]/50'
@@ -761,7 +761,7 @@ export default function Workout() {
             const alreadyAdded = customWorkout.some((item) => item.id === exercise.id);
 
             return (
-              <div key={exercise.id} className="cv-auto flex items-center justify-between neuro-inset p-3">
+              <div key={exercise.id} className="flex items-center justify-between neuro-inset p-3">
                 <div>
                   <p className="text-sm text-white font-medium">{exercise.name}</p>
                   <p className="text-xs text-gray-500">{exercise.muscleGroup} • {exercise.defaultSets}x{exercise.defaultReps}</p>

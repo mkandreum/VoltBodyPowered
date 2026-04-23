@@ -1,6 +1,6 @@
-import type { ReactNode, HTMLAttributes } from 'react';
+import type { ReactNode } from 'react';
 
-type AppCardProps = HTMLAttributes<HTMLDivElement> & {
+type AppCardProps = {
   children: ReactNode;
   className?: string;
   interactive?: boolean;
@@ -11,10 +11,9 @@ function cn(...classes: Array<string | false | undefined>) {
   return classes.filter(Boolean).join(' ');
 }
 
-export default function AppCard({ children, className, interactive = false, accent = false, ...rest }: AppCardProps) {
+export default function AppCard({ children, className, interactive = false, accent = false }: AppCardProps) {
   return (
     <div
-      {...rest}
       className={cn(
         'app-card rounded-[1.35rem] border p-5 transition-all',
         'bg-[linear-gradient(170deg,color-mix(in_srgb,var(--app-surface)_90%,black_10%),color-mix(in_srgb,var(--app-surface-elevated)_90%,black_10%))] border-[var(--app-border)]',

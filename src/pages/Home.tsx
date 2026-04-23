@@ -10,10 +10,6 @@ import { getMondayFirstIndex, mapRoutineByWeekday, computeSmartStreak } from '..
 import { workoutService } from '../services/workoutService';
 import { generateProgressReport, ProgressReport } from '../services/geminiService';
 import { ACHIEVEMENTS_CATALOG } from '../lib/achievements';
-import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
-
-gsap.registerPlugin(ScrollTrigger);
 
 /** Circular SVG progress ring */
 function CircularProgress({ value, size = 64 }: { value: number; size?: number }) {
@@ -110,31 +106,6 @@ export default function Home() {
       }
     };
   }, [reportLoading]);
-
-  // GSAP ScrollTrigger — reveal cards that lack Framer Motion entry animations
-  useEffect(() => {
-    const ctx = gsap.context(() => {
-      const elements = gsap.utils.toArray<HTMLElement>('[data-gsap-reveal]');
-      elements.forEach((el) => {
-        gsap.fromTo(
-          el,
-          { opacity: 0, y: 22 },
-          {
-            opacity: 1,
-            y: 0,
-            duration: 0.5,
-            ease: 'power2.out',
-            scrollTrigger: {
-              trigger: el,
-              start: 'top 90%',
-              toggleActions: 'play none none none',
-            },
-          }
-        );
-      });
-    });
-    return () => ctx.revert();
-  }, []);
 
   const today = new Date().toLocaleDateString('es-ES', { weekday: 'long' });
   const routineByDay = useMemo(() => mapRoutineByWeekday(routine), [routine]);
@@ -612,12 +583,12 @@ export default function Home() {
         ))}
       </div>
 
-      <AppCard className="mb-8 p-5 glass-panel" accent data-gsap-reveal>
+      <AppCard className="mb-8 p-5 glass-panel" accent>
         <SectionHeader title={aiCoachCopy.title} icon={Sparkles} subtitle="AI Coach en tiempo real" />
         <p className="text-sm text-gray-200">{aiCoachCopy.subtitle}</p>
       </AppCard>
 
-      <AppCard className="mb-8 p-5 glass-panel" data-gsap-reveal>
+      <AppCard className="mb-8 p-5 glass-panel">
         <SectionHeader title="🤖 Informe IA de progreso" icon={Activity} />
         <p className="text-sm text-gray-400 mb-4">
           Analiza tus historiales (entrenos, rutina, dieta y fotos) y te dice cómo vas, porcentaje de avance y cuánto te falta para verte mejor.
@@ -791,7 +762,7 @@ export default function Home() {
       </AppCard>
       </motion.div>
 
-      <AppCard className="mb-4 p-0 overflow-hidden glass-panel scroll-reveal" accent>
+      <AppCard className="mb-4 p-0 overflow-hidden glass-panel" accent>
         <div className="relative min-h-[170px]">
           {motivationPhoto ? (
             <img
