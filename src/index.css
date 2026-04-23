@@ -1099,68 +1099,8 @@ button:active {
   filter: drop-shadow(0 0 4px color-mix(in srgb, var(--app-accent) 60%, transparent));
 }
 
-/* ─── View Transitions API ───────────────────────────────── */
-
-.page-transition-root {
-  view-transition-name: page-content;
-}
-
-@keyframes vt-slide-out {
-  to { opacity: 0; transform: translateY(-4px); }
-}
-
-@keyframes vt-slide-in {
-  from { opacity: 0; transform: translateY(6px); }
-}
-
-::view-transition-old(page-content) {
-  animation: vt-slide-out 0.16s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-::view-transition-new(page-content) {
-  animation: vt-slide-in 0.2s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-/* ─── Scroll-driven Animations (native CSS, zero JS) ─────── */
-
-@keyframes scroll-reveal-in {
-  from { opacity: 0; transform: translateY(18px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-@supports (animation-timeline: view()) {
-  .scroll-reveal {
-    animation: scroll-reveal-in linear both;
-    animation-timeline: view();
-    animation-range: entry 0% entry 35%;
-  }
-}
-
-/* ─── content-visibility: auto ───────────────────────────── */
-
-.cv-auto {
-  content-visibility: auto;
-  contain-intrinsic-size: auto 96px;
-}
-
-/* ─── GSAP ScrollTrigger targets — hidden until revealed ──── */
-
-[data-gsap-reveal] {
-  opacity: 0;
-  transform: translateY(20px);
-  will-change: opacity, transform;
-}
-
 /* ─── prefers-reduced-motion: disable all non-essential animations ── */
 @media (prefers-reduced-motion: reduce) {
-  /* Reveal scroll-driven and GSAP targets immediately */
-  .scroll-reveal,
-  [data-gsap-reveal] {
-    opacity: 1 !important;
-    transform: none !important;
-    animation: none !important;
-  }
-
   /* Pause all infinite / decorative animations */
   .liquid-indicator,
   .tab-switch-glow,
