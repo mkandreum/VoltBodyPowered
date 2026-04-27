@@ -642,8 +642,8 @@ export default function Home() {
         <div className="flex items-center justify-between mb-4">
           <SectionHeader title="❤️ Monitor de FC" icon={Heart} subtitle="Sensor Bluetooth (Polar, Garmin…)" />
           {bleState === 'connected' && <StatPill label="sensor" value="live" />}
-          {bleState === 'disconnected' && <StatPill label="sensor" value="desconect." />}
-          {bleState === 'connecting' && <StatPill label="sensor" value="conect…" />}
+          {bleState === 'disconnected' && <StatPill label="sensor" value="desconectado" />}
+          {bleState === 'connecting' && <StatPill label="sensor" value="conectando…" />}
           {bleState === 'error' && <StatPill label="sensor" value="error" />}
         </div>
 

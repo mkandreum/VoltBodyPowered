@@ -109,7 +109,7 @@ export function fatigueStatusLabel(status: FatigueEntry['status']): string {
   }
 }
 
-/** CSS colour class for the status badge */
+/** CSS color class for the status badge */
 export function fatigueStatusColor(status: FatigueEntry['status']): string {
   switch (status) {
     case 'fresh': return 'text-emerald-400';

@@ -26,7 +26,7 @@ function formatDuration(seconds: number): string {
 /** Isometric / keyword-based exercise type detector (fallback when exerciseType is not set) */
 function detectExerciseType(name: string): ExerciseType {
   const lower = name.toLowerCase();
-  if (['plancha', 'frog stand', 'isométric', 'wall sit', 'estática', 'side plank'].some((k) => lower.includes(k))) return 'isometric';
+  if (['plancha', 'frog stand', 'isométrica', 'wall sit', 'estática', 'side plank'].some((k) => lower.includes(k))) return 'isometric';
   if (['dominadas', 'fondos', 'flexiones', 'burpees', 'pull-up', 'dip'].some((k) => lower.includes(k))) return 'bodyweight';
   if (['cardio', 'cuerda', 'correr', 'bicicleta', 'remo ergómetro', 'caminar', 'elíptica'].some((k) => lower.includes(k))) return 'cardio';
   return 'weighted';
