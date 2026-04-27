@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore, Exercise, WorkoutDay, ExerciseType } from '../store/useAppStore';
-import { ChevronLeft, Play, CheckCircle2, Dumbbell, PlusCircle, Trash2, Star, CalendarClock, Flame, BookOpen, Share2, Trophy, TrendingUp, History, Loader2, X, Timer, Square } from 'lucide-react';
+import { ChevronLeft, Play, CheckCircle2, Dumbbell, PlusCircle, Trash2, Star, CalendarClock, Flame, BookOpen, Share2, Trophy, TrendingUp, History, Loader2, X, Timer, Square, Camera } from 'lucide-react';
 import { workoutService } from '../services/workoutService';
 import { authService } from '../services/authService';
 import { enrichRoutine, routineNeedsEnrichment } from '../services/exerciseImageService';
@@ -15,6 +15,7 @@ import { checkNewAchievements } from '../lib/achievements';
 import { getProgressiveSuggestion, getExerciseHistory } from '../lib/progressiveOverload';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import WorkoutSummaryCard from '../components/WorkoutSummaryCard';
+import PoseCoach, { type PoseCoachExercise } from '../components/PoseCoach';
 
 /** Format seconds as MM:SS */
 function formatDuration(seconds: number): string {
@@ -30,6 +31,19 @@ function detectExerciseType(name: string): ExerciseType {
   if (['dominadas', 'fondos', 'flexiones', 'burpees', 'pull-up', 'dip'].some((k) => lower.includes(k))) return 'bodyweight';
   if (['cardio', 'cuerda', 'correr', 'bicicleta', 'remo ergómetro', 'caminar', 'elíptica'].some((k) => lower.includes(k))) return 'cardio';
   return 'weighted';
+}
+
+/** Map exercise name / type to a PoseCoach exercise key */
+function detectPoseExercise(name: string, type: ExerciseType): PoseCoachExercise {
+  const lower = name.toLowerCase();
+  if (lower.includes('sentadilla') || lower.includes('squat') || lower.includes('goblet')) return 'squat';
+  if (lower.includes('plancha') || lower.includes('plank')) return 'plank';
+  if (lower.includes('peso muerto') || lower.includes('deadlift') || lower.includes('rdl')) return 'deadlift';
+  if (lower.includes('zancada') || lower.includes('lunge')) return 'lunge';
+  if (lower.includes('flexiones') || lower.includes('push') || lower.includes('fondos')) return 'pushup';
+  if (type === 'isometric') return 'plank';
+  if (type === 'bodyweight') return 'pushup';
+  return 'squat'; // best general feedback
 }
 
 export default function Workout() {
@@ -86,6 +100,8 @@ export default function Workout() {
   const summaryCardRef = useRef<HTMLDivElement>(null);
   // State for editing a previously logged set
   const [editingSet, setEditingSet] = useState<{ logIndex: number; weight: number; reps: number; duration?: number; rpe?: number } | null>(null);
+  // PoseCoach state
+  const [showPoseCoach, setShowPoseCoach] = useState(false);
 
   // Stable callback passed to WeightCalculator — avoids stale-closure issue with onWeightChange
   const handleCalculatorWeightChange = useCallback((w: number) => setWeightInput(w), []);
@@ -1086,6 +1102,22 @@ export default function Workout() {
                 </motion.div>
               )}
 
+              {/* PoseCoach button */}
+              {(currentExerciseType === 'weighted' || currentExerciseType === 'bodyweight' || currentExerciseType === 'isometric') && (
+                <motion.button
+                  type="button"
+                  onClick={() => setShowPoseCoach(true)}
+                  whileTap={{ scale: 0.96 }}
+                  className="tap-target mb-3 sm:mb-5 w-full flex items-center justify-center gap-2.5 neuro-inset rounded-2xl py-3 px-4 border border-[color:var(--app-accent)]/25 hover:border-[color:var(--app-accent)]/50 transition-colors"
+                >
+                  <Camera size={16} className="app-accent shrink-0" />
+                  <div className="text-left">
+                    <p className="text-sm font-bold text-white">🎥 PoseCoach — Análisis de postura</p>
+                    <p className="text-[10px] text-gray-500">Detección en tiempo real con IA (MediaPipe)</p>
+                  </div>
+                </motion.button>
+              )}
+
               {/* Técnica */}
               {(() => {
                 const libEntry = exerciseLibrary.find((e) => e.id === selectedExercise.id);
@@ -1674,6 +1706,16 @@ export default function Workout() {
         )}
       </AnimatePresence>,
       document.body
+      )}
+
+      {/* PoseCoach overlay — rendered via portal to escape z-index stacking */}
+      {showPoseCoach && selectedExercise && createPortal(
+        <PoseCoach
+          exercise={detectPoseExercise(selectedExercise.name, currentExerciseType)}
+          exerciseName={selectedExercise.name}
+          onClose={() => setShowPoseCoach(false)}
+        />,
+        document.body
       )}
 
       {/* Floating rest timer pill */}

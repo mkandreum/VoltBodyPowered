@@ -143,6 +143,13 @@ export type AppToast = {
   message?: string;
 };
 
+export type RecoveryLog = {
+  date: string;        // YYYY-MM-DD
+  sleepHours: number;
+  hrv?: number;        // Morning HRV in ms (RMSSD). Optional.
+  score: number;       // Computed 0-100
+};
+
 interface AppState {
   // Hydration guard — true once Zustand has rehydrated from localStorage
   _hasHydrated: boolean;
@@ -175,6 +182,8 @@ interface AppState {
   weeklyGoals: WeeklyGoal[];
   achievements: Achievement[];
   notificationsEnabled: boolean;
+  // Recovery Score logs (morning check-in data)
+  recoveryLogs: RecoveryLog[];
 
   // Auth actions
   setAuthToken: (token: string | null) => void;
@@ -211,6 +220,7 @@ interface AppState {
   resetApp: () => void;
   addAchievement: (achievement: Achievement) => void;
   setNotificationsEnabled: (v: boolean) => void;
+  addRecoveryLog: (log: RecoveryLog) => void;
 }
 
 const defaultExerciseLibrary: ExerciseLibraryEntry[] = [
@@ -356,6 +366,7 @@ export const useAppStore = create<AppState>()(
       ],
       achievements: [],
       notificationsEnabled: false,
+      recoveryLogs: [],
 
       // Auth actions
       setAuthToken: (token) => set({ authToken: token, isAuthenticated: !!token }),
@@ -379,6 +390,7 @@ export const useAppStore = create<AppState>()(
         weightLogs: [],
         mealEatenRecord: {},
         achievements: [],
+        recoveryLogs: [],
         weeklyGoals: [
           { id: 'habit-1', label: 'Completar 3 sesiones de fuerza', done: false },
           { id: 'habit-2', label: 'Dormir 7h al menos 5 dias', done: false },
@@ -499,6 +511,7 @@ export const useAppStore = create<AppState>()(
         weightLogs: [],
         mealEatenRecord: {},
         achievements: [],
+        recoveryLogs: [],
         weeklyGoals: [
           { id: 'habit-1', label: 'Completar 3 sesiones de fuerza', done: false },
           { id: 'habit-2', label: 'Dormir 7h al menos 5 dias', done: false },
@@ -506,6 +519,14 @@ export const useAppStore = create<AppState>()(
         ],
       }),
       setNotificationsEnabled: (v) => set({ notificationsEnabled: v }),
+      addRecoveryLog: (log) =>
+        set((state) => ({
+          // Keep one entry per day (newest wins)
+          recoveryLogs: [
+            ...state.recoveryLogs.filter((l) => l.date !== log.date),
+            log,
+          ].sort((a, b) => a.date.localeCompare(b.date)),
+        })),
     }),
     {
       name: 'voltbody-storage',
