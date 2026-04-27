@@ -243,7 +243,34 @@ function getRules(exercise: PoseCoachExercise, lm: Landmarks): PoseRule[] {
   }
 }
 
-// ── Load MediaPipe scripts dynamically ───────────────────────────────────────
+// ── MediaPipe API surface types (loaded from CDN) ────────────────────────────
+// These mirror the public API of @mediapipe/pose and @mediapipe/drawing_utils.
+type MPPoseOptions = {
+  locateFile: (file: string) => string;
+};
+type MPPoseConfig = {
+  modelComplexity?: 0 | 1 | 2;
+  smoothLandmarks?: boolean;
+  enableSegmentation?: boolean;
+  minDetectionConfidence?: number;
+  minTrackingConfidence?: number;
+};
+type MPPoseResults = {
+  image: HTMLVideoElement | HTMLCanvasElement | ImageBitmap;
+  poseLandmarks?: Vec2[];
+};
+type MPPoseInstance = {
+  setOptions(config: MPPoseConfig): void;
+  onResults(callback: (results: MPPoseResults) => void): void;
+  send(input: { image: HTMLVideoElement }): Promise<void>;
+};
+type MPPoseConstructor = new (options: MPPoseOptions) => MPPoseInstance;
+type MPWindow = {
+  Pose?: MPPoseConstructor;
+  drawConnectors?: (ctx: CanvasRenderingContext2D, landmarks: Vec2[], connections: unknown, style: { color: string; lineWidth: number }) => void;
+  drawLandmarks?: (ctx: CanvasRenderingContext2D, landmarks: Vec2[], style: { color: string; lineWidth: number; radius: number }) => void;
+  POSE_CONNECTIONS?: unknown;
+};
 
 function loadScript(src: string): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -263,7 +290,7 @@ export default function PoseCoach({ exercise = 'general', exerciseName, onClose 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const poseRef = useRef<unknown>(null);
+  const poseRef = useRef<MPPoseInstance | null>(null);
   const animFrameRef = useRef<number | null>(null);
 
   const [status, setStatus] = useState<'loading' | 'running' | 'error' | 'nocamera'>('loading');
@@ -314,8 +341,7 @@ export default function PoseCoach({ exercise = 'general', exerciseName, onClose 
         await video.play();
 
         // 3. Init MediaPipe Pose
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const PoseClass = (window as any).Pose;
+        const PoseClass = (window as unknown as MPWindow).Pose;
         if (!PoseClass) throw new Error('MediaPipe Pose no se cargó correctamente.');
 
         const pose = new PoseClass({
@@ -329,8 +355,7 @@ export default function PoseCoach({ exercise = 'general', exerciseName, onClose 
           minTrackingConfidence: 0.5,
         });
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        pose.onResults((results: any) => {
+        pose.onResults((results: MPPoseResults) => {
           if (cancelled) return;
           const canvas = canvasRef.current;
           if (!canvas) return;
@@ -341,16 +366,15 @@ export default function PoseCoach({ exercise = 'general', exerciseName, onClose 
           canvas.height = video.videoHeight || 480;
 
           ctx.clearRect(0, 0, canvas.width, canvas.height);
-          ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
+          ctx.drawImage(results.image as HTMLVideoElement, 0, 0, canvas.width, canvas.height);
 
           if (results.poseLandmarks) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const { drawConnectors, drawLandmarks, POSE_CONNECTIONS } = window as any;
-            if (drawConnectors) {
-              drawConnectors(ctx, results.poseLandmarks, POSE_CONNECTIONS, { color: '#00e5ff', lineWidth: 2 });
+            const mpWin = window as unknown as MPWindow;
+            if (mpWin.drawConnectors && mpWin.POSE_CONNECTIONS) {
+              mpWin.drawConnectors(ctx, results.poseLandmarks, mpWin.POSE_CONNECTIONS, { color: '#00e5ff', lineWidth: 2 });
             }
-            if (drawLandmarks) {
-              drawLandmarks(ctx, results.poseLandmarks, { color: '#ff0080', lineWidth: 1, radius: 3 });
+            if (mpWin.drawLandmarks) {
+              mpWin.drawLandmarks(ctx, results.poseLandmarks, { color: '#ff0080', lineWidth: 1, radius: 3 });
             }
 
             const rules = getRules(exercise, results.poseLandmarks as Landmarks);
@@ -367,8 +391,7 @@ export default function PoseCoach({ exercise = 'general', exerciseName, onClose 
             animFrameRef.current = requestAnimationFrame(frame);
             return;
           }
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          await (poseRef.current as any).send({ image: videoRef.current });
+          await poseRef.current!.send({ image: videoRef.current });
           animFrameRef.current = requestAnimationFrame(frame);
         }
 

@@ -36,7 +36,7 @@ function sleepSubScore(hours: number): number {
   }
   if (hours < 5) return Math.round((hours / 5) * 18);
   // > 9.5h (oversleeping)
-  return Math.round(50 - (hours - 9.5) * 10);
+  return Math.round(Math.max(0, 50 - (hours - 9.5) * 10));
 }
 
 /**

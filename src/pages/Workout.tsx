@@ -24,12 +24,17 @@ function formatDuration(seconds: number): string {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
+// ── Keyword sets for exercise type detection ──────────────────────────────────
+const ISOMETRIC_KEYWORDS = ['plancha', 'frog stand', 'isométrica', 'wall sit', 'estática', 'side plank'];
+const BODYWEIGHT_KEYWORDS = ['dominadas', 'fondos', 'flexiones', 'burpees', 'pull-up', 'dip'];
+const CARDIO_KEYWORDS = ['cardio', 'cuerda', 'correr', 'bicicleta', 'remo ergómetro', 'caminar', 'elíptica'];
+
 /** Isometric / keyword-based exercise type detector (fallback when exerciseType is not set) */
 function detectExerciseType(name: string): ExerciseType {
   const lower = name.toLowerCase();
-  if (['plancha', 'frog stand', 'isométrica', 'wall sit', 'estática', 'side plank'].some((k) => lower.includes(k))) return 'isometric';
-  if (['dominadas', 'fondos', 'flexiones', 'burpees', 'pull-up', 'dip'].some((k) => lower.includes(k))) return 'bodyweight';
-  if (['cardio', 'cuerda', 'correr', 'bicicleta', 'remo ergómetro', 'caminar', 'elíptica'].some((k) => lower.includes(k))) return 'cardio';
+  if (ISOMETRIC_KEYWORDS.some((k) => lower.includes(k))) return 'isometric';
+  if (BODYWEIGHT_KEYWORDS.some((k) => lower.includes(k))) return 'bodyweight';
+  if (CARDIO_KEYWORDS.some((k) => lower.includes(k))) return 'cardio';
   return 'weighted';
 }
 
@@ -1521,7 +1526,7 @@ export default function Workout() {
                       </div>
                     </div>
 
-                    {/* 1RM estimate (Epley formula) */}
+                    {/* 1RM estimate — Epley formula: 1RM = weight × (1 + reps/30) */}
                     {weightInput > 0 && repsInput > 1 && (
                       <p className="text-xs text-center text-gray-500 tabular-nums">
                         1RM estimado (Epley):{' '}

@@ -124,23 +124,23 @@ export default function Home() {
   const [showRecoveryCheckin, setShowRecoveryCheckin] = useState(false);
   const [checkinSleep, setCheckinSleep] = useState<string>('');
   const [checkinHRV, setCheckinHRV] = useState<string>('');
-  const todayDateKey2 = format(new Date(), 'yyyy-MM-dd');
-  const todayRecoveryLog = recoveryLogs.find((l) => l.date === todayDateKey2);
+  const todayRecoveryDate = format(new Date(), 'yyyy-MM-dd');
+  const todayRecoveryLog = recoveryLogs.find((l) => l.date === todayRecoveryDate);
 
   const handleSaveRecovery = useCallback(() => {
     const sleep = parseFloat(checkinSleep);
     const hrv = checkinHRV ? parseFloat(checkinHRV) : undefined;
     if (!sleep || sleep <= 0) return;
 
-    const pastLogs = recoveryLogs.filter((l) => l.date < todayDateKey2);
+    const pastLogs = recoveryLogs.filter((l) => l.date < todayRecoveryDate);
     const score = computeRecoveryScore(sleep, hrv, pastLogs as RecoveryLog[]);
-    addRecoveryLog({ date: todayDateKey2, sleepHours: sleep, hrv, score });
+    addRecoveryLog({ date: todayRecoveryDate, sleepHours: sleep, hrv, score });
     setShowRecoveryCheckin(false);
     setCheckinSleep('');
     setCheckinHRV('');
     const advice = getRecoveryAdvice(score);
     showToast({ type: 'success', title: `Recovery Score: ${score}/100 💤`, message: advice.intensityLabel });
-  }, [checkinSleep, checkinHRV, recoveryLogs, todayDateKey2, addRecoveryLog, showToast]);
+  }, [checkinSleep, checkinHRV, recoveryLogs, todayRecoveryDate, addRecoveryLog, showToast]);
 
   // Simulate progress bar while report is loading
   useEffect(() => {

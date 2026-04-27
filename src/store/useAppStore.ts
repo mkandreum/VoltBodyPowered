@@ -520,13 +520,19 @@ export const useAppStore = create<AppState>()(
       }),
       setNotificationsEnabled: (v) => set({ notificationsEnabled: v }),
       addRecoveryLog: (log) =>
-        set((state) => ({
-          // Keep one entry per day (newest wins)
-          recoveryLogs: [
-            ...state.recoveryLogs.filter((l) => l.date !== log.date),
-            log,
-          ].sort((a, b) => a.date.localeCompare(b.date)),
-        })),
+        set((state) => {
+          const existingIndex = state.recoveryLogs.findIndex((l) => l.date === log.date);
+          if (existingIndex >= 0) {
+            // Update existing entry for this date in-place (no re-sort needed)
+            const updated = [...state.recoveryLogs];
+            updated[existingIndex] = log;
+            return { recoveryLogs: updated };
+          }
+          // New date — append and sort once
+          return {
+            recoveryLogs: [...state.recoveryLogs, log].sort((a, b) => a.date.localeCompare(b.date)),
+          };
+        }),
     }),
     {
       name: 'voltbody-storage',
