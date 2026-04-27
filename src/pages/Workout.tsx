@@ -1,8 +1,8 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { useAppStore, Exercise, WorkoutDay } from '../store/useAppStore';
-import { ChevronLeft, Play, CheckCircle2, Dumbbell, PlusCircle, Trash2, Star, CalendarClock, Flame, BookOpen, Share2, Trophy, TrendingUp, History, Loader2, X } from 'lucide-react';
+import { useAppStore, Exercise, WorkoutDay, ExerciseType } from '../store/useAppStore';
+import { ChevronLeft, Play, CheckCircle2, Dumbbell, PlusCircle, Trash2, Star, CalendarClock, Flame, BookOpen, Share2, Trophy, TrendingUp, History, Loader2, X, Timer, Square } from 'lucide-react';
 import { workoutService } from '../services/workoutService';
 import { authService } from '../services/authService';
 import { enrichRoutine, routineNeedsEnrichment } from '../services/exerciseImageService';
@@ -16,7 +16,21 @@ import { getProgressiveSuggestion, getExerciseHistory } from '../lib/progressive
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import WorkoutSummaryCard from '../components/WorkoutSummaryCard';
 
+/** Format seconds as MM:SS */
+function formatDuration(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
 
+/** Isometric / keyword-based exercise type detector (fallback when exerciseType is not set) */
+function detectExerciseType(name: string): ExerciseType {
+  const lower = name.toLowerCase();
+  if (['plancha', 'frog stand', 'isométric', 'wall sit', 'estática', 'side plank'].some((k) => lower.includes(k))) return 'isometric';
+  if (['dominadas', 'fondos', 'flexiones', 'burpees', 'pull-up', 'dip'].some((k) => lower.includes(k))) return 'bodyweight';
+  if (['cardio', 'cuerda', 'correr', 'bicicleta', 'remo ergómetro', 'caminar', 'elíptica'].some((k) => lower.includes(k))) return 'cardio';
+  return 'weighted';
+}
 
 export default function Workout() {
   const {
@@ -45,6 +59,16 @@ export default function Workout() {
   const [weightInput, setWeightInput] = useState<number>(0);
   const [repsInput, setRepsInput] = useState<number>(0);
   const [setsInput, setSetsInput] = useState<number>(1);
+  // Isometric / cardio duration input (seconds)
+  const [durationInput, setDurationInput] = useState<number>(0);
+  // RPE 1-10 (isometric), -1 = not set
+  const [rpeInput, setRpeInput] = useState<number>(-1);
+  // RIR 0-4 (weighted/bodyweight), -1 = not set
+  const [rirInput, setRirInput] = useState<number>(-1);
+  // Active isometric timer
+  const [isometricRunning, setIsometricRunning] = useState(false);
+  const [isometricElapsed, setIsometricElapsed] = useState(0);
+  const activeTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const historyPushedRef = useRef(false);
   const [selectedMuscleGroup, setSelectedMuscleGroup] = useState<string>('Todos');
   const [selectedDayIndex, setSelectedDayIndex] = useState<number>(() => getMondayFirstIndex(new Date()));
@@ -61,7 +85,7 @@ export default function Workout() {
   const [isSharing, setIsSharing] = useState(false);
   const summaryCardRef = useRef<HTMLDivElement>(null);
   // State for editing a previously logged set
-  const [editingSet, setEditingSet] = useState<{ logIndex: number; weight: number; reps: number } | null>(null);
+  const [editingSet, setEditingSet] = useState<{ logIndex: number; weight: number; reps: number; duration?: number; rpe?: number } | null>(null);
 
   // Stable callback passed to WeightCalculator — avoids stale-closure issue with onWeightChange
   const handleCalculatorWeightChange = useCallback((w: number) => setWeightInput(w), []);
@@ -72,6 +96,15 @@ export default function Workout() {
     setShowTechnique(false);
     setShowHistory(false);
     setEditingSet(null);
+    setDurationInput(0);
+    setRpeInput(-1);
+    setRirInput(-1);
+    setIsometricRunning(false);
+    setIsometricElapsed(0);
+    if (activeTimerRef.current) {
+      clearInterval(activeTimerRef.current);
+      activeTimerRef.current = null;
+    }
     if (historyPushedRef.current) {
       historyPushedRef.current = false;
       window.history.back();
@@ -198,6 +231,25 @@ export default function Workout() {
     }, new Map());
   }, [logs]);
 
+  // Best duration ever logged per exerciseId (for isometric exercises)
+  const personalBestTimes = useMemo(() => {
+    return logs.reduce<Map<string, number>>((acc, log) => {
+      if (log.duration === undefined) return acc;
+      const prev = acc.get(log.exerciseId) ?? 0;
+      if (log.duration > prev) acc.set(log.exerciseId, log.duration);
+      return acc;
+    }, new Map());
+  }, [logs]);
+
+  // Derived exercise type for the currently selected exercise
+  const currentExerciseType = useMemo((): ExerciseType => {
+    if (!selectedExercise) return 'weighted';
+    if (selectedExercise.exerciseType) return selectedExercise.exerciseType;
+    const libEntry = exerciseLibrary.find((e) => e.id === selectedExercise.id);
+    if (libEntry?.exerciseType) return libEntry.exerciseType;
+    return detectExerciseType(selectedExercise.name);
+  }, [selectedExercise, exerciseLibrary]);
+
   // Most recently logged weight per exerciseId
   const lastWeights = useMemo(() => {
     return logs.reduce<Map<string, { weight: number; date: string }>>((acc, log) => {
@@ -233,7 +285,10 @@ export default function Workout() {
   }, []);
 
   // Cleanup on unmount
-  useEffect(() => () => { if (restIntervalRef.current) clearInterval(restIntervalRef.current); }, []);
+  useEffect(() => () => {
+    if (restIntervalRef.current) clearInterval(restIntervalRef.current);
+    if (activeTimerRef.current) clearInterval(activeTimerRef.current);
+  }, []);
 
   // Fire completion celebration once when all exercises are done; reset when session changes.
   // Only trigger for today's session (not when viewing a past completed day).
@@ -359,13 +414,119 @@ export default function Workout() {
   };
 
   const handleLog = async () => {
-    if (selectedExercise && weightInput > 0 && repsInput > 0) {
-      const count = Math.max(1, setsInput);
+    if (!selectedExercise) return;
+
+    const count = Math.max(1, setsInput);
+
+    // ── Isometric / Cardio (duration-based) ─────────────────────────
+    if (currentExerciseType === 'isometric' || currentExerciseType === 'cardio') {
+      if (durationInput <= 0) return;
+      const newLogs = Array.from({ length: count }, () => ({
+        date: new Date().toISOString(),
+        exerciseId: selectedExercise.id,
+        weight: 0,
+        reps: 0,
+        duration: durationInput,
+        ...(rpeInput >= 1 ? { rpe: rpeInput } : {}),
+      }));
+      newLogs.forEach((log) => addLog(log));
+      setSyncStatus('local');
+      startRestTimer(60);
+
+      if (authToken) {
+        try {
+          setSyncStatus('syncing');
+          await Promise.all(newLogs.map((log) => workoutService.addLog(authToken, log)));
+          setSyncStatus('synced');
+        } catch {
+          setSyncStatus('error');
+        }
+      }
+
+      const durationLabel = currentExerciseType === 'cardio'
+        ? `${Math.round(durationInput / 60)} min`
+        : formatDuration(durationInput);
+      showToast({
+        type: 'success',
+        title: count > 1 ? `${count} series guardadas 💪` : 'Serie guardada 💪',
+        message: rpeInput >= 1 ? `${durationLabel} · RPE ${rpeInput}` : durationLabel,
+      });
+
+      // Progressive suggestion for isometric: beat target 3 times → suggest harder variant
+      if (currentExerciseType === 'isometric' && selectedExercise.durationTarget) {
+        const target = selectedExercise.durationTarget;
+        if (durationInput >= target) {
+          const pastBeats = logs
+            .filter((l) => l.exerciseId === selectedExercise.id && (l.duration ?? 0) >= target)
+            .length;
+          if (pastBeats >= 2) {
+            showToast({
+              type: 'info',
+              title: '🔥 ¡Objetivo isométrico superado!',
+              message: 'Considera una variante más exigente en la próxima sesión.',
+            });
+          }
+        }
+      }
+
+      setDurationInput(0);
+      setRpeInput(-1);
+      setSetsInput(1);
+      setIsometricElapsed(0);
+      return;
+    }
+
+    // ── Bodyweight (reps, no weight required) ────────────────────────
+    if (currentExerciseType === 'bodyweight') {
+      if (repsInput <= 0) return;
+      const bodyWeight = profile?.weight ?? 0;
+      const newLogs = Array.from({ length: count }, () => ({
+        date: new Date().toISOString(),
+        exerciseId: selectedExercise.id,
+        weight: bodyWeight,
+        reps: repsInput,
+        ...(rirInput >= 0 ? { rir: rirInput } : {}),
+      }));
+      newLogs.forEach((log) => addLog(log));
+      setSyncStatus('local');
+      startRestTimer(90);
+
+      if (authToken) {
+        try {
+          setSyncStatus('syncing');
+          await Promise.all(newLogs.map((log) => workoutService.addLog(authToken, log)));
+          setSyncStatus('synced');
+        } catch {
+          setSyncStatus('error');
+        }
+      }
+
+      showToast({
+        type: 'success',
+        title: count > 1 ? `${count} series guardadas 💪` : 'Serie guardada 💪',
+        message: rirInput >= 0 ? `${repsInput} reps · RIR ${rirInput}` : `${repsInput} reps`,
+      });
+
+      const newAchievements = checkNewAchievements([...logs, ...newLogs], achievements.map((a) => a.id), selectedExercise.id, bodyWeight);
+      newAchievements.forEach((a) => {
+        addAchievement(a);
+        showToast({ type: 'success', title: `🏅 Logro desbloqueado: ${a.label}`, message: a.description });
+      });
+
+      setRepsInput(0);
+      setRirInput(-1);
+      setSetsInput(1);
+      return;
+    }
+
+    // ── Weighted (default) ───────────────────────────────────────────
+    if (weightInput > 0 && repsInput > 0) {
       const newLogs = Array.from({ length: count }, () => ({
         date: new Date().toISOString(),
         exerciseId: selectedExercise.id,
         weight: weightInput,
         reps: repsInput,
+        ...(rirInput >= 0 ? { rir: rirInput } : {}),
       }));
 
       newLogs.forEach((log) => addLog(log));
@@ -387,10 +548,10 @@ export default function Workout() {
       showToast({
         type: 'success',
         title: count > 1 ? `${count} series guardadas 💪` : 'Serie guardada 💪',
-        message: `${weightInput}kg x ${repsInput} reps`,
+        message: rirInput >= 0 ? `${weightInput}kg x ${repsInput} reps · RIR ${rirInput}` : `${weightInput}kg x ${repsInput} reps`,
       });
 
-      // Check achievements (use logs before this save + newLogs for combined state)
+      // Check achievements
       const newAchievements = checkNewAchievements(
         [...logs, ...newLogs],
         achievements.map((a) => a.id),
@@ -416,9 +577,12 @@ export default function Workout() {
 
       setWeightInput(0);
       setRepsInput(0);
+      setRirInput(-1);
       setSetsInput(1);
     }
   };
+
+  // End of handleLog
 
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     e.currentTarget.src = 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=400&auto=format&fit=crop';
@@ -836,18 +1000,42 @@ export default function Workout() {
             <div className="flex-1 min-h-0 px-4 py-3 sm:p-6 flex flex-col overflow-y-auto">
               <h2 className="text-xl sm:text-3xl font-bold text-white mb-1 sm:mb-2">{selectedExercise.name}</h2>
               {(() => {
+                // Isometric: show best hold time
+                if (currentExerciseType === 'isometric') {
+                  const bestTime = personalBestTimes.get(selectedExercise.id);
+                  const lastLog = logs
+                    .filter((l) => l.exerciseId === selectedExercise.id && l.duration !== undefined)
+                    .sort((a, b) => b.date.localeCompare(a.date))[0];
+                  if (!bestTime && !lastLog) return null;
+                  return (
+                    <div className="flex flex-col gap-1 mb-2">
+                      {bestTime !== undefined && (
+                        <span className="text-xs font-mono text-yellow-400 flex items-center gap-1">
+                          <Trophy size={12} />
+                          Mejor tiempo: {formatDuration(bestTime)}
+                        </span>
+                      )}
+                      {lastLog?.duration !== undefined && (
+                        <span className="text-xs font-mono text-gray-400 flex items-center gap-1">
+                          Último: {formatDuration(lastLog.duration)}{lastLog.rpe ? ` · RPE ${lastLog.rpe}` : ''}
+                        </span>
+                      )}
+                    </div>
+                  );
+                }
+                // Weighted / bodyweight: show best weight
                 const prWeight = personalRecords.get(selectedExercise.id);
                 const lastEntry = lastWeights.get(selectedExercise.id);
                 if (!prWeight && !lastEntry) return null;
                 return (
                   <div className="flex flex-col gap-1 mb-2">
-                    {prWeight && (
+                    {prWeight && prWeight > 0 && (
                       <span className="text-xs font-mono text-yellow-400 flex items-center gap-1">
                         <Trophy size={12} />
                         Mejor marca: {prWeight}kg
                       </span>
                     )}
-                    {lastEntry && (
+                    {lastEntry && lastEntry.weight > 0 && (
                       <span className="text-xs font-mono text-gray-400 flex items-center gap-1">
                         Último peso registrado: {lastEntry.weight}kg
                       </span>
@@ -860,17 +1048,22 @@ export default function Workout() {
                   {selectedExercise.muscleGroup}
                 </span>
                 <span className="neuro-inset px-4 py-2 rounded-full text-sm text-gray-300 font-mono">
+                  {currentExerciseType === 'isometric' ? '⏱ Isométrico' :
+                   currentExerciseType === 'bodyweight' ? '🤸 Peso corporal' :
+                   currentExerciseType === 'cardio' ? '🏃 Cardio' : '🏋️ Con peso'}
+                </span>
+                <span className="neuro-inset px-4 py-2 rounded-full text-sm text-gray-300 font-mono">
                   {selectedExercise.sets} x {selectedExercise.reps}
                 </span>
-                {selectedExercise.weight > 0 && (
+                {currentExerciseType === 'weighted' && selectedExercise.weight > 0 && (
                   <span className="neuro-inset px-4 py-2 rounded-full text-sm text-gray-300 font-mono">
                     Meta: <span className="app-accent font-bold">{selectedExercise.weight} kg</span>
                   </span>
                 )}
               </div>
 
-              {/* Progressive overload suggestion */}
-              {progressiveSuggestion && (
+              {/* Progressive overload suggestion (weighted only) */}
+              {progressiveSuggestion && currentExerciseType === 'weighted' && (
                 <motion.div
                   initial={{ opacity: 0, y: -8 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -952,7 +1145,7 @@ export default function Workout() {
                               onClick={() => {
                                 if (logIndex === undefined) return;
                                 const log = logs[logIndex];
-                                setEditingSet({ logIndex, weight: log.weight, reps: log.reps });
+                                setEditingSet({ logIndex, weight: log.weight, reps: log.reps, duration: log.duration, rpe: log.rpe });
                               }}
                               className="w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold transition-all bg-[color:var(--app-accent)] text-black hover:opacity-80 active:scale-95 cursor-pointer"
                             >
@@ -997,37 +1190,65 @@ export default function Workout() {
                           ✕
                         </button>
                       </div>
-                      <div className="grid grid-cols-2 gap-3 mb-3">
-                        <div>
-                          <label className="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider">Peso (kg)</label>
-                          <input
-                            type="number"
-                            inputMode="decimal"
-                            value={editingSet.weight || ''}
-                            onChange={(e) => setEditingSet((prev) => prev ? { ...prev, weight: Number(e.target.value) } : null)}
-                            className="w-full input-field rounded-2xl p-2.5 text-lg font-semibold text-center"
-                            placeholder="0"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider">Reps</label>
+                      {currentExerciseType === 'isometric' || currentExerciseType === 'cardio' ? (
+                        <div className="mb-3">
+                          <label className="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider">
+                            {currentExerciseType === 'cardio' ? 'Duración (min)' : 'Duración (seg)'}
+                          </label>
                           <input
                             type="number"
                             inputMode="numeric"
-                            value={editingSet.reps || ''}
-                            onChange={(e) => setEditingSet((prev) => prev ? { ...prev, reps: Number(e.target.value) } : null)}
+                            value={editingSet.duration ?? ''}
+                            onChange={(e) => setEditingSet((prev) => prev ? { ...prev, duration: Number(e.target.value) } : null)}
                             className="w-full input-field rounded-2xl p-2.5 text-lg font-semibold text-center"
                             placeholder="0"
                           />
                         </div>
-                      </div>
+                      ) : (
+                        <div className="grid grid-cols-2 gap-3 mb-3">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider">
+                              {currentExerciseType === 'bodyweight' ? 'Peso corporal (kg)' : 'Peso (kg)'}
+                            </label>
+                            <input
+                              type="number"
+                              inputMode="decimal"
+                              value={editingSet.weight || ''}
+                              onChange={(e) => setEditingSet((prev) => prev ? { ...prev, weight: Number(e.target.value) } : null)}
+                              className="w-full input-field rounded-2xl p-2.5 text-lg font-semibold text-center"
+                              placeholder="0"
+                              readOnly={currentExerciseType === 'bodyweight'}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider">Reps</label>
+                            <input
+                              type="number"
+                              inputMode="numeric"
+                              value={editingSet.reps || ''}
+                              onChange={(e) => setEditingSet((prev) => prev ? { ...prev, reps: Number(e.target.value) } : null)}
+                              className="w-full input-field rounded-2xl p-2.5 text-lg font-semibold text-center"
+                              placeholder="0"
+                            />
+                          </div>
+                        </div>
+                      )}
                       <button
                         type="button"
-                        disabled={!editingSet.weight || !editingSet.reps}
+                        disabled={
+                          (currentExerciseType === 'isometric' || currentExerciseType === 'cardio')
+                            ? !editingSet.duration
+                            : !editingSet.reps
+                        }
                         onClick={() => {
                           if (!editingSet) return;
-                          updateLog(editingSet.logIndex, { weight: editingSet.weight, reps: editingSet.reps });
-                          showToast({ type: 'success', title: 'Serie actualizada ✏️', message: `${editingSet.weight}kg × ${editingSet.reps} reps` });
+                          if (currentExerciseType === 'isometric' || currentExerciseType === 'cardio') {
+                            updateLog(editingSet.logIndex, { duration: editingSet.duration });
+                            showToast({ type: 'success', title: 'Serie actualizada ✏️', message: `${editingSet.duration}s` });
+                          } else {
+                            updateLog(editingSet.logIndex, { weight: editingSet.weight, reps: editingSet.reps });
+                            showToast({ type: 'success', title: 'Serie actualizada ✏️', message: `${editingSet.weight}kg × ${editingSet.reps} reps` });
+                          }
                           setEditingSet(null);
                         }}
                         className="w-full primary-btn font-bold py-2.5 rounded-xl tap-target disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1038,61 +1259,278 @@ export default function Workout() {
                   )}
                 </AnimatePresence>
 
-                {/* Smart Weight Calculator */}
-                <WeightCalculator
-                  exerciseId={selectedExercise.id}
-                  exerciseName={selectedExercise.name}
-                  targetWeight={selectedExercise.weight}
-                  userBodyweight={profile?.weight}
-                  onWeightChange={handleCalculatorWeightChange}
-                />
-                
-                <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1 sm:mb-2 uppercase tracking-wider">Peso (kg)</label>
-                    <input
-                      type="number"
-                      inputMode="decimal"
-                      value={weightInput || ''}
-                      onChange={(e) => setWeightInput(Number(e.target.value))}
-                      className="w-full input-field rounded-2xl p-2.5 sm:p-4 text-lg sm:text-2xl font-semibold text-center"
-                      placeholder="0"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1 sm:mb-2 uppercase tracking-wider">Reps</label>
-                    <input
-                      type="number"
-                      inputMode="numeric"
-                      value={repsInput || ''}
-                      onChange={(e) => setRepsInput(Number(e.target.value))}
-                      className="w-full input-field rounded-2xl p-2.5 sm:p-4 text-lg sm:text-2xl font-semibold text-center"
-                      placeholder="0"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1 sm:mb-2 uppercase tracking-wider">Series</label>
-                    <input
-                      type="number"
-                      inputMode="numeric"
-                      min={1}
-                      max={10}
-                      value={setsInput || ''}
-                      onChange={(e) => setSetsInput(Math.max(1, Number(e.target.value)))}
-                      className="w-full input-field rounded-2xl p-2.5 sm:p-4 text-lg sm:text-2xl font-semibold text-center"
-                      placeholder="1"
-                    />
-                  </div>
-                </div>
+                {/* ── Isometric form ── */}
+                {(currentExerciseType === 'isometric' || currentExerciseType === 'cardio') && (
+                  <div className="space-y-3 mb-3">
+                    {/* Active hold timer (isometric only) */}
+                    {currentExerciseType === 'isometric' && (
+                      <div className="neuro-inset rounded-2xl p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-xs uppercase tracking-wider text-gray-500 font-medium">Timer en vivo</span>
+                          <span className="text-2xl font-black text-white tabular-nums">
+                            {formatDuration(isometricElapsed)}
+                          </span>
+                        </div>
+                        {isometricRunning ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsometricRunning(false);
+                              if (activeTimerRef.current) {
+                                clearInterval(activeTimerRef.current);
+                                activeTimerRef.current = null;
+                              }
+                              setDurationInput(isometricElapsed);
+                              setIsometricElapsed(0);
+                            }}
+                            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-red-500/20 border border-red-500/40 text-red-400 font-bold text-sm tap-target"
+                          >
+                            <Square size={14} fill="currentColor" />
+                            DETENER — {formatDuration(isometricElapsed)}
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsometricElapsed(0);
+                              setIsometricRunning(true);
+                              if (activeTimerRef.current) clearInterval(activeTimerRef.current);
+                              activeTimerRef.current = setInterval(() => {
+                                setIsometricElapsed((prev) => prev + 1);
+                              }, 1000);
+                            }}
+                            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-[color:var(--app-accent)]/10 border border-[color:var(--app-accent)]/30 text-[var(--app-accent)] font-bold text-sm tap-target"
+                          >
+                            <Timer size={14} />
+                            Iniciar serie en vivo
+                          </button>
+                        )}
+                      </div>
+                    )}
 
-                {/* Last session context */}
-                {lastSessionLog && (
-                  <p className="text-xs text-gray-500 text-center tabular-nums">
-                    Última vez:{' '}
-                    <span className="text-white/70 font-medium">
-                      {lastSessionLog.weight}kg × {lastSessionLog.reps} reps
-                    </span>
-                  </p>
+                    <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1 sm:mb-2 uppercase tracking-wider">
+                          {currentExerciseType === 'cardio' ? 'Duración (min)' : 'Duración (seg)'}
+                        </label>
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          value={durationInput || ''}
+                          onChange={(e) => setDurationInput(Math.max(0, Number(e.target.value)))}
+                          className="w-full input-field rounded-2xl p-2.5 sm:p-4 text-lg sm:text-2xl font-semibold text-center"
+                          placeholder="0"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1 sm:mb-2 uppercase tracking-wider">Series</label>
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          min={1}
+                          max={10}
+                          value={setsInput || ''}
+                          onChange={(e) => setSetsInput(Math.max(1, Number(e.target.value)))}
+                          className="w-full input-field rounded-2xl p-2.5 sm:p-4 text-lg sm:text-2xl font-semibold text-center"
+                          placeholder="1"
+                        />
+                      </div>
+                    </div>
+
+                    {/* RPE (isometric only) */}
+                    {currentExerciseType === 'isometric' && (
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-2 uppercase tracking-wider">
+                          RPE <span className="normal-case text-gray-600">(esfuerzo 1-10, opcional)</span>
+                        </label>
+                        <div className="flex gap-1.5 flex-wrap">
+                          {[1,2,3,4,5,6,7,8,9,10].map((r) => (
+                            <button
+                              key={r}
+                              type="button"
+                              onClick={() => setRpeInput((prev) => prev === r ? -1 : r)}
+                              className={`w-9 h-9 rounded-xl text-sm font-bold transition-all tap-target ${
+                                rpeInput === r
+                                  ? 'bg-[color:var(--app-accent)] text-black'
+                                  : 'neuro-inset text-gray-500 hover:text-white'
+                              }`}
+                            >
+                              {r}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Last session context for isometric */}
+                    {lastSessionLog?.duration !== undefined && (
+                      <p className="text-xs text-gray-500 text-center tabular-nums">
+                        Última vez: <span className="text-white/70 font-medium">{formatDuration(lastSessionLog.duration)}</span>
+                        {lastSessionLog.rpe ? <span className="text-gray-500"> · RPE {lastSessionLog.rpe}</span> : null}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* ── Bodyweight form ── */}
+                {currentExerciseType === 'bodyweight' && (
+                  <div className="space-y-3 mb-3">
+                    {profile?.weight && (
+                      <div className="neuro-inset rounded-xl p-3 flex items-center gap-3">
+                        <span className="text-2xl">🤸</span>
+                        <div>
+                          <p className="text-xs text-gray-500 uppercase tracking-wider">Peso corporal (referencia)</p>
+                          <p className="text-lg font-black text-white">{profile.weight} kg</p>
+                        </div>
+                      </div>
+                    )}
+                    <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1 sm:mb-2 uppercase tracking-wider">Reps</label>
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          value={repsInput || ''}
+                          onChange={(e) => setRepsInput(Number(e.target.value))}
+                          className="w-full input-field rounded-2xl p-2.5 sm:p-4 text-lg sm:text-2xl font-semibold text-center"
+                          placeholder="0"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1 sm:mb-2 uppercase tracking-wider">Series</label>
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          min={1}
+                          max={10}
+                          value={setsInput || ''}
+                          onChange={(e) => setSetsInput(Math.max(1, Number(e.target.value)))}
+                          className="w-full input-field rounded-2xl p-2.5 sm:p-4 text-lg sm:text-2xl font-semibold text-center"
+                          placeholder="1"
+                        />
+                      </div>
+                    </div>
+                    {/* RIR */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-2 uppercase tracking-wider">
+                        RIR <span className="normal-case text-gray-600">(reps al fallo, opcional)</span>
+                      </label>
+                      <div className="flex gap-2">
+                        {[0,1,2,3,4].map((r) => (
+                          <button
+                            key={r}
+                            type="button"
+                            onClick={() => setRirInput((prev) => prev === r ? -1 : r)}
+                            className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all tap-target ${
+                              rirInput === r ? 'bg-[color:var(--app-accent)] text-black' : 'neuro-inset text-gray-500'
+                            }`}
+                          >
+                            {r}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    {lastSessionLog && lastSessionLog.reps > 0 && (
+                      <p className="text-xs text-gray-500 text-center tabular-nums">
+                        Última vez: <span className="text-white/70 font-medium">{lastSessionLog.reps} reps</span>
+                        {lastSessionLog.rir !== undefined ? <span className="text-gray-500"> · RIR {lastSessionLog.rir}</span> : null}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* ── Weighted form (default) ── */}
+                {currentExerciseType === 'weighted' && (
+                  <div className="space-y-3 mb-3">
+                    {/* Smart Weight Calculator */}
+                    <WeightCalculator
+                      exerciseId={selectedExercise.id}
+                      exerciseName={selectedExercise.name}
+                      targetWeight={selectedExercise.weight}
+                      userBodyweight={profile?.weight}
+                      onWeightChange={handleCalculatorWeightChange}
+                    />
+
+                    <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1 sm:mb-2 uppercase tracking-wider">Peso (kg)</label>
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          value={weightInput || ''}
+                          onChange={(e) => setWeightInput(Number(e.target.value))}
+                          className="w-full input-field rounded-2xl p-2.5 sm:p-4 text-lg sm:text-2xl font-semibold text-center"
+                          placeholder="0"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1 sm:mb-2 uppercase tracking-wider">Reps</label>
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          value={repsInput || ''}
+                          onChange={(e) => setRepsInput(Number(e.target.value))}
+                          className="w-full input-field rounded-2xl p-2.5 sm:p-4 text-lg sm:text-2xl font-semibold text-center"
+                          placeholder="0"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1 sm:mb-2 uppercase tracking-wider">Series</label>
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          min={1}
+                          max={10}
+                          value={setsInput || ''}
+                          onChange={(e) => setSetsInput(Math.max(1, Number(e.target.value)))}
+                          className="w-full input-field rounded-2xl p-2.5 sm:p-4 text-lg sm:text-2xl font-semibold text-center"
+                          placeholder="1"
+                        />
+                      </div>
+                    </div>
+
+                    {/* 1RM estimate (Epley formula) */}
+                    {weightInput > 0 && repsInput > 1 && (
+                      <p className="text-xs text-center text-gray-500 tabular-nums">
+                        1RM estimado (Epley):{' '}
+                        <span className="text-[var(--app-accent)] font-bold">
+                          {Math.round(weightInput * (1 + repsInput / 30))} kg
+                        </span>
+                      </p>
+                    )}
+
+                    {/* RIR */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-2 uppercase tracking-wider">
+                        RIR <span className="normal-case text-gray-600">(reps al fallo, opcional)</span>
+                      </label>
+                      <div className="flex gap-2">
+                        {[0,1,2,3,4].map((r) => (
+                          <button
+                            key={r}
+                            type="button"
+                            onClick={() => setRirInput((prev) => prev === r ? -1 : r)}
+                            className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all tap-target ${
+                              rirInput === r ? 'bg-[color:var(--app-accent)] text-black' : 'neuro-inset text-gray-500'
+                            }`}
+                          >
+                            {r}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Last session context */}
+                    {lastSessionLog && lastSessionLog.weight > 0 && (
+                      <p className="text-xs text-gray-500 text-center tabular-nums">
+                        Última vez:{' '}
+                        <span className="text-white/70 font-medium">
+                          {lastSessionLog.weight}kg × {lastSessionLog.reps} reps
+                        </span>
+                        {lastSessionLog.rir !== undefined ? <span className="text-gray-500"> · RIR {lastSessionLog.rir}</span> : null}
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
 
@@ -1123,25 +1561,42 @@ export default function Workout() {
                       ) : (
                         <div className="neuro-inset rounded-2xl p-4">
                           {/* PR summary */}
-                          {(() => {
-                            const prWeight = Math.max(...exerciseHistory.map((s) => s.maxWeight));
-                            const prReps = Math.max(...exerciseHistory.map((s) => s.maxReps));
-                            return (
-                              <div className="flex gap-3 mb-4">
-                                <div className="flex-1 neuro-raised rounded-xl p-3 text-center">
-                                  <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">🥇 PR Peso</p>
-                                  <p className="text-lg font-black text-yellow-400">{prWeight} kg</p>
-                                </div>
-                                <div className="flex-1 neuro-raised rounded-xl p-3 text-center">
-                                  <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">🔁 PR Reps</p>
-                                  <p className="text-lg font-black text-yellow-400">{prReps}</p>
-                                </div>
+                          {currentExerciseType === 'isometric' ? (
+                            <div className="flex gap-3 mb-4">
+                              <div className="flex-1 neuro-raised rounded-xl p-3 text-center">
+                                <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">⏱ PR Tiempo</p>
+                                <p className="text-lg font-black text-yellow-400">
+                                  {formatDuration(personalBestTimes.get(selectedExercise.id) ?? 0)}
+                                </p>
                               </div>
-                            );
-                          })()}
+                              <div className="flex-1 neuro-raised rounded-xl p-3 text-center">
+                                <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">📊 Sesiones</p>
+                                <p className="text-lg font-black text-yellow-400">{exerciseHistory.length}</p>
+                              </div>
+                            </div>
+                          ) : (
+                            (() => {
+                              const prWeight = Math.max(...exerciseHistory.map((s) => s.maxWeight));
+                              const prReps = Math.max(...exerciseHistory.map((s) => s.maxReps));
+                              return (
+                                <div className="flex gap-3 mb-4">
+                                  <div className="flex-1 neuro-raised rounded-xl p-3 text-center">
+                                    <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">🥇 PR Peso</p>
+                                    <p className="text-lg font-black text-yellow-400">{prWeight} kg</p>
+                                  </div>
+                                  <div className="flex-1 neuro-raised rounded-xl p-3 text-center">
+                                    <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">🔁 PR Reps</p>
+                                    <p className="text-lg font-black text-yellow-400">{prReps}</p>
+                                  </div>
+                                </div>
+                              );
+                            })()
+                          )}
 
-                          {/* Weight progression chart */}
-                          <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-2">Progresión de peso</p>
+                          {/* Progression chart */}
+                          <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-2">
+                            {currentExerciseType === 'isometric' ? 'Progresión de tiempo' : 'Progresión de peso'}
+                          </p>
                           <ResponsiveContainer width="100%" height={120}>
                             <LineChart data={exerciseHistory} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                               <XAxis
@@ -1154,7 +1609,7 @@ export default function Workout() {
                               <Tooltip
                                 contentStyle={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)', borderRadius: 8, fontSize: 11 }}
                                 labelFormatter={(d: string) => d}
-                                formatter={(v: number) => [`${v} kg`, 'Peso']}
+                                formatter={(v: number) => [currentExerciseType === 'isometric' ? `${v}s` : `${v} kg`, currentExerciseType === 'isometric' ? 'Duración' : 'Peso']}
                               />
                               <Line
                                 type="monotone"
@@ -1173,9 +1628,15 @@ export default function Workout() {
                             {[...exerciseHistory].reverse().map((s) => (
                               <div key={s.date} className="flex items-center justify-between text-xs">
                                 <span className="text-gray-400 font-mono">{s.date}</span>
-                                <span className="text-white font-medium">{s.maxWeight} kg</span>
+                                {currentExerciseType === 'isometric' ? (
+                                  <span className="text-white font-medium">{formatDuration(s.maxWeight)}</span>
+                                ) : (
+                                  <span className="text-white font-medium">{s.maxWeight} kg</span>
+                                )}
                                 <span className="text-gray-500">{s.sets} sets</span>
-                                <span className="text-gray-500">Vol: {Math.round(s.totalVolume)}</span>
+                                {currentExerciseType !== 'isometric' && (
+                                  <span className="text-gray-500">Vol: {Math.round(s.totalVolume)}</span>
+                                )}
                               </div>
                             ))}
                           </div>
@@ -1189,15 +1650,25 @@ export default function Workout() {
 
             {/* Sticky save button – always visible at the bottom of the sheet */}
             <div className="px-6 pt-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] border-t border-[var(--app-border)] bg-[var(--app-bg)]">
-              <motion.button
-                onClick={handleLog}
-                disabled={!weightInput || !repsInput}
-                whileTap={!weightInput || !repsInput ? {} : { scale: [1, 1.06, 0.97, 1.02, 1] }}
-                transition={{ duration: 0.45, ease: [0.2, 0.9, 0.4, 1.1] }}
-                className="w-full tap-target primary-btn ripple-host font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {setsInput > 1 ? `Guardar ${setsInput} series 💾` : 'Guardar Serie 💾'}
-              </motion.button>
+              {(() => {
+                const isDisabled =
+                  currentExerciseType === 'isometric' || currentExerciseType === 'cardio'
+                    ? durationInput <= 0
+                    : currentExerciseType === 'bodyweight'
+                    ? repsInput <= 0
+                    : !weightInput || !repsInput;
+                return (
+                  <motion.button
+                    onClick={handleLog}
+                    disabled={isDisabled}
+                    whileTap={isDisabled ? {} : { scale: [1, 1.06, 0.97, 1.02, 1] }}
+                    transition={{ duration: 0.45, ease: [0.2, 0.9, 0.4, 1.1] }}
+                    className="w-full tap-target primary-btn ripple-host font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {setsInput > 1 ? `Guardar ${setsInput} series 💾` : 'Guardar Serie 💾'}
+                  </motion.button>
+                );
+              })()}
             </div>
           </motion.div>
         )}

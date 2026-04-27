@@ -1,7 +1,7 @@
-import { useMemo, useState, useRef, useEffect } from 'react';
+import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore } from '../store/useAppStore';
-import { Dumbbell, Utensils, Flame, Moon, Activity, Sparkles, Quote, Clock3, Camera, Zap } from 'lucide-react';
+import { Dumbbell, Utensils, Flame, Moon, Activity, Sparkles, Quote, Clock3, Camera, Zap, Heart, Bluetooth, BluetoothOff } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { format, subDays, isValid, startOfWeek, endOfWeek } from 'date-fns';
 import { AppCard, SectionHeader, StatPill } from '../components/ui';
@@ -10,6 +10,8 @@ import { getMondayFirstIndex, mapRoutineByWeekday, computeSmartStreak } from '..
 import { workoutService } from '../services/workoutService';
 import { generateProgressReport, ProgressReport } from '../services/geminiService';
 import { ACHIEVEMENTS_CATALOG } from '../lib/achievements';
+import { BLEHeartRateService, isBLESupported, type BLEConnectionState, type HRPayload } from '../services/BLEHeartRateService';
+import { computeFatigueIndex, fatigueStatusLabel, fatigueStatusColor } from '../lib/fatigueIndex';
 
 /** Circular SVG progress ring */
 function CircularProgress({ value, size = 64 }: { value: number; size?: number }) {
@@ -72,6 +74,50 @@ export default function Home() {
   const [report, setReport] = useState<ProgressReport | null>(null);
   // Track whether the chart has animated once — avoid re-animating on every state update
   const chartAnimatedRef = useRef(false);
+
+  // BLE Heart Rate state
+  const [bleState, setBleState] = useState<BLEConnectionState>('disconnected');
+  const [heartRate, setHeartRate] = useState<number | null>(null);
+  const [bleDeviceName, setBleDeviceName] = useState<string | null>(null);
+  const bleServiceRef = useRef<BLEHeartRateService | null>(null);
+
+  const handleHRUpdate = useCallback((payload: HRPayload) => {
+    setHeartRate(payload.bpm);
+  }, []);
+
+  const handleBLEStateChange = useCallback((state: BLEConnectionState) => {
+    setBleState(state);
+    if (state === 'disconnected') {
+      setHeartRate(null);
+      setBleDeviceName(null);
+    }
+  }, []);
+
+  const connectBLE = useCallback(async () => {
+    if (!bleServiceRef.current) {
+      bleServiceRef.current = new BLEHeartRateService(handleHRUpdate, handleBLEStateChange);
+    }
+    try {
+      await bleServiceRef.current.connect();
+      setBleDeviceName(bleServiceRef.current.deviceName);
+    } catch (err) {
+      showToast({
+        type: 'error',
+        title: 'Error Bluetooth',
+        message: err instanceof Error ? err.message : 'No se pudo conectar al sensor.',
+      });
+    }
+  }, [handleHRUpdate, handleBLEStateChange, showToast]);
+
+  const disconnectBLE = useCallback(() => {
+    bleServiceRef.current?.disconnect();
+    bleServiceRef.current = null;
+  }, []);
+
+  // Cleanup BLE on unmount
+  useEffect(() => {
+    return () => { bleServiceRef.current?.disconnect(); };
+  }, []);
 
   // Simulate progress bar while report is loading
   useEffect(() => {
@@ -236,6 +282,9 @@ export default function Home() {
 
   // Estimated workout duration based on number of exercises
   const estimatedMinutes = (todayRoutine?.exercises?.length || 0) * MINUTES_PER_EXERCISE;
+
+  // Fatigue Index per muscle group for the current week
+  const fatigueData = useMemo(() => computeFatigueIndex(logs, routine), [logs, routine]);
 
   const sleepScore = useMemo(() => {
     if (!insights?.sleepRecommendation) return 72;
@@ -573,7 +622,7 @@ export default function Home() {
             <AppCard interactive className="h-full p-4 glass-panel">
               <div className="flex items-center justify-between mb-3">
                 <card.icon className="app-accent" size={18} />
-                <StatPill label="status" value="live" />
+                <StatPill label="estimado" value="calc" />
               </div>
               <p className="text-2xl font-black text-white tracking-tight">{card.value}</p>
               <p className="text-xs uppercase tracking-wider text-gray-500 mt-1">{card.title}</p>
@@ -587,6 +636,102 @@ export default function Home() {
         <SectionHeader title={aiCoachCopy.title} icon={Sparkles} subtitle="AI Coach en tiempo real" />
         <p className="text-sm text-gray-200">{aiCoachCopy.subtitle}</p>
       </AppCard>
+
+      {/* ── BLE Heart Rate Monitor ─────────────────────────────────── */}
+      <AppCard className="mb-8 p-5 glass-panel">
+        <div className="flex items-center justify-between mb-4">
+          <SectionHeader title="❤️ Monitor de FC" icon={Heart} subtitle="Sensor Bluetooth (Polar, Garmin…)" />
+          {bleState === 'connected' && <StatPill label="sensor" value="live" />}
+          {bleState === 'disconnected' && <StatPill label="sensor" value="desconect." />}
+          {bleState === 'connecting' && <StatPill label="sensor" value="conect…" />}
+          {bleState === 'error' && <StatPill label="sensor" value="error" />}
+        </div>
+
+        {bleState === 'connected' && heartRate !== null && (
+          <motion.div
+            key={heartRate}
+            initial={{ opacity: 0.6, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="flex items-center gap-3 mb-4 neuro-inset rounded-2xl p-4"
+          >
+            <Heart className="text-red-400 shrink-0" size={28} fill="currentColor" />
+            <div>
+              <p className="text-3xl font-black text-white tabular-nums leading-none">{heartRate} <span className="text-base font-normal text-gray-400">bpm</span></p>
+              {bleDeviceName && <p className="text-xs text-gray-500 mt-0.5">{bleDeviceName}</p>}
+            </div>
+          </motion.div>
+        )}
+
+        {!isBLESupported() ? (
+          <p className="text-xs text-gray-500 mb-4">
+            ⚠️ Web Bluetooth no está disponible en este navegador. Usa Chrome en Android o desktop.
+          </p>
+        ) : (
+          <p className="text-xs text-gray-500 mb-4">
+            Conecta un sensor de frecuencia cardíaca BLE estándar para ver datos reales durante el entrenamiento.
+          </p>
+        )}
+
+        <div className="flex gap-3">
+          {bleState !== 'connected' ? (
+            <button
+              type="button"
+              disabled={!isBLESupported() || bleState === 'connecting'}
+              onClick={() => void connectBLE()}
+              className="flex items-center gap-2 tap-target primary-btn rounded-xl py-2.5 px-4 text-sm font-bold disabled:opacity-50"
+            >
+              <Bluetooth size={15} />
+              {bleState === 'connecting' ? 'Conectando…' : 'Conectar sensor'}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={disconnectBLE}
+              className="flex items-center gap-2 tap-target neuro-raised rounded-xl py-2.5 px-4 text-sm font-semibold text-gray-300"
+            >
+              <BluetoothOff size={15} />
+              Desconectar
+            </button>
+          )}
+        </div>
+      </AppCard>
+
+      {/* ── Fatigue Index ──────────────────────────────────────────── */}
+      {fatigueData.length > 0 && (
+        <AppCard className="mb-8 p-5 glass-panel">
+          <SectionHeader title="⚡ Índice de Fatiga Semanal" icon={Activity} subtitle="Volumen vs MRV por grupo muscular" />
+          <p className="text-xs text-gray-500 mb-4">
+            Compara tus series semanales con el Volumen Máximo Recuperable (MRV). Reduce intensidad cuando un grupo llega al 75%+.
+          </p>
+          <div className="space-y-3">
+            {fatigueData.map((entry) => (
+              <div key={entry.muscleGroup}>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm text-white font-medium">{entry.muscleGroup}</span>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs font-semibold ${fatigueStatusColor(entry.status)}`}>
+                      {fatigueStatusLabel(entry.status)}
+                    </span>
+                    <span className="text-[10px] font-mono text-gray-500">{entry.weeklyVolume}/{entry.mrv} series</span>
+                  </div>
+                </div>
+                <div className="h-2 rounded-full bg-white/10 overflow-hidden">
+                  <motion.div
+                    className={`h-full rounded-full transition-all ${
+                      entry.status === 'fresh' ? 'bg-emerald-400' :
+                      entry.status === 'moderate' ? 'bg-yellow-400' :
+                      entry.status === 'high' ? 'bg-orange-400' : 'bg-red-400'
+                    }`}
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.min(100, entry.percent)}%` }}
+                    transition={{ duration: 0.6, ease: 'easeOut' }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </AppCard>
+      )}
 
       <AppCard className="mb-8 p-5 glass-panel">
         <SectionHeader title="🤖 Informe IA de progreso" icon={Activity} />
