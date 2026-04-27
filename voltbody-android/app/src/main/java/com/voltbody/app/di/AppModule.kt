@@ -71,3 +71,5 @@ object AppModule {
     @Provides fun provideRecoveryLogDao(db: AppDatabase) = db.recoveryLogDao()
     @Provides fun provideProgressPhotoDao(db: AppDatabase) = db.progressPhotoDao()
 }
+
+// BleHeartRateManager is @Singleton and @Inject constructor — Hilt provides it automatically.
