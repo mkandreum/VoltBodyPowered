@@ -129,3 +129,15 @@ data class ProgressReportResponse(
     val improvements: List<String>,
     val nextActions: List<String>
 )
+
+// ── Enrich Routine ────────────────────────────────────────────────────────────
+
+@JsonClass(generateAdapter = true)
+data class EnrichRoutineRequest(
+    val routine: List<WorkoutDay>
+)
+
+@JsonClass(generateAdapter = true)
+data class EnrichRoutineResponse(
+    val routine: List<WorkoutDay>
+)

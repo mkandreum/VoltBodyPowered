@@ -1,12 +1,12 @@
 package com.voltbody.app.ui.screens.workout
 
+import android.content.Intent
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -18,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.*
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -25,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.voltbody.app.R
 import com.voltbody.app.domain.model.*
 import com.voltbody.app.domain.usecase.WEEKDAY_LABELS
 import com.voltbody.app.ui.components.*
@@ -124,13 +126,18 @@ fun WorkoutScreen(
                 }
             }
 
-            // Workout complete celebration
+            // Workout complete celebration + share card
             if (uiState.workoutComplete) {
                 item {
-                    WorkoutCompleteCard(
-                        setsLogged = uiState.todaySetsLogged,
-                        duration = uiState.sessionElapsed
-                    )
+                    uiState.currentWorkoutDay?.let { day ->
+                        WorkoutSummaryShareCard(
+                            day = day,
+                            setsLogged = uiState.todaySetsLogged,
+                            duration = uiState.sessionElapsed,
+                            streak = uiState.currentStreak,
+                            userName = uiState.userName
+                        )
+                    }
                 }
             }
         }
@@ -308,31 +315,6 @@ private fun RestTimerCard(secondsLeft: Int, total: Int, onSkip: () -> Unit) {
 }
 
 @Composable
-private fun WorkoutCompleteCard(setsLogged: Int, duration: Int) {
-    val vb = LocalVoltBodyColors.current
-    AppCard {
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text("🎉", fontSize = 40.sp)
-            Text("¡Entreno completado!", style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Black), color = vb.accent, textAlign = TextAlign.Center)
-            Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("$setsLogged", style = MonoMetric, color = vb.accent)
-                    Text("SERIES", style = UppercaseLabel, color = vb.textMuted)
-                }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(formatDuration(duration), style = MonoMetric, color = ColorSuccess)
-                    Text("DURACIÓN", style = UppercaseLabel, color = vb.textMuted)
-                }
-            }
-        }
-    }
-}
-
-@Composable
 private fun LogSetDialog(
     exercise: Exercise,
     lastWeight: Float?,
@@ -412,6 +394,13 @@ private fun LogSetDialog(
                                 value = weight.toInt(),
                                 step = 2,
                                 onValueChange = { weight = it.toFloat() }
+                            )
+                            // Weight Calculator
+                            WeightCalculatorSection(
+                                exerciseName = exercise.name,
+                                targetWeight = exercise.weight,
+                                userBodyweight = 0f,
+                                onWeightApplied = { weight = it }
                             )
                         }
                         LabeledNumberStepper(label = "Repeticiones", value = reps, step = 1, onValueChange = { reps = it })
@@ -521,6 +510,408 @@ private fun LabeledNumberStepper(
                 onClick = { if (value + step <= max) onValueChange(value + step) },
                 modifier = Modifier.size(36.dp).clip(CircleShape).background(vb.surface)
             ) { Text("+", color = vb.accent, fontWeight = FontWeight.Black, fontSize = 16.sp) }
+        }
+    }
+}
+
+// ── Weight Calculator (ported from WeightCalculator.tsx) ──────────────────────
+
+private enum class EquipmentCategory { BARBELL, DUMBBELL, MACHINE, BODYWEIGHT }
+
+private val BARBELL_KEYWORDS = listOf(
+    "banca", "press de banca", "sentadilla", "peso muerto", "press militar",
+    "remo con barra", "jalón", "dominada", "press banca", "rumano",
+    "press francés", "barra", "hip thrust", "curl con barra"
+)
+private val DUMBBELL_KEYWORDS = listOf(
+    "mancuerna", "curl de bíceps", "curl martillo", "press inclinado con mancuernas",
+    "aperturas", "elevaciones laterales", "pájaros", "press con mancuernas",
+    "curl de biceps", "press de hombros"
+)
+private val BODYWEIGHT_KEYWORDS = listOf(
+    "dominadas asistidas", "fondos en paralelas", "fondos", "flexiones",
+    "plancha", "burpees", "sentadilla búlgara", "step"
+)
+private val MACHINE_KEYWORDS = listOf(
+    "polea", "prensa", "cable", "extensión", "face pull", "máquina",
+    "jalón al pecho", "remo en cable", "extensión de tríceps"
+)
+
+private fun detectEquipmentCategory(name: String): EquipmentCategory {
+    val lower = name.lowercase()
+    if (BODYWEIGHT_KEYWORDS.any { lower.contains(it) }) return EquipmentCategory.BODYWEIGHT
+    if (DUMBBELL_KEYWORDS.any { lower.contains(it) }) return EquipmentCategory.DUMBBELL
+    if (BARBELL_KEYWORDS.any { lower.contains(it) }) return EquipmentCategory.BARBELL
+    if (MACHINE_KEYWORDS.any { lower.contains(it) }) return EquipmentCategory.MACHINE
+    return EquipmentCategory.MACHINE
+}
+
+private val PLATE_OPTIONS = listOf(1.25f, 2.5f, 5f, 10f, 15f, 20f, 25f)
+private val BARBELL_OPTIONS = listOf(
+    Pair("Barra Olímpica (20 kg)", 20f),
+    Pair("Barra Mujer (15 kg)", 15f),
+    Pair("Barra Pesada (25 kg)", 25f)
+)
+
+private fun roundToNearestPlate(kg: Float): Float =
+    PLATE_OPTIONS.minByOrNull { kotlin.math.abs(it - kg) } ?: PLATE_OPTIONS.first()
+
+/**
+ * Collapsible weight calculator — ported from WeightCalculator.tsx.
+ * Integrated inside LogSetDialog for WEIGHTED exercises.
+ *
+ * @param exerciseName  name of the exercise (used for category detection)
+ * @param targetWeight  AI-suggested target weight (0 = not set)
+ * @param userBodyweight body weight from profile (bodyweight exercises)
+ * @param onWeightApplied called when user taps "Usar" with the computed total
+ */
+@Composable
+private fun WeightCalculatorSection(
+    exerciseName: String,
+    targetWeight: Float,
+    userBodyweight: Float,
+    onWeightApplied: (Float) -> Unit
+) {
+    val vb = LocalVoltBodyColors.current
+    val category = remember(exerciseName) { detectEquipmentCategory(exerciseName) }
+
+    var expanded by remember { mutableStateOf(false) }
+    var barbellKg by remember { mutableFloatStateOf(20f) }
+    var platesPerSide by remember { mutableFloatStateOf(0f) }
+    var dumbbellKg by remember { mutableFloatStateOf(0f) }
+    var machineKg by remember { mutableFloatStateOf(if (targetWeight > 0f) targetWeight else 0f) }
+
+    val total: Float = when (category) {
+        EquipmentCategory.BARBELL -> barbellKg + platesPerSide * 2f
+        EquipmentCategory.DUMBBELL -> dumbbellKg * 2f
+        EquipmentCategory.MACHINE -> machineKg
+        EquipmentCategory.BODYWEIGHT -> userBodyweight
+    }
+
+    val categoryLabel = when (category) {
+        EquipmentCategory.BARBELL -> "🏋️ Con barra"
+        EquipmentCategory.DUMBBELL -> "💪 Mancuernas"
+        EquipmentCategory.MACHINE -> "⚙️ Máquina / Cable"
+        EquipmentCategory.BODYWEIGHT -> "🤸 Peso corporal"
+    }
+
+    Column {
+        // ── Toggle row ──────────────────────────────────────────────────────
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(10.dp))
+                .clickable { expanded = !expanded }
+                .padding(horizontal = 4.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Icon(Icons.Filled.Build, contentDescription = null, tint = vb.textMuted, modifier = Modifier.size(14.dp))
+            Text("Calcular peso", style = UppercaseLabel.copy(fontSize = 11.sp), color = vb.textMuted)
+            Icon(
+                if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                contentDescription = null, tint = vb.textMuted, modifier = Modifier.size(14.dp)
+            )
+            Text(categoryLabel, style = MaterialTheme.typography.labelSmall, color = vb.textMuted.copy(0.7f))
+        }
+
+        AnimatedVisibility(visible = expanded) {
+            Column(
+                modifier = Modifier
+                    .padding(top = 8.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(vb.surface)
+                    .border(1.dp, vb.border, RoundedCornerShape(14.dp))
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Goal badge
+                if (targetWeight > 0f) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text("Meta IA:", style = MaterialTheme.typography.labelSmall, color = vb.textMuted)
+                        Text("${targetWeight} kg", style = MonoMetric.copy(fontSize = 13.sp), color = vb.accent)
+                    }
+                }
+
+                when (category) {
+                    EquipmentCategory.BARBELL -> {
+                        // Barbell selector
+                        Text("Tipo de barra", style = UppercaseLabel.copy(fontSize = 10.sp), color = vb.textMuted)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            BARBELL_OPTIONS.forEach { (label, kg) ->
+                                val selected = barbellKg == kg
+                                FilterChip(
+                                    selected = selected,
+                                    onClick = { barbellKg = kg },
+                                    label = { Text("${kg.toInt()} kg", style = MaterialTheme.typography.labelSmall) },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = vb.accent.copy(0.2f),
+                                        selectedLabelColor = vb.accent,
+                                        containerColor = vb.surfaceElevated,
+                                        labelColor = vb.textMuted
+                                    )
+                                )
+                            }
+                        }
+                        // Plates per side
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Discos por lado (kg)", style = MaterialTheme.typography.bodySmall, color = vb.textMuted)
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                IconButton(
+                                    onClick = { platesPerSide = maxOf(0f, platesPerSide - 2.5f) },
+                                    modifier = Modifier.size(32.dp).clip(CircleShape).background(vb.surfaceElevated)
+                                ) { Text("−", color = vb.accent, fontWeight = FontWeight.Black) }
+                                Text(
+                                    if (platesPerSide == platesPerSide.toLong().toFloat()) "${platesPerSide.toInt()}" else "$platesPerSide",
+                                    style = MonoMetric.copy(fontSize = 18.sp), color = ColorWhite
+                                )
+                                IconButton(
+                                    onClick = { platesPerSide += 2.5f },
+                                    modifier = Modifier.size(32.dp).clip(CircleShape).background(vb.surfaceElevated)
+                                ) { Text("+", color = vb.accent, fontWeight = FontWeight.Black) }
+                            }
+                        }
+                        // Suggest plates CTA
+                        if (targetWeight > 0f) {
+                            OutlinedButton(
+                                onClick = {
+                                    val needed = (targetWeight - barbellKg) / 2f
+                                    platesPerSide = if (needed <= 0f) 0f else roundToNearestPlate(needed)
+                                },
+                                shape = RoundedCornerShape(10.dp),
+                                border = BorderStroke(1.dp, vb.accent.copy(0.4f)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(Icons.Filled.Lightbulb, contentDescription = null, tint = vb.accent, modifier = Modifier.size(14.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("Sugerir discos", color = vb.accent, style = MaterialTheme.typography.labelMedium)
+                            }
+                        }
+                    }
+
+                    EquipmentCategory.DUMBBELL -> {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Peso por mancuerna (kg)", style = MaterialTheme.typography.bodySmall, color = vb.textMuted)
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                IconButton(
+                                    onClick = { dumbbellKg = maxOf(0f, dumbbellKg - 1f) },
+                                    modifier = Modifier.size(32.dp).clip(CircleShape).background(vb.surfaceElevated)
+                                ) { Text("−", color = vb.accent, fontWeight = FontWeight.Black) }
+                                Text("${dumbbellKg.toInt()}", style = MonoMetric.copy(fontSize = 18.sp), color = ColorWhite)
+                                IconButton(
+                                    onClick = { dumbbellKg += 1f },
+                                    modifier = Modifier.size(32.dp).clip(CircleShape).background(vb.surfaceElevated)
+                                ) { Text("+", color = vb.accent, fontWeight = FontWeight.Black) }
+                            }
+                        }
+                        if (dumbbellKg > 0f) Text("${dumbbellKg.toInt()} kg c/brazo", style = MaterialTheme.typography.labelSmall, color = vb.textMuted)
+                    }
+
+                    EquipmentCategory.MACHINE -> {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Peso en máquina (kg)", style = MaterialTheme.typography.bodySmall, color = vb.textMuted)
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                IconButton(
+                                    onClick = { machineKg = maxOf(0f, machineKg - 5f) },
+                                    modifier = Modifier.size(32.dp).clip(CircleShape).background(vb.surfaceElevated)
+                                ) { Text("−", color = vb.accent, fontWeight = FontWeight.Black) }
+                                Text("${machineKg.toInt()}", style = MonoMetric.copy(fontSize = 18.sp), color = ColorWhite)
+                                IconButton(
+                                    onClick = { machineKg += 5f },
+                                    modifier = Modifier.size(32.dp).clip(CircleShape).background(vb.surfaceElevated)
+                                ) { Text("+", color = vb.accent, fontWeight = FontWeight.Black) }
+                            }
+                        }
+                    }
+
+                    EquipmentCategory.BODYWEIGHT -> {
+                        if (userBodyweight > 0f)
+                            Text("Peso corporal: ${userBodyweight.toInt()} kg", style = MaterialTheme.typography.bodySmall, color = vb.textMuted)
+                        else
+                            Text("Sin peso adicional", style = MaterialTheme.typography.bodySmall, color = vb.textMuted)
+                    }
+                }
+
+                // ── Total + gap + use button ─────────────────────────────────
+                if (total > 0f) {
+                    HorizontalDivider(color = vb.border)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column {
+                            Text("Peso total calculado", style = UppercaseLabel.copy(fontSize = 10.sp), color = vb.textMuted)
+                            Text(
+                                "${if (total == total.toLong().toFloat()) total.toInt() else total} kg",
+                                style = MonoMetric.copy(fontSize = 22.sp), color = vb.accent
+                            )
+                            if (targetWeight > 0f) {
+                                val gap = targetWeight - total
+                                val gapText = when {
+                                    gap == 0f -> "✅ Exactamente en la meta"
+                                    gap > 0f -> "${gap} kg por debajo de la meta"
+                                    else -> "${-gap} kg por encima de la meta"
+                                }
+                                val gapColor = when {
+                                    gap == 0f -> ColorSuccess
+                                    gap > 0f -> Color(0xFFFBBF24) // amber
+                                    else -> Color(0xFF38BDF8) // sky
+                                }
+                                Text(gapText, style = MaterialTheme.typography.labelSmall, color = gapColor)
+                            }
+                        }
+                        Button(
+                            onClick = { onWeightApplied(total) },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = vb.accent, contentColor = ColorBlack)
+                        ) {
+                            Text("Usar", fontWeight = FontWeight.Black)
+                            Spacer(Modifier.width(4.dp))
+                            Icon(Icons.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(14.dp))
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ── Workout Summary Share Card (ported from WorkoutSummaryCard.tsx) ────────────
+
+/**
+ * Shareable workout summary card rendered inside the workout-complete section.
+ * Uses Android's native share sheet instead of html2canvas.
+ */
+@Composable
+private fun WorkoutSummaryShareCard(
+    day: WorkoutDay,
+    setsLogged: Int,
+    duration: Int,
+    streak: Int,
+    userName: String?
+) {
+    val vb = LocalVoltBodyColors.current
+    val context = LocalContext.current
+
+    AppCard {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text("⚡ VoltBody", style = UppercaseLabel.copy(fontSize = 10.sp), color = vb.accent)
+                    Text(
+                        "¡Entreno completado!",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black),
+                        color = ColorWhite
+                    )
+                    if (!userName.isNullOrBlank())
+                        Text(userName, style = MaterialTheme.typography.bodySmall, color = vb.textMuted)
+                }
+                Text("🎉", fontSize = 32.sp)
+            }
+
+            HorizontalDivider(color = vb.border)
+
+            // Focus + date
+            Text(day.focus, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold), color = vb.accent)
+            Text(
+                java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("d 'de' MMMM, yyyy", java.util.Locale("es"))),
+                style = MaterialTheme.typography.labelSmall, color = vb.textMuted
+            )
+
+            // Stats row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceAround
+            ) {
+                listOf(
+                    Triple("$setsLogged", "SERIES", "💪"),
+                    Triple(formatDuration(duration), "DURACIÓN", "⏱"),
+                    Triple("$streak", "RACHA", "🔥")
+                ).forEach { (value, label, icon) ->
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(icon, fontSize = 18.sp)
+                        Text(value, style = MonoMetric.copy(fontSize = 16.sp), color = vb.accent)
+                        Text(label, style = UppercaseLabel.copy(fontSize = 9.sp), color = vb.textMuted)
+                    }
+                }
+            }
+
+            // Exercise list (first 5)
+            day.exercises.take(5).forEach { ex ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(ex.name, style = MaterialTheme.typography.bodySmall, color = ColorWhite, modifier = Modifier.weight(1f))
+                    Text(
+                        "${ex.sets}×${ex.reps}",
+                        style = MaterialTheme.typography.labelSmall.copy(fontFamily = MonoMetric.fontFamily),
+                        color = vb.textMuted
+                    )
+                }
+            }
+            if (day.exercises.size > 5)
+                Text("+ ${day.exercises.size - 5} más", style = MaterialTheme.typography.labelSmall, color = vb.textMuted)
+
+            HorizontalDivider(color = vb.border)
+
+            // Share button
+            Button(
+                onClick = {
+                    val dateStr = java.time.LocalDate.now().format(
+                        java.time.format.DateTimeFormatter.ofPattern("d/MM/yyyy")
+                    )
+                    val text = buildString {
+                        appendLine(context.getString(R.string.share_workout_header))
+                        appendLine()
+                        appendLine(context.getString(R.string.share_workout_focus_prefix, day.focus))
+                        appendLine(context.getString(R.string.share_workout_date_prefix, dateStr))
+                        appendLine()
+                        appendLine(context.getString(R.string.share_workout_stats, setsLogged, formatDuration(duration), streak))
+                        appendLine()
+                        day.exercises.take(5).forEach { ex -> appendLine("• ${ex.name} — ${ex.sets}×${ex.reps}") }
+                        if (day.exercises.size > 5)
+                            appendLine(context.getString(R.string.share_workout_more_exercises, day.exercises.size - 5))
+                        appendLine()
+                        appendLine(context.getString(R.string.share_workout_hashtags))
+                    }
+                    val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                        putExtra(Intent.EXTRA_TEXT, text)
+                        type = "text/plain"
+                    }
+                    context.startActivity(
+                        Intent.createChooser(sendIntent, context.getString(R.string.share_workout_chooser_title))
+                    )
+                },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = vb.accent, contentColor = ColorBlack)
+            ) {
+                Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(context.getString(R.string.share_workout_button), fontWeight = FontWeight.Black)
+            }
         }
     }
 }

@@ -1,4 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">VoltBody</string>
+
+    <!-- Workout share card -->
+    <string name="share_workout_header">⚡ ¡Completé mi entrenamiento con VoltBody!</string>
+    <string name="share_workout_focus_prefix">💪 %s</string>
+    <string name="share_workout_date_prefix">📅 %s</string>
+    <string name="share_workout_stats">📊 %d series · ⏱ %s · 🔥 %d días de racha</string>
+    <string name="share_workout_more_exercises">• + %d ejercicios más</string>
+    <string name="share_workout_hashtags">#VoltBody #Fitness #Entrenamiento</string>
+    <string name="share_workout_chooser_title">Compartir entrenamiento</string>
+    <string name="share_workout_button">Compartir entrenamiento</string>
+
+    <!-- Weight calculator -->
+    <string name="weight_calc_toggle">Calcular peso</string>
+    <string name="weight_calc_goal_label">Meta IA:</string>
+    <string name="weight_calc_barbell_type">Tipo de barra</string>
+    <string name="weight_calc_plates_side">Discos por lado (kg)</string>
+    <string name="weight_calc_suggest_plates">Sugerir discos</string>
+    <string name="weight_calc_dumbbell_per">Peso por mancuerna (kg)</string>
+    <string name="weight_calc_machine">Peso en máquina (kg)</string>
+    <string name="weight_calc_total_label">Peso total calculado</string>
+    <string name="weight_calc_use">Usar</string>
+    <string name="weight_calc_on_goal">✅ Exactamente en la meta</string>
+    <string name="weight_calc_below_goal">%s kg por debajo de la meta</string>
+    <string name="weight_calc_above_goal">%s kg por encima de la meta</string>
 </resources>

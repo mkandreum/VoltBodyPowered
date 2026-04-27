@@ -29,7 +29,9 @@ data class WorkoutUiState(
     val lastWeightForExercise: Map<String, Float> = emptyMap(),
     val progressiveSuggestions: Map<String, ProgressiveSuggestion> = emptyMap(),
     val workoutComplete: Boolean = false,
-    val todaySetsLogged: Int = 0
+    val todaySetsLogged: Int = 0,
+    val currentStreak: Int = 0,
+    val userName: String? = null
 )
 
 @HiltViewModel
@@ -47,8 +49,9 @@ class WorkoutViewModel @Inject constructor(
         viewModelScope.launch {
             combine(
                 appViewModel.routine,
-                appViewModel.workoutLogs
-            ) { routine, logs ->
+                appViewModel.workoutLogs,
+                appViewModel.user
+            ) { routine, logs, user ->
                 val today = LocalDate.now()
                 val todayDayIndex = getMondayFirstIndex(today)
 
@@ -98,6 +101,9 @@ class WorkoutViewModel @Inject constructor(
                 val workoutComplete = dayProgress >= 80 && todayLogs.isNotEmpty()
                 val todaySetsLogged = todayLogs.size
 
+                // Smart streak
+                val streak = computeSmartStreak(logs, routine)
+
                 _uiState.value.copy(
                     routine = routine,
                     currentWorkoutDay = currentDay,
@@ -107,7 +113,9 @@ class WorkoutViewModel @Inject constructor(
                     lastWeightForExercise = lastWeightMap,
                     progressiveSuggestions = suggestions,
                     workoutComplete = workoutComplete,
-                    todaySetsLogged = todaySetsLogged
+                    todaySetsLogged = todaySetsLogged,
+                    currentStreak = streak,
+                    userName = user?.name
                 )
             }.collect { state -> _uiState.value = state }
         }

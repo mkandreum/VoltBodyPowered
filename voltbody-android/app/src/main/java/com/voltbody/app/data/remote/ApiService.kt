@@ -66,6 +66,12 @@ interface ApiService {
         @Body request: ProgressReportRequest
     ): Response<ProgressReportResponse>
 
+    @POST("api/ai/enrich-routine")
+    suspend fun enrichRoutine(
+        @Header("Authorization") token: String,
+        @Body request: EnrichRoutineRequest
+    ): Response<EnrichRoutineResponse>
+
     // ── Health ────────────────────────────────────────────────────────────────
 
     @GET("api/health")

@@ -201,6 +201,23 @@ class AppViewModel @Inject constructor(
     fun setRoutine(routine: List<WorkoutDay>) {
         _routine.value = routine
         viewModelScope.launch { prefs.saveRoutine(routine) }
+        // Enrich exercises that lack a gifUrl (fire-and-forget)
+        viewModelScope.launch { enrichRoutineIfNeeded(routine) }
+    }
+
+    private suspend fun enrichRoutineIfNeeded(routine: List<WorkoutDay>) {
+        val token = _authToken.value ?: return
+        val needsEnrichment = routine.any { day -> day.exercises.any { it.gifUrl.isBlank() } }
+        if (!needsEnrichment) return
+        runCatching {
+            val response = api.enrichRoutine("Bearer $token", EnrichRoutineRequest(routine))
+            if (response.isSuccessful) {
+                response.body()?.routine?.let { enriched ->
+                    _routine.value = enriched
+                    prefs.saveRoutine(enriched)
+                }
+            }
+        }
     }
 
     fun setDiet(diet: DietPlan) {

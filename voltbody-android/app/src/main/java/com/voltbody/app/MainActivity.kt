@@ -1,5 +1,6 @@
 package com.voltbody.app
 
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -34,6 +35,7 @@ class MainActivity : ComponentActivity() {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        enable120fps()
         notificationService.createChannels()
 
         setContent {
@@ -124,4 +126,25 @@ private fun AppTab.toRoute() = when (this) {
     AppTab.DIET -> Screen.Diet.route
     AppTab.CALENDAR -> Screen.Calendar.route
     AppTab.PROFILE -> Screen.Profile.route
+}
+
+/** Request the highest available refresh rate (up to 120 Hz) for smooth animations. */
+private fun ComponentActivity.enable120fps() {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        // API 30+: use WindowManager.currentWindowMetrics and Display.getSupportedModes()
+        // windowManager.currentWindowMetrics is non-deprecated; we get the display via DisplayManager.
+        val displayManager = getSystemService(android.hardware.display.DisplayManager::class.java)
+        val display = displayManager?.getDisplay(android.view.Display.DEFAULT_DISPLAY) ?: return
+        val supportedModes = display.supportedModes
+        val bestMode = supportedModes.maxByOrNull { it.refreshRate } ?: return
+        window.attributes = window.attributes.also { lp ->
+            lp.preferredDisplayModeId = bestMode.modeId
+        }
+    } else {
+        // API 21-29: request 120 fps via preferredRefreshRate (best effort)
+        @Suppress("DEPRECATION")
+        window.attributes = window.attributes.also { lp ->
+            lp.preferredRefreshRate = 120f
+        }
+    }
 }
