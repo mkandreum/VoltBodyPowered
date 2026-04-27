@@ -29,7 +29,7 @@ import com.voltbody.app.domain.model.*
 import com.voltbody.app.ui.components.AppCard
 import com.voltbody.app.ui.components.NeonBadge
 import com.voltbody.app.ui.theme.*
-import com.voltbody.app.ui.viewmodel.LoginViewModel
+import com.voltbody.app.ui.screens.login.LoginViewModel
 
 @Composable
 fun LoginScreen(

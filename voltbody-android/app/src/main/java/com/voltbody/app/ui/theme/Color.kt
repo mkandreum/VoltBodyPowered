@@ -40,7 +40,7 @@ val ColorOrange = Color(0xFFFB923C)         // orange-400
 // ── Glass / neuro surfaces ────────────────────────────────────────────────────
 val GlassSurface = Color(0x9913131A)        // 60% surface
 val GlassBorder = Color(0x14FFFFFF)         // rgba(255,255,255,0.08)
-val NeuroSurface = Color(0x801414A) // translúcido
+val NeuroSurface = Color(0x80141414) // translúcido
 val NeuroShadowDark = Color(0xCC000000)
 val NeuroShadowLight = Color(0x0FFFFFFF)
 
