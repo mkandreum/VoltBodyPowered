@@ -1,7 +1,7 @@
-import { useMemo, useState, useRef, useEffect } from 'react';
+import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore } from '../store/useAppStore';
-import { Dumbbell, Utensils, Flame, Moon, Activity, Sparkles, Quote, Clock3, Camera, Zap } from 'lucide-react';
+import { Dumbbell, Utensils, Flame, Moon, Activity, Sparkles, Quote, Clock3, Camera, Zap, Heart, Bluetooth, BluetoothOff, BedDouble, Gauge } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { format, subDays, isValid, startOfWeek, endOfWeek } from 'date-fns';
 import { AppCard, SectionHeader, StatPill } from '../components/ui';
@@ -10,6 +10,9 @@ import { getMondayFirstIndex, mapRoutineByWeekday, computeSmartStreak } from '..
 import { workoutService } from '../services/workoutService';
 import { generateProgressReport, ProgressReport } from '../services/geminiService';
 import { ACHIEVEMENTS_CATALOG } from '../lib/achievements';
+import { BLEHeartRateService, isBLESupported, type BLEConnectionState, type HRPayload } from '../services/BLEHeartRateService';
+import { computeFatigueIndex, fatigueStatusLabel, fatigueStatusColor } from '../lib/fatigueIndex';
+import { computeRecoveryScore, getRecoveryAdvice, type RecoveryLog } from '../lib/recoveryScore';
 
 /** Circular SVG progress ring */
 function CircularProgress({ value, size = 64 }: { value: number; size?: number }) {
@@ -64,7 +67,7 @@ function parseMealHour(time: string): number {
 }
 
 export default function Home() {
-  const { profile, routine, diet, logs, insights, setTab, motivationPhrase, motivationPhoto, showToast, addLog, authToken, mealEatenRecord, progressPhotos, achievements } = useAppStore();
+  const { profile, routine, diet, logs, insights, setTab, motivationPhrase, motivationPhoto, showToast, addLog, authToken, mealEatenRecord, progressPhotos, achievements, recoveryLogs, addRecoveryLog } = useAppStore();
   const [syncState, setSyncState] = useState<'idle' | 'local' | 'syncing' | 'synced' | 'error'>('idle');
   const [reportLoading, setReportLoading] = useState(false);
   const [reportProgress, setReportProgress] = useState(0);
@@ -72,6 +75,72 @@ export default function Home() {
   const [report, setReport] = useState<ProgressReport | null>(null);
   // Track whether the chart has animated once — avoid re-animating on every state update
   const chartAnimatedRef = useRef(false);
+
+  // BLE Heart Rate state
+  const [bleState, setBleState] = useState<BLEConnectionState>('disconnected');
+  const [heartRate, setHeartRate] = useState<number | null>(null);
+  const [bleDeviceName, setBleDeviceName] = useState<string | null>(null);
+  const bleServiceRef = useRef<BLEHeartRateService | null>(null);
+
+  const handleHRUpdate = useCallback((payload: HRPayload) => {
+    setHeartRate(payload.bpm);
+  }, []);
+
+  const handleBLEStateChange = useCallback((state: BLEConnectionState) => {
+    setBleState(state);
+    if (state === 'disconnected') {
+      setHeartRate(null);
+      setBleDeviceName(null);
+    }
+  }, []);
+
+  const connectBLE = useCallback(async () => {
+    if (!bleServiceRef.current) {
+      bleServiceRef.current = new BLEHeartRateService(handleHRUpdate, handleBLEStateChange);
+    }
+    try {
+      await bleServiceRef.current.connect();
+      setBleDeviceName(bleServiceRef.current.deviceName);
+    } catch (err) {
+      showToast({
+        type: 'error',
+        title: 'Error Bluetooth',
+        message: err instanceof Error ? err.message : 'No se pudo conectar al sensor.',
+      });
+    }
+  }, [handleHRUpdate, handleBLEStateChange, showToast]);
+
+  const disconnectBLE = useCallback(() => {
+    bleServiceRef.current?.disconnect();
+    bleServiceRef.current = null;
+  }, []);
+
+  // Cleanup BLE on unmount
+  useEffect(() => {
+    return () => { bleServiceRef.current?.disconnect(); };
+  }, []);
+
+  // ── Recovery Score check-in state ─────────────────────────────
+  const [showRecoveryCheckin, setShowRecoveryCheckin] = useState(false);
+  const [checkinSleep, setCheckinSleep] = useState<string>('');
+  const [checkinHRV, setCheckinHRV] = useState<string>('');
+  const todayRecoveryDate = format(new Date(), 'yyyy-MM-dd');
+  const todayRecoveryLog = recoveryLogs.find((l) => l.date === todayRecoveryDate);
+
+  const handleSaveRecovery = useCallback(() => {
+    const sleep = parseFloat(checkinSleep);
+    const hrv = checkinHRV ? parseFloat(checkinHRV) : undefined;
+    if (!sleep || sleep <= 0) return;
+
+    const pastLogs = recoveryLogs.filter((l) => l.date < todayRecoveryDate);
+    const score = computeRecoveryScore(sleep, hrv, pastLogs as RecoveryLog[]);
+    addRecoveryLog({ date: todayRecoveryDate, sleepHours: sleep, hrv, score });
+    setShowRecoveryCheckin(false);
+    setCheckinSleep('');
+    setCheckinHRV('');
+    const advice = getRecoveryAdvice(score);
+    showToast({ type: 'success', title: `Recovery Score: ${score}/100 💤`, message: advice.intensityLabel });
+  }, [checkinSleep, checkinHRV, recoveryLogs, todayRecoveryDate, addRecoveryLog, showToast]);
 
   // Simulate progress bar while report is loading
   useEffect(() => {
@@ -237,6 +306,9 @@ export default function Home() {
   // Estimated workout duration based on number of exercises
   const estimatedMinutes = (todayRoutine?.exercises?.length || 0) * MINUTES_PER_EXERCISE;
 
+  // Fatigue Index per muscle group for the current week
+  const fatigueData = useMemo(() => computeFatigueIndex(logs, routine), [logs, routine]);
+
   const sleepScore = useMemo(() => {
     if (!insights?.sleepRecommendation) return 72;
     const match = insights.sleepRecommendation.match(/(\d+(?:[.,]\d+)?)\s*hor/i);
@@ -245,12 +317,32 @@ export default function Home() {
     return score;
   }, [insights?.sleepRecommendation]);
 
+  // Recovery Score from today's check-in (or fallback from sleep insights)
+  const recoveryScore = useMemo(() => {
+    if (todayRecoveryLog) return todayRecoveryLog.score;
+    // Fallback: derive from sleep recommendation when no check-in
+    return sleepScore;
+  }, [todayRecoveryLog, sleepScore]);
+
+  const recoveryAdvice = useMemo(
+    () => getRecoveryAdvice(recoveryScore, todayRoutine?.focus),
+    [recoveryScore, todayRoutine?.focus],
+  );
+
   const aiCoachCopy = useMemo(() => {
-    if (sleepScore < 70) {
+    if (recoveryScore < 40) {
       return {
-        title: '😴 Recuperación primero',
-        subtitle: 'Dormiste poco. Baja volumen y prioriza técnica limpia hoy.',
-        cta: '🛌 Modo recovery',
+        title: `${recoveryAdvice.emoji} ${recoveryAdvice.title}`,
+        subtitle: recoveryAdvice.subtitle,
+        cta: recoveryAdvice.intensityLabel,
+      };
+    }
+
+    if (recoveryScore < 65) {
+      return {
+        title: `${recoveryAdvice.emoji} ${recoveryAdvice.title}`,
+        subtitle: recoveryAdvice.subtitle,
+        cta: recoveryAdvice.intensityLabel,
       };
     }
 
@@ -262,12 +354,20 @@ export default function Home() {
       };
     }
 
+    if (recoveryScore >= 85) {
+      return {
+        title: `${recoveryAdvice.emoji} ${recoveryAdvice.title}`,
+        subtitle: recoveryAdvice.subtitle,
+        cta: recoveryAdvice.intensityLabel,
+      };
+    }
+
     return {
       title: '🎯 Ritmo perfecto',
       subtitle: 'Mantén intensidad y cuida la ejecución. +1% mejor hoy.',
       cta: '📋 Seguir plan',
     };
-  }, [sleepScore, routineCompletion, todayRoutine]);
+  }, [recoveryScore, recoveryAdvice, routineCompletion, todayRoutine]);
 
   const bentoCards = useMemo(() => {
     const cards = [
@@ -573,7 +673,7 @@ export default function Home() {
             <AppCard interactive className="h-full p-4 glass-panel">
               <div className="flex items-center justify-between mb-3">
                 <card.icon className="app-accent" size={18} />
-                <StatPill label="status" value="live" />
+                <StatPill label="estimado" value="calc" />
               </div>
               <p className="text-2xl font-black text-white tracking-tight">{card.value}</p>
               <p className="text-xs uppercase tracking-wider text-gray-500 mt-1">{card.title}</p>
@@ -587,6 +687,228 @@ export default function Home() {
         <SectionHeader title={aiCoachCopy.title} icon={Sparkles} subtitle="AI Coach en tiempo real" />
         <p className="text-sm text-gray-200">{aiCoachCopy.subtitle}</p>
       </AppCard>
+
+      {/* ── Recovery Score ─────────────────────────────────────────── */}
+      <AppCard className={`mb-8 p-5 glass-panel border ${todayRecoveryLog ? recoveryAdvice.bannerClass : 'border-white/10'}`}>
+        <div className="flex items-center justify-between mb-3">
+          <SectionHeader title="💤 Recovery Score" icon={BedDouble} subtitle="Check-in matutino de recuperación" />
+          {todayRecoveryLog && (
+            <div className="flex flex-col items-end shrink-0">
+              <span className={`text-2xl font-black ${
+                recoveryScore >= 85 ? 'text-[var(--app-accent)]' :
+                recoveryScore >= 65 ? 'text-emerald-400' :
+                recoveryScore >= 40 ? 'text-yellow-400' : 'text-blue-400'
+              }`}>{recoveryScore}<span className="text-sm font-normal text-gray-500">/100</span></span>
+              <span className="text-[10px] text-gray-500 font-mono">{recoveryAdvice.intensityLabel}</span>
+            </div>
+          )}
+        </div>
+
+        {!todayRecoveryLog ? (
+          <>
+            <p className="text-xs text-gray-400 mb-4">
+              Registra tus horas de sueño y HRV matutino para calcular tu Recovery Score y ajustar la intensidad del entreno de hoy.
+            </p>
+            {!showRecoveryCheckin ? (
+              <button
+                type="button"
+                onClick={() => setShowRecoveryCheckin(true)}
+                className="flex items-center gap-2 tap-target primary-btn rounded-xl py-2.5 px-4 text-sm font-bold"
+              >
+                <Gauge size={15} />
+                Check-in matutino
+              </button>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="space-y-3"
+              >
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider">
+                      <BedDouble size={10} className="inline mr-1" />Horas de sueño
+                    </label>
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      step="0.5"
+                      min="0"
+                      max="14"
+                      value={checkinSleep}
+                      onChange={(e) => setCheckinSleep(e.target.value)}
+                      placeholder="7.5"
+                      className="w-full input-field rounded-xl p-2.5 text-lg font-semibold text-center"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider">
+                      <Heart size={10} className="inline mr-1" />HRV (ms, opcional)
+                    </label>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min="0"
+                      max="200"
+                      value={checkinHRV}
+                      onChange={(e) => setCheckinHRV(e.target.value)}
+                      placeholder="60"
+                      className="w-full input-field rounded-xl p-2.5 text-lg font-semibold text-center"
+                    />
+                  </div>
+                </div>
+                <p className="text-[10px] text-gray-600">
+                  HRV: mide el estrés fisiológico con tu smartwatch o Polar. Déjalo vacío si no tienes datos.
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    disabled={!checkinSleep || parseFloat(checkinSleep) <= 0}
+                    onClick={handleSaveRecovery}
+                    className="flex-1 tap-target primary-btn rounded-xl py-2.5 text-sm font-bold disabled:opacity-50"
+                  >
+                    Calcular Recovery Score
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowRecoveryCheckin(false)}
+                    className="tap-target neuro-raised rounded-xl py-2.5 px-4 text-sm text-gray-400"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex gap-3">
+              <div className="flex-1 neuro-inset rounded-xl p-3 text-center">
+                <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">😴 Sueño</p>
+                <p className="text-lg font-black text-white">{todayRecoveryLog.sleepHours}h</p>
+              </div>
+              {todayRecoveryLog.hrv !== undefined && (
+                <div className="flex-1 neuro-inset rounded-xl p-3 text-center">
+                  <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">❤️ HRV</p>
+                  <p className="text-lg font-black text-white">{todayRecoveryLog.hrv} ms</p>
+                </div>
+              )}
+              <div className={`flex-1 neuro-inset rounded-xl p-3 text-center border ${recoveryAdvice.bannerClass}`}>
+                <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">🎯 Score</p>
+                <p className={`text-lg font-black ${
+                  recoveryScore >= 85 ? 'text-[var(--app-accent)]' :
+                  recoveryScore >= 65 ? 'text-emerald-400' :
+                  recoveryScore >= 40 ? 'text-yellow-400' : 'text-blue-400'
+                }`}>{recoveryScore}/100</p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-300">{recoveryAdvice.subtitle}</p>
+            <button
+              type="button"
+              onClick={() => setShowRecoveryCheckin(true)}
+              className="text-xs text-gray-600 tap-target underline"
+            >
+              Actualizar check-in
+            </button>
+          </div>
+        )}
+      </AppCard>
+
+      {/* ── BLE Heart Rate Monitor ─────────────────────────────────── */}
+      <AppCard className="mb-8 p-5 glass-panel">
+        <div className="flex items-center justify-between mb-4">
+          <SectionHeader title="❤️ Monitor de FC" icon={Heart} subtitle="Sensor Bluetooth (Polar, Garmin…)" />
+          {bleState === 'connected' && <StatPill label="sensor" value="live" />}
+          {bleState === 'disconnected' && <StatPill label="sensor" value="desconectado" />}
+          {bleState === 'connecting' && <StatPill label="sensor" value="conectando…" />}
+          {bleState === 'error' && <StatPill label="sensor" value="error" />}
+        </div>
+
+        {bleState === 'connected' && heartRate !== null && (
+          <motion.div
+            key={heartRate}
+            initial={{ opacity: 0.6, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="flex items-center gap-3 mb-4 neuro-inset rounded-2xl p-4"
+          >
+            <Heart className="text-red-400 shrink-0" size={28} fill="currentColor" />
+            <div>
+              <p className="text-3xl font-black text-white tabular-nums leading-none">{heartRate} <span className="text-base font-normal text-gray-400">bpm</span></p>
+              {bleDeviceName && <p className="text-xs text-gray-500 mt-0.5">{bleDeviceName}</p>}
+            </div>
+          </motion.div>
+        )}
+
+        {!isBLESupported() ? (
+          <p className="text-xs text-gray-500 mb-4">
+            ⚠️ Web Bluetooth no está disponible en este navegador. Usa Chrome en Android o desktop.
+          </p>
+        ) : (
+          <p className="text-xs text-gray-500 mb-4">
+            Conecta un sensor de frecuencia cardíaca BLE estándar para ver datos reales durante el entrenamiento.
+          </p>
+        )}
+
+        <div className="flex gap-3">
+          {bleState !== 'connected' ? (
+            <button
+              type="button"
+              disabled={!isBLESupported() || bleState === 'connecting'}
+              onClick={() => void connectBLE()}
+              className="flex items-center gap-2 tap-target primary-btn rounded-xl py-2.5 px-4 text-sm font-bold disabled:opacity-50"
+            >
+              <Bluetooth size={15} />
+              {bleState === 'connecting' ? 'Conectando…' : 'Conectar sensor'}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={disconnectBLE}
+              className="flex items-center gap-2 tap-target neuro-raised rounded-xl py-2.5 px-4 text-sm font-semibold text-gray-300"
+            >
+              <BluetoothOff size={15} />
+              Desconectar
+            </button>
+          )}
+        </div>
+      </AppCard>
+
+      {/* ── Fatigue Index ──────────────────────────────────────────── */}
+      {fatigueData.length > 0 && (
+        <AppCard className="mb-8 p-5 glass-panel">
+          <SectionHeader title="⚡ Índice de Fatiga Semanal" icon={Activity} subtitle="Volumen vs MRV por grupo muscular" />
+          <p className="text-xs text-gray-500 mb-4">
+            Compara tus series semanales con el Volumen Máximo Recuperable (MRV). Reduce intensidad cuando un grupo llega al 75%+.
+          </p>
+          <div className="space-y-3">
+            {fatigueData.map((entry) => (
+              <div key={entry.muscleGroup}>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm text-white font-medium">{entry.muscleGroup}</span>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs font-semibold ${fatigueStatusColor(entry.status)}`}>
+                      {fatigueStatusLabel(entry.status)}
+                    </span>
+                    <span className="text-[10px] font-mono text-gray-500">{entry.weeklyVolume}/{entry.mrv} series</span>
+                  </div>
+                </div>
+                <div className="h-2 rounded-full bg-white/10 overflow-hidden">
+                  <motion.div
+                    className={`h-full rounded-full transition-all ${
+                      entry.status === 'fresh' ? 'bg-emerald-400' :
+                      entry.status === 'moderate' ? 'bg-yellow-400' :
+                      entry.status === 'high' ? 'bg-orange-400' : 'bg-red-400'
+                    }`}
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.min(100, entry.percent)}%` }}
+                    transition={{ duration: 0.6, ease: 'easeOut' }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </AppCard>
+      )}
 
       <AppCard className="mb-8 p-5 glass-panel">
         <SectionHeader title="🤖 Informe IA de progreso" icon={Activity} />

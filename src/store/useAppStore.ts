@@ -40,6 +40,8 @@ export type UserProfile = {
   };
 };
 
+export type ExerciseType = 'weighted' | 'isometric' | 'bodyweight' | 'cardio';
+
 export type Exercise = {
   id: string;
   name: string;
@@ -50,6 +52,9 @@ export type Exercise = {
   gifUrl: string;
   muscleGroup: string;
   technique?: string;
+  exerciseType?: ExerciseType;
+  /** Target hold duration in seconds (used for isometric exercises) */
+  durationTarget?: number;
 };
 
 export type WorkoutDay = {
@@ -80,6 +85,12 @@ export type WorkoutLog = {
   exerciseId: string;
   weight: number;
   reps: number;
+  /** Duration in seconds (for isometric and cardio exercises) */
+  duration?: number;
+  /** Rate of Perceived Exertion 1-10 (isometric) */
+  rpe?: number;
+  /** Reps In Reserve 0-4 (weighted / bodyweight) */
+  rir?: number;
 };
 
 export type WeightLog = {
@@ -108,6 +119,7 @@ export type ExerciseLibraryEntry = {
   muscleGroup: string;
   defaultSets: number;
   defaultReps: string;
+  exerciseType?: ExerciseType;
 };
 
 export type Achievement = {
@@ -129,6 +141,13 @@ export type AppToast = {
   type: 'success' | 'error' | 'info';
   title: string;
   message?: string;
+};
+
+export type RecoveryLog = {
+  date: string;        // YYYY-MM-DD
+  sleepHours: number;
+  hrv?: number;        // Morning HRV in ms (RMSSD). Optional.
+  score: number;       // Computed 0-100
 };
 
 interface AppState {
@@ -163,6 +182,8 @@ interface AppState {
   weeklyGoals: WeeklyGoal[];
   achievements: Achievement[];
   notificationsEnabled: boolean;
+  // Recovery Score logs (morning check-in data)
+  recoveryLogs: RecoveryLog[];
 
   // Auth actions
   setAuthToken: (token: string | null) => void;
@@ -199,6 +220,7 @@ interface AppState {
   resetApp: () => void;
   addAchievement: (achievement: Achievement) => void;
   setNotificationsEnabled: (v: boolean) => void;
+  addRecoveryLog: (log: RecoveryLog) => void;
 }
 
 const defaultExerciseLibrary: ExerciseLibraryEntry[] = [
@@ -216,10 +238,12 @@ const defaultExerciseLibrary: ExerciseLibraryEntry[] = [
   },
   {
     id: 'chest-4', name: 'Fondos en paralelas', nameEn: 'chest dips', muscleGroup: 'Pecho', defaultSets: 3, defaultReps: '8-12',
+    exerciseType: 'bodyweight',
     technique: '1. Apóyate en las barras con los brazos extendidos.\n2. Inclínate ligeramente hacia delante para activar el pecho.\n3. Baja doblando los codos hasta 90°.\n4. Empuja hacia arriba controlando el movimiento.\n5. No hiperextiendas los codos arriba.',
   },
   {
     id: 'back-1', name: 'Dominadas asistidas', nameEn: 'assisted pull up', muscleGroup: 'Espalda', defaultSets: 4, defaultReps: '6-10',
+    exerciseType: 'bodyweight',
     technique: '1. Agarra la barra con agarre prono a la anchura de los hombros.\n2. Cuelga con los brazos extendidos y activa las escápulas hacia abajo y atrás.\n3. Tira del cuerpo hacia arriba hasta que la barbilla supere la barra.\n4. Baja lentamente hasta la extensión completa.\n5. Evita balancear el cuerpo.',
   },
   {
@@ -282,6 +306,27 @@ const defaultExerciseLibrary: ExerciseLibraryEntry[] = [
     id: 'arms-4', name: 'Press francés', nameEn: 'skull crusher', muscleGroup: 'Tríceps', defaultSets: 3, defaultReps: '10-12',
     technique: '1. Túmbate en el banco con una barra EZ o mancuernas sobre la cabeza.\n2. Con los codos apuntando al techo, baja el peso hacia la frente.\n3. Extiende los brazos sin bloquear los codos.\n4. Mantén los codos fijos, sin que se abran hacia los lados.\n5. Controla bien la bajada para proteger los codos.',
   },
+  // ─── Isometric exercises ───────────────────────────────────────────────────
+  {
+    id: 'core-1', name: 'Plancha', nameEn: 'plank', muscleGroup: 'Core', defaultSets: 3, defaultReps: '30-60s',
+    exerciseType: 'isometric',
+    technique: '1. Apoya los antebrazos y las puntas de los pies en el suelo.\n2. Mantén el cuerpo alineado de cabeza a talones.\n3. Contrae el abdomen, glúteos y cuádriceps durante toda la serie.\n4. No dejes caer ni elevar las caderas.\n5. Respira de forma continua y controlada.',
+  },
+  {
+    id: 'core-2', name: 'Sentadilla isométrica', nameEn: 'wall sit', muscleGroup: 'Piernas', defaultSets: 3, defaultReps: '30-60s',
+    exerciseType: 'isometric',
+    technique: '1. Apoya la espalda en la pared.\n2. Baja hasta que los muslos queden paralelos al suelo y las rodillas a 90°.\n3. Los pies deben estar a la anchura de los hombros.\n4. Mantén la posición sin mover la espalda de la pared.\n5. Focaliza la tensión en cuádriceps y glúteos.',
+  },
+  {
+    id: 'cali-1', name: 'Frog Stand', nameEn: 'frog stand', muscleGroup: 'Calistenia', defaultSets: 3, defaultReps: '10-30s',
+    exerciseType: 'isometric',
+    technique: '1. En cuclillas, coloca las manos en el suelo a la anchura de los hombros.\n2. Apoya las rodillas sobre los tríceps.\n3. Inclínate lentamente hacia adelante transfiriendo el peso a las manos.\n4. Levanta los pies del suelo y mantén el equilibrio.\n5. Activa el core y mira al suelo a 30 cm enfrente.',
+  },
+  {
+    id: 'core-3', name: 'Plancha lateral', nameEn: 'side plank', muscleGroup: 'Core', defaultSets: 3, defaultReps: '20-45s',
+    exerciseType: 'isometric',
+    technique: '1. Apoya el antebrazo derecho y el borde del pie derecho.\n2. Eleva las caderas hasta alinear el cuerpo lateralmente.\n3. Mantén el abdomen y glúteo activados.\n4. No dejes caer la cadera hacia el suelo.\n5. Repite por el lado izquierdo.',
+  },
 ];
 
 export const useAppStore = create<AppState>()(
@@ -321,6 +366,7 @@ export const useAppStore = create<AppState>()(
       ],
       achievements: [],
       notificationsEnabled: false,
+      recoveryLogs: [],
 
       // Auth actions
       setAuthToken: (token) => set({ authToken: token, isAuthenticated: !!token }),
@@ -344,6 +390,7 @@ export const useAppStore = create<AppState>()(
         weightLogs: [],
         mealEatenRecord: {},
         achievements: [],
+        recoveryLogs: [],
         weeklyGoals: [
           { id: 'habit-1', label: 'Completar 3 sesiones de fuerza', done: false },
           { id: 'habit-2', label: 'Dormir 7h al menos 5 dias', done: false },
@@ -393,6 +440,7 @@ export const useAppStore = create<AppState>()(
               weight: 0,
               gifUrl: '',
               muscleGroup: exercise.muscleGroup,
+              exerciseType: exercise.exerciseType,
             },
           ],
         };
@@ -463,6 +511,7 @@ export const useAppStore = create<AppState>()(
         weightLogs: [],
         mealEatenRecord: {},
         achievements: [],
+        recoveryLogs: [],
         weeklyGoals: [
           { id: 'habit-1', label: 'Completar 3 sesiones de fuerza', done: false },
           { id: 'habit-2', label: 'Dormir 7h al menos 5 dias', done: false },
@@ -470,6 +519,20 @@ export const useAppStore = create<AppState>()(
         ],
       }),
       setNotificationsEnabled: (v) => set({ notificationsEnabled: v }),
+      addRecoveryLog: (log) =>
+        set((state) => {
+          const existingIndex = state.recoveryLogs.findIndex((l) => l.date === log.date);
+          if (existingIndex >= 0) {
+            // Update existing entry for this date in-place (no re-sort needed)
+            const updated = [...state.recoveryLogs];
+            updated[existingIndex] = log;
+            return { recoveryLogs: updated };
+          }
+          // New date — append and sort once
+          return {
+            recoveryLogs: [...state.recoveryLogs, log].sort((a, b) => a.date.localeCompare(b.date)),
+          };
+        }),
     }),
     {
       name: 'voltbody-storage',
