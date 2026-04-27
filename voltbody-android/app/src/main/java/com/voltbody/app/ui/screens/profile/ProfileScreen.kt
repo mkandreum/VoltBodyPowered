@@ -1,5 +1,9 @@
 package com.voltbody.app.ui.screens.profile
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.*
@@ -33,6 +37,17 @@ fun ProfileScreen(
     val vb = LocalVoltBodyColors.current
     val uiState by viewModel.uiState.collectAsState()
 
+    // Photo pickers
+    val profilePhotoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        uri?.toString()?.let { viewModel.setProfilePhotoUri(it) }
+    }
+    val progressPhotoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        uri?.toString()?.let { viewModel.addProgressPhotoUri(it) }
+    }
+    val motivationPhotoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        viewModel.setMotivationPhoto(uri?.toString())
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -51,14 +66,38 @@ fun ProfileScreen(
             level = uiState.level,
             xp = uiState.xp,
             streak = uiState.streak,
-            onPickPhoto = viewModel::pickPhoto
+            onPickPhoto = { profilePhotoPicker.launch("image/*") },
+            onSaveDimensions = viewModel::updateProfileDimensions
+        )
+
+        // ── Fitness stat bars ─────────────────────────────────────────────────
+        FitnessStatBarsCard(stats = uiState.fitnessStats)
+
+        // ── Progress photos ───────────────────────────────────────────────────
+        ProgressPhotosCard(
+            progressPhotos = uiState.progressPhotos,
+            onAddPhoto = { progressPhotoPicker.launch("image/*") }
         )
 
         // ── Weight log ────────────────────────────────────────────────────────
         WeightLogCard(
             currentWeight = uiState.profile?.weight ?: 70f,
             lastLogWeight = uiState.lastWeightLog,
+            weightLogHistory = uiState.weightLogHistory,
             onAddWeight = viewModel::addWeightLog
+        )
+
+        // ── Personal records ──────────────────────────────────────────────────
+        if (uiState.personalRecords.isNotEmpty()) {
+            PersonalRecordsCard(records = uiState.personalRecords)
+        }
+
+        // ── Motivation ────────────────────────────────────────────────────────
+        MotivationCard(
+            phrase = uiState.motivationPhrase,
+            photo = uiState.motivationPhoto,
+            onPhraseChange = viewModel::setMotivationPhrase,
+            onPickPhoto = { motivationPhotoPicker.launch("image/*") }
         )
 
         // ── Themes ────────────────────────────────────────────────────────────
@@ -97,9 +136,14 @@ private fun ProfileHeaderCard(
     level: Int,
     xp: Int,
     streak: Int,
-    onPickPhoto: () -> Unit
+    onPickPhoto: () -> Unit,
+    onSaveDimensions: (Float, Float) -> Unit
 ) {
     val vb = LocalVoltBodyColors.current
+    var isEditing by remember { mutableStateOf(false) }
+    var editWeight by remember(profile?.weight) { mutableStateOf(String.format("%.1f", profile?.weight ?: 70f)) }
+    var editHeight by remember(profile?.height) { mutableStateOf(String.format("%.0f", profile?.height ?: 170f)) }
+
     AppCard {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
             // Avatar photo
@@ -141,16 +185,65 @@ private fun ProfileHeaderCard(
                     MicroStat("${profile?.weight?.toInt() ?: "—"}kg", "Peso")
                 }
             }
+            // Edit toggle
+            IconButton(onClick = {
+                if (isEditing) {
+                    val w = editWeight.toFloatOrNull() ?: (profile?.weight ?: 70f)
+                    val h = editHeight.toFloatOrNull() ?: (profile?.height ?: 170f)
+                    onSaveDimensions(w, h)
+                }
+                isEditing = !isEditing
+            }) {
+                Icon(
+                    if (isEditing) Icons.Filled.Check else Icons.Outlined.Edit,
+                    contentDescription = null,
+                    tint = if (isEditing) ColorSuccess else vb.textMuted,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
         }
         if (profile != null) {
             Spacer(modifier = Modifier.height(12.dp))
             AccentDivider()
             Spacer(modifier = Modifier.height(8.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
-                ProfileStat("${profile.height.toInt()}cm", "Altura")
-                ProfileStat(profile.currentState, "Nivel")
-                ProfileStat("${profile.trainingDaysPerWeek}d/sem", "Entrenos")
-                ProfileStat("${profile.sessionMinutes}min", "Sesión")
+                if (isEditing) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Peso (kg)", style = UppercaseLabel.copy(fontSize = 8.sp), color = vb.textMuted)
+                        OutlinedTextField(
+                            value = editWeight,
+                            onValueChange = { editWeight = it },
+                            modifier = Modifier.width(80.dp),
+                            singleLine = true,
+                            textStyle = MaterialTheme.typography.bodySmall.copy(color = ColorWhite, textAlign = TextAlign.Center),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = vb.accent,
+                                unfocusedBorderColor = vb.border
+                            )
+                        )
+                    }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Altura (cm)", style = UppercaseLabel.copy(fontSize = 8.sp), color = vb.textMuted)
+                        OutlinedTextField(
+                            value = editHeight,
+                            onValueChange = { editHeight = it },
+                            modifier = Modifier.width(80.dp),
+                            singleLine = true,
+                            textStyle = MaterialTheme.typography.bodySmall.copy(color = ColorWhite, textAlign = TextAlign.Center),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = vb.accent,
+                                unfocusedBorderColor = vb.border
+                            )
+                        )
+                    }
+                    ProfileStat("${profile.age} años", "Edad")
+                    ProfileStat("${profile.trainingDaysPerWeek}d/sem", "Entrenos")
+                } else {
+                    ProfileStat("${profile.height.toInt()}cm", "Altura")
+                    ProfileStat(profile.currentState.split(" ").firstOrNull() ?: profile.currentState, "Nivel")
+                    ProfileStat("${profile.trainingDaysPerWeek}d/sem", "Entrenos")
+                    ProfileStat("${profile.sessionMinutes}min", "Sesión")
+                }
             }
         }
     }
@@ -175,7 +268,12 @@ private fun ProfileStat(value: String, label: String) {
 }
 
 @Composable
-private fun WeightLogCard(currentWeight: Float, lastLogWeight: Float?, onAddWeight: (Float) -> Unit) {
+private fun WeightLogCard(
+    currentWeight: Float,
+    lastLogWeight: Float?,
+    weightLogHistory: List<WeightLog>,
+    onAddWeight: (Float) -> Unit
+) {
     val vb = LocalVoltBodyColors.current
     var weightInput by remember { mutableStateOf(currentWeight) }
     AppCard {
@@ -204,6 +302,25 @@ private fun WeightLogCard(currentWeight: Float, lastLogWeight: Float?, onAddWeig
             val diff = weightInput - it
             val diffText = if (diff > 0) "+${String.format("%.1f", diff)}kg" else "${String.format("%.1f", diff)}kg"
             Text("Último registro: ${String.format("%.1f", it)}kg · $diffText", style = MaterialTheme.typography.bodySmall, color = vb.textMuted)
+        }
+        // Weight log history
+        if (weightLogHistory.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(12.dp))
+            AccentDivider()
+            Spacer(modifier = Modifier.height(8.dp))
+            weightLogHistory.forEach { log ->
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(vb.surface)
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(log.date, style = MaterialTheme.typography.labelSmall, color = vb.textMuted)
+                    Text("${String.format("%.1f", log.weight)} kg", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold), color = vb.accent)
+                }
+            }
         }
     }
 }
@@ -348,6 +465,206 @@ private fun NotificationsCard(enabled: Boolean, onToggle: (Boolean) -> Unit) {
                     uncheckedTrackColor = vb.surface
                 )
             )
+        }
+    }
+}
+
+// ── Fitness stat bars ──────────────────────────────────────────────────────────
+
+@Composable
+private fun FitnessStatBarsCard(stats: FitnessStats) {
+    val vb = LocalVoltBodyColors.current
+    val statBars = listOf(
+        Triple("💪 Fuerza", stats.strength, vb.accent),
+        Triple("🔥 Consistencia", stats.consistency, ColorWarning),
+        Triple("⚡ Energía", stats.energy, ColorInfo)
+    )
+    AppCard {
+        SectionHeader(title = "📊 Indicadores de forma")
+        Spacer(modifier = Modifier.height(12.dp))
+        statBars.forEach { (label, value, color) ->
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(label, style = MaterialTheme.typography.bodySmall, color = ColorWhite, modifier = Modifier.weight(1f))
+                Text("$value%", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold), color = color)
+            }
+            Box(
+                modifier = Modifier.fillMaxWidth().height(6.dp)
+                    .clip(CircleShape).background(vb.border)
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxHeight()
+                        .fillMaxWidth(minOf(1f, value / 100f))
+                        .clip(CircleShape).background(color)
+                )
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+        }
+    }
+}
+
+// ── Progress photos ────────────────────────────────────────────────────────────
+
+@Composable
+private fun ProgressPhotosCard(
+    progressPhotos: List<ProgressPhoto>,
+    onAddPhoto: () -> Unit
+) {
+    val vb = LocalVoltBodyColors.current
+    AppCard {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            SectionHeader(title = "📸 Fotos de progreso", modifier = Modifier.weight(1f))
+            IconButton(
+                onClick = onAddPhoto,
+                modifier = Modifier.size(32.dp).clip(CircleShape).background(vb.accent.copy(0.15f))
+                    .border(1.dp, vb.accent.copy(0.4f), CircleShape)
+            ) {
+                Icon(Icons.Filled.Add, contentDescription = "Añadir foto", tint = vb.accent, modifier = Modifier.size(16.dp))
+            }
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+        if (progressPhotos.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("Sube fotos para ver tu evolución 📷", style = MaterialTheme.typography.bodySmall, color = vb.textMuted, textAlign = TextAlign.Center)
+            }
+        } else {
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                progressPhotos.takeLast(8).reversed().forEach { photo ->
+                    Box(
+                        modifier = Modifier.size(width = 100.dp, height = 130.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(vb.surface)
+                            .border(1.dp, vb.border, RoundedCornerShape(12.dp))
+                    ) {
+                        AsyncImage(
+                            model = photo.url,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                        // Date overlay
+                        Box(
+                            modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+                                .background(Color.Black.copy(0.6f))
+                                .padding(vertical = 3.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                photo.date.take(10),
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
+                                color = Color.White.copy(0.85f)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ── Personal records ───────────────────────────────────────────────────────────
+
+@Composable
+private fun PersonalRecordsCard(records: List<PersonalRecord>) {
+    val vb = LocalVoltBodyColors.current
+    AppCard {
+        SectionHeader(
+            title = "🏆 Récords personales",
+            trailing = { NeonBadge("${records.size}") }
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        records.forEach { pr ->
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                    .clip(RoundedCornerShape(10.dp)).background(vb.surface)
+                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(pr.exerciseName, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium), color = ColorWhite, maxLines = 1)
+                    Text(pr.date, style = MaterialTheme.typography.labelSmall, color = vb.textMuted)
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text("${String.format("%.1f", pr.weight)}kg", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold), color = vb.accent)
+                    Text("× ${pr.reps} reps", style = MaterialTheme.typography.labelSmall, color = vb.textMuted)
+                }
+            }
+        }
+    }
+}
+
+// ── Motivation section ─────────────────────────────────────────────────────────
+
+@Composable
+private fun MotivationCard(
+    phrase: String,
+    photo: String?,
+    onPhraseChange: (String) -> Unit,
+    onPickPhoto: () -> Unit
+) {
+    val vb = LocalVoltBodyColors.current
+    AppCard {
+        SectionHeader(title = "💪 Motivación")
+        Spacer(modifier = Modifier.height(12.dp))
+        OutlinedTextField(
+            value = phrase,
+            onValueChange = onPhraseChange,
+            modifier = Modifier.fillMaxWidth(),
+            placeholder = { Text("Escribe tu frase motivacional…", style = MaterialTheme.typography.bodySmall, color = vb.textMuted) },
+            singleLine = false,
+            maxLines = 3,
+            textStyle = MaterialTheme.typography.bodySmall.copy(color = ColorWhite),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = vb.accent,
+                unfocusedBorderColor = vb.border
+            )
+        )
+        Spacer(modifier = Modifier.height(10.dp))
+        OutlinedButton(
+            onClick = onPickPhoto,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            border = BorderStroke(1.dp, vb.accent.copy(0.4f))
+        ) {
+            Icon(Icons.Outlined.AddPhotoAlternate, contentDescription = null, tint = vb.accent, modifier = Modifier.size(16.dp))
+            Spacer(modifier = Modifier.width(6.dp))
+            Text("Subir foto motivacional 📷", color = vb.accent, style = MaterialTheme.typography.labelMedium)
+        }
+        if (photo != null) {
+            Spacer(modifier = Modifier.height(10.dp))
+            Box(
+                modifier = Modifier.fillMaxWidth().height(160.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .border(1.dp, vb.border, RoundedCornerShape(12.dp))
+            ) {
+                AsyncImage(
+                    model = photo,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+                // Phrase overlay
+                Box(
+                    modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+                        .background(Color.Black.copy(0.55f)).padding(10.dp)
+                ) {
+                    Text(phrase, style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium), color = Color.White)
+                }
+            }
         }
     }
 }

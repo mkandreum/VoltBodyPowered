@@ -11,7 +11,29 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.time.temporal.WeekFields
+import java.util.Locale
 import javax.inject.Inject
+
+// ── Extra model types for Profile ─────────────────────────────────────────────
+
+data class PersonalRecord(
+    val exerciseName: String,
+    val weight: Float,
+    val reps: Int,
+    val date: String
+)
+
+data class FitnessStats(
+    /** Derived from total workout log count (capped at 100) */
+    val strength: Int,
+    /** Derived from weekly goals completion percentage */
+    val consistency: Int,
+    /** Derived from weight log frequency (capped at 100, min 30) */
+    val energy: Int
+)
+
+// ── UI State ──────────────────────────────────────────────────────────────────
 
 data class ProfileUiState(
     val profile: UserProfile? = null,
@@ -21,9 +43,15 @@ data class ProfileUiState(
     val xp: Int = 0,
     val streak: Int = 0,
     val lastWeightLog: Float? = null,
+    val weightLogHistory: List<WeightLog> = emptyList(),
     val achievements: List<Achievement> = emptyList(),
     val weeklyGoals: List<WeeklyGoal> = emptyList(),
-    val notificationsEnabled: Boolean = false
+    val notificationsEnabled: Boolean = false,
+    val progressPhotos: List<ProgressPhoto> = emptyList(),
+    val personalRecords: List<PersonalRecord> = emptyList(),
+    val motivationPhrase: String = "Cada serie te acerca más a tu meta. ¡No pares!",
+    val motivationPhoto: String? = null,
+    val fitnessStats: FitnessStats = FitnessStats(0, 0, 30)
 )
 
 @HiltViewModel
@@ -67,7 +95,39 @@ class ProfileViewModel @Inject constructor(
                     achievements.firstOrNull { it.id == catalogItem.id } ?: catalogItem
                 }
 
-                ProfileUiState(
+                // Personal records — best weight per exercise
+                val exerciseNames = buildMap<String, String> {
+                    for (day in routine) {
+                        for (ex in day.exercises) put(ex.id, ex.name)
+                    }
+                }
+                val prMap = mutableMapOf<String, PersonalRecord>()
+                for (log in logs) {
+                    val existing = prMap[log.exerciseId]
+                    if (log.weight > 0 && (existing == null || log.weight > existing.weight)) {
+                        prMap[log.exerciseId] = PersonalRecord(
+                            exerciseName = exerciseNames[log.exerciseId] ?: log.exerciseId,
+                            weight = log.weight,
+                            reps = log.reps,
+                            date = log.date.take(10)
+                        )
+                    }
+                }
+                val personalRecords = prMap.values
+                    .sortedByDescending { it.weight }
+                    .take(10)
+
+                // Fitness stats
+                val completedGoals = weeklyGoals.count { it.done }
+                val consistencyScore = if (weeklyGoals.isEmpty()) 0
+                    else ((completedGoals.toFloat() / weeklyGoals.size) * 100).toInt()
+                val fitnessStats = FitnessStats(
+                    strength = minOf(100, logs.size * 4),
+                    consistency = consistencyScore,
+                    energy = minOf(100, maxOf(30, weightLogs.size * 18))
+                )
+
+                _uiState.value.copy(
                     profile = profile,
                     profilePhoto = profilePhoto,
                     theme = theme,
@@ -75,26 +135,62 @@ class ProfileViewModel @Inject constructor(
                     xp = xp % 500,
                     streak = streak,
                     lastWeightLog = lastWeightLog,
+                    weightLogHistory = weightLogs.takeLast(6).reversed(),
                     achievements = mergedAchievements,
                     weeklyGoals = weeklyGoals,
-                    notificationsEnabled = notificationsEnabled
+                    notificationsEnabled = notificationsEnabled,
+                    personalRecords = personalRecords,
+                    fitnessStats = fitnessStats
                 )
             }.collect { _uiState.value = it }
+        }
+
+        // Progress photos
+        viewModelScope.launch {
+            appViewModel.progressPhotos.collect { photos ->
+                _uiState.value = _uiState.value.copy(progressPhotos = photos)
+            }
+        }
+
+        // Motivation phrase + photo
+        viewModelScope.launch {
+            combine(appViewModel.motivationPhrase, appViewModel.motivationPhoto) { phrase, photo ->
+                _uiState.value = _uiState.value.copy(motivationPhrase = phrase, motivationPhoto = photo)
+            }.collect {}
         }
     }
 
     fun pickPhoto() {
-        // Photo picking is handled by MainActivity via ActivityResultContracts
-        // This is a stub — the activity will call setProfilePhoto when done
+        // Photo picking is handled in ProfileScreen via rememberLauncherForActivityResult
+    }
+
+    fun setProfilePhotoUri(uriString: String) {
+        appViewModel.setProfilePhoto(uriString)
+    }
+
+    fun addProgressPhotoUri(uriString: String) {
+        val date = java.time.Instant.now().toString()
+        appViewModel.addProgressPhoto(ProgressPhoto(date = date, url = uriString))
+        appViewModel.showToast(AppToast("progress_photo", ToastType.SUCCESS, "Foto añadida", "Foto de progreso guardada"))
     }
 
     fun addWeightLog(weight: Float) {
         val today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
         appViewModel.addWeightLog(WeightLog(today, weight))
-        // Also update profile weight
         appViewModel.profile.value?.let { appViewModel.updateProfile(it.copy(weight = weight)) }
         appViewModel.showToast(AppToast("weight_log", ToastType.SUCCESS, "Peso registrado", "${String.format("%.1f", weight)} kg"))
     }
+
+    fun updateProfileDimensions(weight: Float, height: Float) {
+        appViewModel.profile.value?.let {
+            appViewModel.updateProfile(it.copy(weight = weight, height = height))
+        }
+        appViewModel.showToast(AppToast("profile_updated", ToastType.SUCCESS, "Perfil actualizado"))
+    }
+
+    fun setMotivationPhrase(phrase: String) = appViewModel.setMotivationPhrase(phrase)
+
+    fun setMotivationPhoto(uriString: String?) = appViewModel.setMotivationPhoto(uriString)
 
     fun setTheme(theme: AppTheme) = appViewModel.setTheme(theme)
 
