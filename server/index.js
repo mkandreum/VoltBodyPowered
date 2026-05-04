@@ -45,9 +45,15 @@ app.use('/api/profile', profileRoutes);
 app.use('/api/workout', workoutRoutes);
 app.use('/api/ai', aiRoutes);
 
-// Health check
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString(), requestId: req.requestId });
+// Health check — verifies DB connectivity
+app.get('/api/health', async (req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ status: 'ok', db: 'connected', timestamp: new Date().toISOString(), requestId: req.requestId });
+  } catch (err) {
+    logError('health.check.failed', { message: err.message });
+    res.status(503).json({ status: 'error', db: 'disconnected', timestamp: new Date().toISOString() });
+  }
 });
 
 app.get('/api/metrics', (req, res) => {
