@@ -60,7 +60,14 @@ router.post('/register', authRateLimiter, validateAuthPayload, async (req, res) 
         id: user.id,
         email: user.email,
         name: user.name
-      }
+      },
+      profile: user.profile,
+      routine: user.profile?.routine,
+      diet: user.profile?.diet,
+      insights: user.profile?.insights,
+      profilePhoto: user.profile?.profilePhoto,
+      motivationPhrase: user.profile?.motivationPhrase,
+      motivationPhoto: user.profile?.motivationPhoto
     });
   } catch (error) {
     incrementAuthError();
@@ -108,7 +115,14 @@ router.post('/login', authRateLimiter, validateAuthPayload, async (req, res) => 
         id: user.id,
         email: user.email,
         name: user.name
-      }
+      },
+      profile: user.profile,
+      routine: user.profile?.routine,
+      diet: user.profile?.diet,
+      insights: user.profile?.insights,
+      profilePhoto: user.profile?.profilePhoto,
+      motivationPhrase: user.profile?.motivationPhrase,
+      motivationPhoto: user.profile?.motivationPhoto
     });
   } catch (error) {
     incrementAuthError();
