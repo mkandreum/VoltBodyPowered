@@ -56,6 +56,11 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
+// Lightweight health check that doesn't query DB
+app.get('/api/ping', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString(), requestId: req.requestId });
+});
+
 app.get('/api/metrics', (req, res) => {
   const metricsKey = process.env.METRICS_KEY;
   const providedKey = req.headers['x-metrics-key'];

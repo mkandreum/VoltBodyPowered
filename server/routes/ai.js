@@ -13,12 +13,21 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const EXERCISES_PATH = path.join(__dirname, '../utils/exercises.json');
 
-let localExercises = [];
-try {
-  localExercises = JSON.parse(fs.readFileSync(EXERCISES_PATH, 'utf8'));
-  logInfo('ai.local_exercises.loaded', { count: localExercises.length });
-} catch (err) {
-  logError('ai.local_exercises.load_error', { message: err.message });
+let localExercises = null;
+let exercisesLoadAttempted = false;
+
+async function ensureExercisesLoaded() {
+  if (exercisesLoadAttempted) return;
+  exercisesLoadAttempted = true;
+
+  try {
+    const raw = await fs.promises.readFile(EXERCISES_PATH, 'utf8');
+    localExercises = JSON.parse(raw);
+    logInfo('ai.local_exercises.loaded', { count: localExercises.length });
+  } catch (err) {
+    logError('ai.local_exercises.load_error', { message: err.message });
+    localExercises = [];
+  }
 }
 
 const router = express.Router();
@@ -367,8 +376,9 @@ function scoreExerciseMatch(resultName, searchTerm) {
  * Resolves each exercise locally and accurately, mapping to a high-speed raw GitHub CDN URL.
  */
 async function enrichExercisesWithGifs(exercises = []) {
-  if (!localExercises.length) {
-    return exercises; // Fallback
+  await ensureExercisesLoaded();
+  if (!localExercises?.length) {
+    return exercises;
   }
 
   return exercises.map((ex) => {
