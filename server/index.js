@@ -17,10 +17,19 @@ import prisma from './utils/prisma.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+import { setTimeout as delay } from 'timers/promises';
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.set('trust proxy', 1);
+
+// Startup delay to allow infrastructure to stabilize
+const STARTUP_DELAY = parseInt(process.env.STARTUP_DELAY_MS || '3000');
+if (STARTUP_DELAY > 0) {
+  console.log(`Startup delay: ${STARTUP_DELAY}ms to allow infrastructure to stabilize`);
+  await delay(STARTUP_DELAY);
+}
 
 // Verify static files exist
 const staticPath = path.join(__dirname, '../public');

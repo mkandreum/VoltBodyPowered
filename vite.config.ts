@@ -41,7 +41,7 @@ export default defineConfig(() => {
           cleanupOutdatedCaches: true,
           skipWaiting: true,
           clientsClaim: true,
-          globIgnores: ['**/index.html', '**/manifest.webmanifest', '**/*.map'],
+          globIgnores: ['**/*.map'],
           importScripts: ['/sw-notifications.js'],
           runtimeCaching: [
             {
