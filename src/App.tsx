@@ -3,6 +3,7 @@ import { useAppStore } from './store/useAppStore';
 import Login from './pages/Login';
 import Onboarding from './pages/Onboarding';
 import BottomNav from './components/BottomNav';
+import SidebarNav from './components/SidebarNav';
 import SplashScreen from './components/SplashScreen';
 import { AnimatePresence, motion } from 'motion/react';
 import { pageTransition, fadeSlideUp } from './lib/motion';
@@ -133,7 +134,8 @@ export default function App() {
   };
 
   return (
-    <div className="app-shell min-h-[100dvh] text-white overflow-x-hidden safe-bottom">
+    <div className="app-shell min-h-[100dvh] text-white overflow-x-hidden safe-bottom lg:pl-72">
+      <SidebarNav />
       <AnimatePresence>
         <motion.div
           key={currentTab}

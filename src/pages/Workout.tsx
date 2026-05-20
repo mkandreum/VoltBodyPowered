@@ -660,334 +660,342 @@ export default function Workout() {
         <p className="app-accent font-mono text-sm glow-text">{todayRoutine?.focus || 'Hoy toca activar el cuerpo'}</p>
       </header>
 
-      <motion.div {...listStagger(0)}>
-      <AppCard className="mb-5 p-4 glass-panel">
-        <SectionHeader
-          title="Semana de entrenamiento"
-          subtitle={
-            isEditingDays
-              ? 'Paso 1: toca un dia activo. Paso 2: toca un dia bloqueado para moverlo.'
-              : 'Selecciona un dia. Los dias sin plan quedan bloqueados.'
-          }
-          right={
-            <button
-              type="button"
-              onClick={() => {
-                setIsEditingDays((prev) => !prev);
-                setMoveSourceDayIndex(null);
-              }}
-              aria-label={isEditingDays ? 'Cancelar edición de días' : 'Editar días de entrenamiento'}
-              className="tap-target neuro-raised px-3 py-2 text-[11px] font-semibold text-gray-300 transition-all hover:text-white"
-            >
-              {isEditingDays ? 'Cancelar' : 'Editar dias de entreno'}
-            </button>
-          }
-        />
-        <div className="grid grid-cols-7 gap-2">
-          {WEEKDAY_LABELS.map((day, index) => {
-            const hasRoutine = Boolean(routinesByDay[index]);
-            const isSelected = selectedDayIndex === index;
-            const isMoveSource = moveSourceDayIndex === index;
+      <div className="flex flex-col lg:grid lg:grid-cols-[380px_1fr] lg:gap-8 lg:items-start pb-8">
+        {/* Left Column (Sticky Sidebar on Desktop) */}
+        <div className="space-y-6 lg:sticky lg:top-6">
+          <motion.div {...listStagger(0)}>
+          <AppCard className="p-4 glass-panel">
+            <SectionHeader
+              title="Semana de entrenamiento"
+              subtitle={
+                isEditingDays
+                  ? 'Paso 1: toca un dia activo. Paso 2: toca un dia bloqueado para moverlo.'
+                  : 'Selecciona un dia. Los dias sin plan quedan bloqueados.'
+              }
+              right={
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditingDays((prev) => !prev);
+                    setMoveSourceDayIndex(null);
+                  }}
+                  aria-label={isEditingDays ? 'Cancelar edición de días' : 'Editar días de entrenamiento'}
+                  className="tap-target neuro-raised px-3 py-2 text-[11px] font-semibold text-gray-300 transition-all hover:text-white"
+                >
+                  {isEditingDays ? 'Cancelar' : 'Editar dias de entreno'}
+                </button>
+              }
+            />
+            <div className="grid grid-cols-7 gap-2">
+              {WEEKDAY_LABELS.map((day, index) => {
+                const hasRoutine = Boolean(routinesByDay[index]);
+                const isSelected = selectedDayIndex === index;
+                const isMoveSource = moveSourceDayIndex === index;
 
-            return (
-              <button
-                key={day.key}
-                type="button"
-                onClick={() => void handleWeekdayTap(index)}
-                disabled={!isEditingDays && !hasRoutine}
-                className={[
-                  'tap-target rounded-xl border px-1 py-2 text-center text-[11px] font-semibold transition-all',
-                  !isEditingDays && hasRoutine ? 'pressable cursor-pointer' : '',
-                  !isEditingDays && !hasRoutine ? 'cursor-not-allowed opacity-45' : '',
-                  isEditingDays && !hasRoutine ? 'cursor-pointer opacity-75' : '',
-                  isEditingDays && isMoveSource ? 'border-amber-400 bg-amber-500/20 text-amber-200' : '',
-                  isSelected
-                    ? 'border-[color:var(--app-accent)]/60 text-[var(--app-accent)] shadow-[inset_2px_2px_6px_var(--neuro-shadow-dark),0_0_10px_color-mix(in_srgb,var(--app-accent)_18%,transparent)]'
-                    : 'border-[color:var(--neuro-shadow-light)]/50 text-gray-300 shadow-[3px_3px_8px_var(--neuro-shadow-dark),-2px_-2px_6px_var(--neuro-shadow-light)]',
-                  isEditingDays && !hasRoutine ? 'border-dashed' : '',
-                ].join(' ')}
-              >
-                {day.short}
-              </button>
-            );
-          })}
-        </div>
-      </AppCard>
-      </motion.div>
-
-      <motion.div {...listStagger(1)}>
-      <AppCard accent interactive className="mb-8 p-6 glass-panel">
-        <div className="flex items-start justify-between gap-4 mb-4">
-          <div>
-            <p className="text-xs uppercase tracking-[0.18em] text-gray-400 mb-2">🎯 Sesión Prioritaria</p>
-            <h2 className="text-3xl font-black leading-none tracking-tight headline-gradient">
-              {todayRoutine?.focus || 'Crea tu sesión personalizada'}
-            </h2>
-            <p className="text-sm text-gray-300 mt-2">
-              {todayRoutine
-                ? `${totalTodayExercises} ejercicios listos para ejecutar. Hoy toca. Sin excusas.`
-                : 'No hay rutina asignada hoy. Arma una sesión en 1 minuto.'}
-            </p>
-          </div>
-          <Flame className="app-accent shrink-0" />
-        </div>
-
-        <div className="grid grid-cols-3 gap-2 mb-4">
-          <StatPill label="estado" value={todayRoutine ? 'activo ✅' : 'custom'} />
-          <StatPill label="ejercicios" value={`${totalTodayExercises}`} />
-          <StatPill label="tu lista" value={`${customWorkout.length}`} />
-        </div>
-
-        <button
-          onClick={() => {
-            if (!todayRoutine?.exercises?.length) {
-              showToast({
-                type: 'info',
-                title: 'Sin rutina automática',
-                message: 'Añade ejercicios en “Arma tu Entrenamiento”.',
-              });
-              return;
-            }
-            showToast({
-              type: 'success',
-              title: 'Sesión iniciada ⚡',
-              message: `Enfócate en ${todayRoutine.focus}.`,
-            });
-          }}
-          className="tap-target pressable pulse-surface primary-btn w-full rounded-xl font-bold py-3 px-4 transition-base"
-        >
-          Empezar sesión 🚀
-        </button>
-      </AppCard>
-      </motion.div>
-
-      <AppCard className="mb-6 p-4 glass-panel">
-        <div className="mb-2 flex items-center justify-between text-xs text-gray-400">
-          <span>Checklist de sesion</span>
-          <span>{completedSets}/{plannedSets} series</span>
-        </div>
-        <div className="h-2.5 w-full neuro-progress-track">
-          <div className="neuro-progress-fill" style={{ width: `${sessionProgress}%` }} />
-        </div>
-        <div className="mt-2 flex items-center justify-between text-[11px]">
-          <span className="text-gray-400">Progreso: {sessionProgress}%</span>
-          <span className="text-gray-400">ETA: {etaMinutes} min</span>
-        </div>
-        <div className="mt-2 text-[11px] text-gray-400">
-          Sync:{' '}
-          <span className={syncStatus === 'synced' ? 'text-emerald-400' : syncStatus === 'error' ? 'text-amber-300' : 'text-gray-300'}>
-            {syncStatus === 'idle' && 'sin actividad'}
-            {syncStatus === 'local' && 'guardado local'}
-            {syncStatus === 'syncing' && 'sincronizando...'}
-            {syncStatus === 'synced' && 'sincronizado'}
-            {syncStatus === 'error' && 'error de sincronizacion'}
-          </span>
-        </div>
-      </AppCard>
-
-      {isSpecialClassToday && (
-        <AppCard className="mb-8 border-[color:var(--app-accent)]/30 bg-[color:var(--app-accent)]/5">
-          <div className="flex items-center gap-3">
-            <CalendarClock className="app-accent" />
-            <div>
-              <p className="text-sm font-bold text-white">Hoy toca clase especial 🎯</p>
-              <p className="text-xs text-gray-300">Prioriza técnica y ritmo para sumar calidad al progreso.</p>
+                return (
+                  <button
+                    key={day.key}
+                    type="button"
+                    onClick={() => void handleWeekdayTap(index)}
+                    disabled={!isEditingDays && !hasRoutine}
+                    className={[
+                      'tap-target rounded-xl border px-1 py-2 text-center text-[11px] font-semibold transition-all',
+                      !isEditingDays && hasRoutine ? 'pressable cursor-pointer' : '',
+                      !isEditingDays && !hasRoutine ? 'cursor-not-allowed opacity-45' : '',
+                      isEditingDays && !hasRoutine ? 'cursor-pointer opacity-75' : '',
+                      isEditingDays && isMoveSource ? 'border-amber-400 bg-amber-500/20 text-amber-200' : '',
+                      isSelected
+                        ? 'border-[color:var(--app-accent)]/60 text-[var(--app-accent)] shadow-[inset_2px_2px_6px_var(--neuro-shadow-dark),0_0_10px_color-mix(in_srgb,var(--app-accent)_18%,transparent)]'
+                        : 'border-[color:var(--neuro-shadow-light)]/50 text-gray-300 shadow-[3px_3px_8px_var(--neuro-shadow-dark),-2px_-2px_6px_var(--neuro-shadow-light)]',
+                      isEditingDays && !hasRoutine ? 'border-dashed' : '',
+                    ].join(' ')}
+                  >
+                    {day.short}
+                  </button>
+                );
+              })}
             </div>
-          </div>
-        </AppCard>
-      )}
+          </AppCard>
+          </motion.div>
 
-      <div className="space-y-4">
-        {todayRoutine?.exercises.length ? todayRoutine.exercises.map((exercise, index) => {
-          const completedCount = setsByExercise.get(exercise.id) ?? 0;
-          const targetSets = Math.max(1, Number(exercise.sets || 0));
-          const isCompleted = completedCount >= targetSets;
-          const progressPct = Math.min(100, Math.round((completedCount / targetSets) * 100));
+          <motion.div {...listStagger(1)}>
+          <AppCard accent interactive className="p-6 glass-panel">
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.18em] text-gray-400 mb-2">🎯 Sesión Prioritaria</p>
+                <h2 className="text-3xl font-black leading-none tracking-tight headline-gradient">
+                  {todayRoutine?.focus || 'Crea tu sesión personalizada'}
+                </h2>
+                <p className="text-sm text-gray-300 mt-2">
+                  {todayRoutine
+                    ? `${totalTodayExercises} ejercicios listos para ejecutar. Hoy toca. Sin excusas.`
+                    : 'No hay rutina asignada hoy. Arma una sesión en 1 minuto.'}
+                </p>
+              </div>
+              <Flame className="app-accent shrink-0" />
+            </div>
 
-          return (
-          <motion.div
-            key={exercise.id}
-            {...listStagger(index)}
-            whileTap={{ scale: 0.985 }}
-            onClick={() => setSelectedExercise(exercise)}
-            className={`panel-soft interactive-tile rounded-3xl overflow-hidden cursor-pointer transition-all group ripple-host ${
-              isCompleted
-                ? 'border-[color:var(--app-accent)]/60 bg-[color:var(--app-accent)]/5 anim-glow-pulse'
-                : 'hover:border-[color:var(--app-accent)]/50'
-            }`}
-          >
-            <div className="p-5 flex items-center gap-4">
+            <div className="grid grid-cols-3 gap-2 mb-4">
+              <StatPill label="estado" value={todayRoutine ? 'activo ✅' : 'custom'} />
+              <StatPill label="ejercicios" value={`${totalTodayExercises}`} />
+              <StatPill label="tu lista" value={`${customWorkout.length}`} />
+            </div>
+
+            <button
+              onClick={() => {
+                if (!todayRoutine?.exercises?.length) {
+                  showToast({
+                    type: 'info',
+                    title: 'Sin rutina automática',
+                    message: 'Añade ejercicios en “Arma tu Entrenamiento”.',
+                  });
+                  return;
+                }
+                showToast({
+                  type: 'success',
+                  title: 'Sesión iniciada ⚡',
+                  message: `Enfócate en ${todayRoutine.focus}.`,
+                });
+              }}
+              className="tap-target pressable pulse-surface primary-btn w-full rounded-xl font-bold py-3 px-4 transition-base"
+            >
+              Empezar sesión 🚀
+            </button>
+          </AppCard>
+          </motion.div>
+
+          <AppCard className="p-4 glass-panel">
+            <div className="mb-2 flex items-center justify-between text-xs text-gray-400">
+              <span>Checklist de sesion</span>
+              <span>{completedSets}/{plannedSets} series</span>
+            </div>
+            <div className="h-2.5 w-full neuro-progress-track">
+              <div className="neuro-progress-fill" style={{ width: `${sessionProgress}%` }} />
+            </div>
+            <div className="mt-2 flex items-center justify-between text-[11px]">
+              <span className="text-gray-400">Progreso: {sessionProgress}%</span>
+              <span className="text-gray-400">ETA: {etaMinutes} min</span>
+            </div>
+            <div className="mt-2 text-[11px] text-gray-400">
+              Sync:{' '}
+              <span className={syncStatus === 'synced' ? 'text-emerald-400' : syncStatus === 'error' ? 'text-amber-300' : 'text-gray-300'}>
+                {syncStatus === 'idle' && 'sin actividad'}
+                {syncStatus === 'local' && 'guardado local'}
+                {syncStatus === 'syncing' && 'sincronizando...'}
+                {syncStatus === 'synced' && 'sincronizado'}
+                {syncStatus === 'error' && 'error de sincronizacion'}
+              </span>
+            </div>
+          </AppCard>
+        </div>
+
+        {/* Right Column (Scrollable Main Content on Desktop) */}
+        <div className="space-y-6 lg:mt-0 flex-1 min-w-0">
+          {isSpecialClassToday && (
+            <AppCard className="border-[color:var(--app-accent)]/30 bg-[color:var(--app-accent)]/5">
+              <div className="flex items-center gap-3">
+                <CalendarClock className="app-accent" />
+                <div>
+                  <p className="text-sm font-bold text-white">Hoy toca clase especial 🎯</p>
+                  <p className="text-xs text-gray-300">Prioriza técnica y ritmo para sumar calidad al progreso.</p>
+                </div>
+              </div>
+            </AppCard>
+          )}
+
+          <div className="space-y-4">
+            {todayRoutine?.exercises.length ? todayRoutine.exercises.map((exercise, index) => {
+              const completedCount = setsByExercise.get(exercise.id) ?? 0;
+              const targetSets = Math.max(1, Number(exercise.sets || 0));
+              const isCompleted = completedCount >= targetSets;
+              const progressPct = Math.min(100, Math.round((completedCount / targetSets) * 100));
+
+              return (
               <motion.div
-                layoutId={`ex-img-${exercise.id}`}
-                className="w-16 h-16 rounded-2xl overflow-hidden bg-[var(--app-surface)] flex-shrink-0 relative"
+                key={exercise.id}
+                {...listStagger(index)}
+                whileTap={{ scale: 0.985 }}
+                onClick={() => setSelectedExercise(exercise)}
+                className={`panel-soft interactive-tile rounded-3xl overflow-hidden cursor-pointer transition-all group ripple-host ${
+                  isCompleted
+                    ? 'border-[color:var(--app-accent)]/60 bg-[color:var(--app-accent)]/5 anim-glow-pulse'
+                    : 'hover:border-[color:var(--app-accent)]/50'
+                }`}
               >
-                <LazyImage 
-                  src={exercise.gifUrl || 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=400&auto=format&fit=crop'} 
-                  alt={exercise.name} 
-                  onError={handleImageError}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
-                  referrerPolicy="no-referrer"
-                />
-                <div className="absolute inset-0 flex items-center justify-center bg-black/40 group-hover:bg-transparent transition-colors">
+                <div className="p-5 flex items-center gap-4">
+                  <motion.div
+                    layoutId={`ex-img-${exercise.id}`}
+                    className="w-16 h-16 rounded-2xl overflow-hidden bg-[var(--app-surface)] flex-shrink-0 relative"
+                  >
+                    <LazyImage 
+                      src={exercise.gifUrl || 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=400&auto=format&fit=crop'} 
+                      alt={exercise.name} 
+                      onError={handleImageError}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+                      referrerPolicy="no-referrer"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 group-hover:bg-transparent transition-colors">
+                      <AnimatePresence mode="wait" initial={false}>
+                        {isCompleted ? (
+                          <motion.span key="done" {...checkBounce}>
+                            <CheckCircle2 className="text-[var(--app-accent)]" size={22} />
+                          </motion.span>
+                        ) : (
+                          <motion.span key="play" initial={{ opacity: 0.8 }} animate={{ opacity: 0.8 }}>
+                            <Play className="app-accent opacity-80" size={20} />
+                          </motion.span>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </motion.div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-base font-semibold text-white mb-0.5 truncate">{exercise.name}</h3>
+                    <p className="text-sm text-gray-500 font-medium tabular-nums">
+                      {exercise.sets} sets × {exercise.reps} reps
+                    </p>
+                    {completedCount > 0 && (
+                      <AnimatePresence>
+                        <motion.p
+                          key={`${exercise.id}-count`}
+                          initial={{ opacity: 0, y: 4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                          className="text-xs font-mono mt-0.5 text-[var(--app-accent)]"
+                        >
+                          {isCompleted ? '✅ Completado' : `${completedCount}/${targetSets} series`}
+                        </motion.p>
+                      </AnimatePresence>
+                    )}
+                  </div>
                   <AnimatePresence mode="wait" initial={false}>
                     {isCompleted ? (
-                      <motion.span key="done" {...checkBounce}>
-                        <CheckCircle2 className="text-[var(--app-accent)]" size={22} />
+                      <motion.span key="done-icon" {...completionGlow}>
+                        <CheckCircle2 className="text-[var(--app-accent)]" size={20} />
                       </motion.span>
                     ) : (
-                      <motion.span key="play" initial={{ opacity: 0.8 }} animate={{ opacity: 0.8 }}>
-                        <Play className="app-accent opacity-80" size={20} />
+                      <motion.span key="chevron" initial={{ opacity: 1 }} animate={{ opacity: 1 }}>
+                        <ChevronLeft className="text-gray-600 rotate-180 group-hover:text-[var(--app-accent)] transition-colors" />
                       </motion.span>
                     )}
                   </AnimatePresence>
                 </div>
+                {/* Ultra-thin series progress bar */}
+                <div className="h-[3px] w-full bg-white/5">
+                  <motion.div
+                    className="h-full rounded-full"
+                    style={{ background: isCompleted ? 'var(--app-accent)' : 'var(--app-accent)' }}
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progressPct}%` }}
+                    transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                  />
+                </div>
               </motion.div>
-              <div className="flex-1 min-w-0">
-                <h3 className="text-base font-semibold text-white mb-0.5 truncate">{exercise.name}</h3>
-                <p className="text-sm text-gray-500 font-medium tabular-nums">
-                  {exercise.sets} sets × {exercise.reps} reps
-                </p>
-                {completedCount > 0 && (
-                  <AnimatePresence>
-                    <motion.p
-                      key={`${exercise.id}-count`}
-                      initial={{ opacity: 0, y: 4 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                      className="text-xs font-mono mt-0.5 text-[var(--app-accent)]"
-                    >
-                      {isCompleted ? '✅ Completado' : `${completedCount}/${targetSets} series`}
-                    </motion.p>
-                  </AnimatePresence>
-                )}
-              </div>
-              <AnimatePresence mode="wait" initial={false}>
-                {isCompleted ? (
-                  <motion.span key="done-icon" {...completionGlow}>
-                    <CheckCircle2 className="text-[var(--app-accent)]" size={20} />
-                  </motion.span>
-                ) : (
-                  <motion.span key="chevron" initial={{ opacity: 1 }} animate={{ opacity: 1 }}>
-                    <ChevronLeft className="text-gray-600 rotate-180 group-hover:text-[var(--app-accent)] transition-colors" />
-                  </motion.span>
-                )}
-              </AnimatePresence>
-            </div>
-            {/* Ultra-thin series progress bar */}
-            <div className="h-[3px] w-full bg-white/5">
+              );
+            }) : (
+              /* Empty state */
               <motion.div
-                className="h-full rounded-full"
-                style={{ background: isCompleted ? 'var(--app-accent)' : 'var(--app-accent)' }}
-                initial={{ width: 0 }}
-                animate={{ width: `${progressPct}%` }}
-                transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-              />
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                className="flex flex-col items-center justify-center py-16 px-6 text-center"
+              >
+                <div className="relative mb-6">
+                  <svg width="96" height="96" viewBox="0 0 96 96" fill="none" className="opacity-20">
+                    <rect x="12" y="36" width="72" height="42" rx="6" stroke="currentColor" strokeWidth="1.5" strokeDasharray="4 3" />
+                    <circle cx="48" cy="24" r="12" stroke="currentColor" strokeWidth="1.5" strokeDasharray="4 3" />
+                    <line x1="32" y1="57" x2="64" y2="57" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                    <line x1="38" y1="65" x2="58" y2="65" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Dumbbell className="app-accent opacity-60" size={32} />
+                  </div>
+                </div>
+                <p className="text-white/70 font-semibold text-base mb-1">Sin rutina para hoy</p>
+                <p className="text-gray-500 text-sm max-w-[220px]">Genera tu plan con IA o añade ejercicios en "Arma tu Entrenamiento"</p>
+              </motion.div>
+            )}
+          </div>
+
+          {profile?.weeklySpecialSession?.enabled && (
+            <AppCard accent>
+              <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-2">
+                <Star size={18} className="app-accent" />
+                ⭐ Clase Especial Semanal
+              </h3>
+              <p className="text-sm text-gray-300">
+                {profile.weeklySpecialSession.activity} • {profile.weeklySpecialSession.day} • {profile.weeklySpecialSession.durationMinutes} min
+              </p>
+            </AppCard>
+          )}
+
+          <AppCard className="glass-panel">
+            <SectionHeader title="🏋️ Arma tu Entrenamiento" />
+
+            <div className="flex flex-wrap gap-2 mb-4">
+              {muscleGroups.map((group) => (
+                <button
+                  key={group}
+                  onClick={() => setSelectedMuscleGroup(group)}
+                  className={`tap-target px-3 py-1.5 text-xs rounded-full border transition-colors ${
+                    selectedMuscleGroup === group
+                      ? 'border-[color:var(--app-accent)] bg-[color:var(--app-accent)]/10 text-[var(--app-accent)]'
+                      : 'border-[color:var(--neuro-shadow-light)]/50 text-gray-400 shadow-[3px_3px_8px_var(--neuro-shadow-dark),-1px_-1px_5px_var(--neuro-shadow-light)]'
+                  }`}
+                >
+                  {group}
+                </button>
+              ))}
             </div>
-          </motion.div>
-          );
-        }) : (
-          /* Empty state */
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-            className="flex flex-col items-center justify-center py-16 px-6 text-center"
-          >
-            <div className="relative mb-6">
-              <svg width="96" height="96" viewBox="0 0 96 96" fill="none" className="opacity-20">
-                <rect x="12" y="36" width="72" height="42" rx="6" stroke="currentColor" strokeWidth="1.5" strokeDasharray="4 3" />
-                <circle cx="48" cy="24" r="12" stroke="currentColor" strokeWidth="1.5" strokeDasharray="4 3" />
-                <line x1="32" y1="57" x2="64" y2="57" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                <line x1="38" y1="65" x2="58" y2="65" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Dumbbell className="app-accent opacity-60" size={32} />
+
+            <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+              {filteredLibrary.map((exercise) => {
+                const alreadyAdded = customWorkout.some((item) => item.id === exercise.id);
+
+                return (
+                  <div key={exercise.id} className="flex items-center justify-between neuro-inset p-3">
+                    <div>
+                      <p className="text-sm text-white font-medium">{exercise.name}</p>
+                      <p className="text-xs text-gray-500">{exercise.muscleGroup} • {exercise.defaultSets}x{exercise.defaultReps}</p>
+                    </div>
+                    <button
+                      onClick={() => addToCustomWorkout(exercise)}
+                      disabled={alreadyAdded}
+                      className="p-2 rounded-full neuro-raised text-gray-300 hover:text-[var(--app-accent)] disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <PlusCircle size={16} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </AppCard>
+
+          {customWorkout.length > 0 && (
+            <AppCard className="glass-panel">
+              <SectionHeader title={`📋 Tu Rutina Personal (${customWorkout.length})`} />
+              <div className="space-y-2">
+                {customWorkout.map((exercise) => (
+                  <div key={exercise.id} className="flex items-center justify-between neuro-inset p-3">
+                    <div>
+                      <p className="text-sm text-white">{exercise.name}</p>
+                      <p className="text-xs text-gray-500">{exercise.muscleGroup}</p>
+                    </div>
+                    <button
+                      onClick={() => removeFromCustomWorkout(exercise.id)}
+                      className="p-2 rounded-full neuro-raised text-gray-300 hover:text-red-400"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                ))}
               </div>
-            </div>
-            <p className="text-white/70 font-semibold text-base mb-1">Sin rutina para hoy</p>
-            <p className="text-gray-500 text-sm max-w-[220px]">Genera tu plan con IA o añade ejercicios en "Arma tu Entrenamiento"</p>
-          </motion.div>
-        )}
+            </AppCard>
+          )}
+        </div>
       </div>
 
-      {profile?.weeklySpecialSession?.enabled && (
-        <AppCard className="mt-8" accent>
-          <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-2">
-            <Star size={18} className="app-accent" />
-            ⭐ Clase Especial Semanal
-          </h3>
-          <p className="text-sm text-gray-300">
-            {profile.weeklySpecialSession.activity} • {profile.weeklySpecialSession.day} • {profile.weeklySpecialSession.durationMinutes} min
-          </p>
-        </AppCard>
-      )}
-
-      <AppCard className="mt-8 glass-panel">
-        <SectionHeader title="🏋️ Arma tu Entrenamiento" />
-
-        <div className="flex flex-wrap gap-2 mb-4">
-          {muscleGroups.map((group) => (
-            <button
-              key={group}
-              onClick={() => setSelectedMuscleGroup(group)}
-              className={`tap-target px-3 py-1.5 text-xs rounded-full border transition-colors ${
-                selectedMuscleGroup === group
-                  ? 'border-[color:var(--app-accent)] bg-[color:var(--app-accent)]/10 text-[var(--app-accent)]'
-                  : 'border-[color:var(--neuro-shadow-light)]/50 text-gray-400 shadow-[3px_3px_8px_var(--neuro-shadow-dark),-1px_-1px_5px_var(--neuro-shadow-light)]'
-              }`}
-            >
-              {group}
-            </button>
-          ))}
-        </div>
-
-        <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-          {filteredLibrary.map((exercise) => {
-            const alreadyAdded = customWorkout.some((item) => item.id === exercise.id);
-
-            return (
-              <div key={exercise.id} className="flex items-center justify-between neuro-inset p-3">
-                <div>
-                  <p className="text-sm text-white font-medium">{exercise.name}</p>
-                  <p className="text-xs text-gray-500">{exercise.muscleGroup} • {exercise.defaultSets}x{exercise.defaultReps}</p>
-                </div>
-                <button
-                  onClick={() => addToCustomWorkout(exercise)}
-                  disabled={alreadyAdded}
-                  className="p-2 rounded-full neuro-raised text-gray-300 hover:text-[var(--app-accent)] disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  <PlusCircle size={16} />
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      </AppCard>
-
-      {customWorkout.length > 0 && (
-        <AppCard className="mt-6 glass-panel">
-          <SectionHeader title={`📋 Tu Rutina Personal (${customWorkout.length})`} />
-          <div className="space-y-2">
-            {customWorkout.map((exercise) => (
-              <div key={exercise.id} className="flex items-center justify-between neuro-inset p-3">
-                <div>
-                  <p className="text-sm text-white">{exercise.name}</p>
-                  <p className="text-xs text-gray-500">{exercise.muscleGroup}</p>
-                </div>
-                <button
-                  onClick={() => removeFromCustomWorkout(exercise.id)}
-                  className="p-2 rounded-full neuro-raised text-gray-300 hover:text-red-400"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            ))}
-          </div>
-        </AppCard>
-      )}
-
       {createPortal(
-      <AnimatePresence>
+        <AnimatePresence>
         {selectedExercise && (
           <motion.div
             {...slideUpSheet}

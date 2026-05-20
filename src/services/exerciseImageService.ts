@@ -2,11 +2,22 @@ import { WorkoutDay } from '../store/useAppStore';
 
 const API_URL = '/api';
 
+export function isMockOrEmptyGifUrl(url: string | undefined | null): boolean {
+  if (!url) return true;
+  const s = String(url).toLowerCase();
+  return (
+    s.includes('exercisedb.dev') ||
+    s.includes('unsplash.com') ||
+    s.includes('placeholder') ||
+    s.includes('mock')
+  );
+}
+
 /**
- * Returns true if at least one exercise in the routine has no gifUrl.
+ * Returns true if at least one exercise in the routine has no valid gifUrl or has a mock URL.
  */
 export function routineNeedsEnrichment(routine: WorkoutDay[]): boolean {
-  return routine.some((day) => day.exercises?.some((ex) => !ex.gifUrl));
+  return routine.some((day) => day.exercises?.some((ex) => isMockOrEmptyGifUrl(ex.gifUrl)));
 }
 
 /**

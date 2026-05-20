@@ -5,6 +5,21 @@ import { createRateLimiter } from '../middleware/rateLimit.js';
 import { validateGeneratePlanPayload, validateAlternativeMealPayload, validateProgressReportPayload } from '../middleware/validators.js';
 import { logError, logInfo } from '../utils/logger.js';
 import { incrementAiError } from '../utils/metrics.js';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const EXERCISES_PATH = path.join(__dirname, '../utils/exercises.json');
+
+let localExercises = [];
+try {
+  localExercises = JSON.parse(fs.readFileSync(EXERCISES_PATH, 'utf8'));
+  logInfo('ai.local_exercises.loaded', { count: localExercises.length });
+} catch (err) {
+  logError('ai.local_exercises.load_error', { message: err.message });
+}
 
 const router = express.Router();
 const aiRateLimiter = createRateLimiter({ windowMs: 10 * 60 * 1000, max: 12, keyPrefix: 'ai' });
@@ -159,6 +174,17 @@ const ai = new GoogleGenAI({ apiKey });
 // Docs: https://oss.exercisedb.dev
 const EXERCISEDB_BASE = 'https://oss.exercisedb.dev/api/v1';
 
+function isMockOrEmptyGifUrl(url) {
+  if (!url) return true;
+  const s = String(url).toLowerCase();
+  return (
+    s.includes('exercisedb.dev') ||
+    s.includes('unsplash.com') ||
+    s.includes('placeholder') ||
+    s.includes('mock')
+  );
+}
+
 /**
  * Translates a Spanish exercise name to an English search term
  * using a simple keyword map. Falls back to the original name.
@@ -166,53 +192,59 @@ const EXERCISEDB_BASE = 'https://oss.exercisedb.dev/api/v1';
 function toEnglishSearchTerm(nameEs = '') {
   const lower = nameEs.toLowerCase();
   const map = [
+    [/sentadilla.*búlgara|sentadilla.*bulgara|sentadilla.*bulgar/, 'bulgarian split squat'],
     [/sentadilla goblet/,   'goblet squat'],
-    [/sentadill/,           'squat'],
+    [/sentadilla con barra|sentadilla libre|sentadilla frontal|sentadilla trasera/, 'barbell squat'],
+    [/sentadilla/,           'squat'],
+    [/peso muerto rumano|peso muerto rum/, 'romanian deadlift'],
+    [/peso muerto sumo/,    'sumo deadlift'],
+    [/peso muerto/,         'deadlift'],
+    [/hip thrust con barra|hip thrust/, 'hip thrust'],
+    [/puente de glúteo|puente de gluteo|glute bridge/, 'glute bridge'],
+    [/patada de glúteo|patada de gluteo|glute kickback/, 'glute kickback'],
+    [/prensa.*pierna|prensa|leg press/, 'leg press'],
+    [/curl femoral|curl.*pierna|leg curl/, 'leg curl'],
+    [/extensión de cuádriceps|extension de cuadriceps|leg extension/, 'leg extension'],
+    [/elevación de talones|elevacion de talones|pantorrilla|gemelos/, 'calf raise'],
+    [/zancadas caminando|zancada caminando|lunge caminando/, 'walking lunge'],
+    [/zancada lateral|lunge lateral/, 'lateral lunge'],
+    [/zancada|lunge/,       'lunge'],
     [/press.*banca.*inclin|press.*inclin.*banca/, 'incline bench press'],
+    [/press.*banca.*declin|press.*declin.*banca/, 'decline bench press'],
     [/press.*banca/,        'bench press'],
     [/press.*inclin.*mancuerna|press.*mancuerna.*inclin/, 'incline dumbbell press'],
     [/press.*inclin/,       'incline dumbbell press'],
     [/press.*militar|press.*overhead|press.*hombro/, 'overhead press'],
-    [/press.*mancuerna/,    'dumbbell press'],
-    [/curl.*barra.*z|curl.*z/,  'ez bar curl'],
+    [/press.*militar.*mancuerna|press.*mancuerna.*militar/, 'dumbbell overhead press'],
+    [/press.*mancuerna/,    'dumbbell bench press'],
+    [/aperturas.*polea|cable.*fly/, 'cable fly'],
+    [/aperturas.*mancuerna|apertura.*mancuerna/, 'dumbbell fly'],
+    [/apertura|cruces de poleas/, 'cable crossover'],
+    [/elevación lateral|elevaciones laterales/, 'lateral raise'],
+    [/elevación frontal|elevaciones frontales/, 'front raise'],
+    [/pájaro inclinado|pajaro inclinado|pájaros|pajaros/, 'bent over lateral raise'],
+    [/face pull|facepull/,  'face pull'],
+    [/curl.*barra.*z|curl.*z/, 'ez bar curl'],
     [/curl.*b.?ceps.*barra|curl.*barra.*b.?ceps/, 'barbell curl'],
-    [/curl.*b.?ceps|bicep curl/, 'bicep curl'],
     [/curl.*martillo/,      'hammer curl'],
     [/curl.*mancuerna/,     'dumbbell curl'],
+    [/curl.*b.?ceps|bicep curl/, 'bicep curl'],
+    [/extensión de tríceps en polea|tríceps en polea|triceps en polea|extension de triceps en polea/, 'cable tricep extension'],
+    [/press.*francés|press.*frances|skull crusher/, 'skull crusher'],
+    [/extensión.*tríceps|extension.*triceps/, 'tricep extension'],
+    [/fondos.*paralelas|fondos en paralelas/, 'chest dips'],
+    [/fondos|dips/,         'dips'],
+    [/jalón.*pecho|jalon.*pecho|lat pulldown/, 'lat pulldown'],
+    [/dominadas.*asistidas/, 'assisted pull up'],
+    [/dominada|pull up|pull-up/, 'pull up'],
     [/remo.*barra/,         'barbell row'],
     [/remo.*mancuerna/,     'dumbbell row'],
-    [/remo.*cable|remo.*polea/, 'cable row'],
+    [/remo.*cable|remo.*polea|remo.*sentado/, 'cable row'],
     [/remo/,                'row'],
-    [/jalón.*pecho|jalon.*pecho|lat pulldown/, 'lat pulldown'],
-    [/jalón|jalon/,         'lat pulldown'],
-    [/dominada/,            'pull up'],
-    [/fondos/,              'dips'],
-    [/apertura.*polea|cable.*fly/, 'cable fly'],
-    [/apertura/,            'dumbbell fly'],
-    [/peso muerto rumano|peso muerto rum/, 'romanian deadlift'],
-    [/peso muerto/,         'deadlift'],
-    [/zancada caminando|lunge caminando/, 'walking lunge'],
-    [/zancada|lunge/,       'lunge'],
-    [/prensa.*pierna|leg press/, 'leg press'],
-    [/curl.*femoral|curl.*pierna/, 'leg curl'],
-    [/extensi.?n.*cuadricep|extensi.?n.*pierna/, 'leg extension'],
-    [/extensi.?n.*tri/,     'tricep extension'],
-    [/press.*franc.?s|skull crusher/, 'skull crusher'],
-    [/elevaci.?n lateral/,  'lateral raise'],
-    [/elevaci.?n frontal/,  'front raise'],
-    [/p.?jaro inclinado/,   'bent over lateral raise'],
-    [/face pull/,           'face pull'],
-    [/plancha/,             'plank'],
+    [/plancha frontal|plancha/, 'plank'],
     [/burpee/,              'burpee'],
-    [/hip thrust/,          'hip thrust'],
-    [/glut/,                'glute bridge'],
-    [/cardio|trote|corr/,   'run'],
-    [/pull.*over|pullover/,  'pullover'],
-    [/remo.*sentado/,        'seated cable row'],
-    [/extensi.?n.*tr.?ceps.*polea|tr.?ceps.*polea/, 'cable tricep extension'],
-    [/fondos.*paralelas|fondos en paralelas/, 'chest dips'],
-    [/dominadas.*asistidas/, 'assisted pull up'],
-    [/press.*militar.*mancuerna|press.*mancuerna.*militar/, 'dumbbell overhead press'],
+    [/trote|correr|corr|cardio/, 'run'],
+    [/pull.*over|pullover/,  'pullover']
   ];
   for (const [pattern, term] of map) {
     if (pattern.test(lower)) return term;
@@ -221,75 +253,144 @@ function toEnglishSearchTerm(nameEs = '') {
 }
 
 /**
- * Scores how well an ExerciseDB result name matches the English search term.
- * Returns a value in [0, 1]: 1 means every word in the term appears as a
- * whole word in the result name. Uses whole-word comparison to avoid false
- * positives such as 'lat' matching 'lateral'.
+ * Scores how well an exercise dataset result name matches the English search term.
+ * Returns a value based on word overlaps and ordering, with penalties for extra words.
+ * Incorporates plural/singular normalization and intellectual penalties for variation equipment.
  */
 function scoreExerciseMatch(resultName, searchTerm) {
-  const normalize = (s) => s.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
-  const rWords = new Set(normalize(resultName).split(/\s+/).filter(Boolean));
-  const terms = normalize(searchTerm).split(/\s+/).filter(Boolean);
+  const normalize = (s) => {
+    return s.toLowerCase()
+      .replace(/[^a-z0-9\s]/g, '')
+      .replace(/\bbiceps?\b/g, 'bicep')
+      .replace(/\btriceps?\b/g, 'tricep')
+      .replace(/\blunges?\b/g, 'lunge')
+      .replace(/\bsquats?\b/g, 'squat')
+      .replace(/\braises?\b/g, 'raise')
+      .replace(/\bextensions?\b/g, 'extension')
+      .replace(/\bfly(s|ies)?\b/g, 'fly')
+      .replace(/\bpresses?\b/g, 'press')
+      .replace(/\bdips?\b/g, 'dip')
+      .trim();
+  };
+
+  const normResult = normalize(resultName);
+  const normSearch = normalize(searchTerm);
+
+  if (normResult === normSearch) return 10.0; // Perfect match
+
+  const rWords = normResult.split(/\s+/).filter(Boolean);
+  const rWordSet = new Set(rWords);
+  const terms = normSearch.split(/\s+/).filter(Boolean);
+
   if (!terms.length) return 0;
-  const hits = terms.filter((t) => rWords.has(t));
-  return hits.length / terms.length;
+
+  let hits = 0;
+  terms.forEach(t => {
+    if (rWordSet.has(t)) hits++;
+  });
+
+  if (hits === 0) return -1000; // Force an extremely bad score so it never matches
+
+  // Calculate percentage of search terms matched
+  const searchMatchRatio = hits / terms.length;
+
+  // Add small penalty for extra words in the result to avoid overly long matches winning
+  const lengthPenalty = 0.05 * Math.abs(rWords.length - terms.length);
+
+  let score = searchMatchRatio - lengthPenalty;
+
+  // Substring bonus: if the entire search term appears as a continuous substring
+  if (normResult.includes(normSearch)) {
+    score += 0.5;
+  }
+
+  // Exact word starting/ending match bonus
+  if (normResult.startsWith(normSearch) || normResult.endsWith(normSearch)) {
+    score += 0.2;
+  }
+
+  // INTELLECTUAL PENALTIES:
+  // Penalize exercises in the database that require special/non-standard equipment or variations
+  // if the user did NOT explicitly search for those words.
+  const specialWords = [
+    'band', 'resistance', 'elastic',
+    'ball', 'swiss', 'stability', 'exercise ball',
+    'bosu',
+    'medicine',
+    'lever', 'machine',
+    'assisted',
+    'power point', 'powerpoint',
+    'suspension', 'trx',
+    'foam', 'roller',
+    'wheel',
+    'partner',
+    'slide',
+    'towel',
+    'chair',
+    'bench press on', // e.g. dumbbell press on exercise ball
+    'smith',
+    'elbow dip', // avoid very weird elbow dips
+    'impossible dip',
+    'korean dip',
+    'three bench'
+  ];
+
+  specialWords.forEach(word => {
+    if (normResult.includes(word) && !normSearch.includes(word)) {
+      score -= 0.8; // Apply a heavy penalty
+    }
+  });
+
+  // Prefer standard "barbell" or "dumbbell" or "bodyweight" defaults if nothing is specified.
+  if (normSearch === 'bench press' && normResult === 'barbell bench press') {
+    score += 0.5;
+  }
+  if (normSearch === 'plank' && normResult === 'weighted front plank') {
+    score += 0.5;
+  }
+  if (normSearch === 'bicep curl' && normResult === 'dumbbell bicep curl') {
+    score += 0.6;
+  }
+  if (normSearch === 'dip' && normResult === 'tricep dip') {
+    score += 0.5;
+  }
+  if (normSearch === 'dumbbell press' && normResult === 'dumbbell bench press') {
+    score += 0.6;
+  }
+
+  return score;
 }
 
 /**
- * Enriches an array of exercises with GIF URLs from the free ExerciseDB API.
- * Only fills gifUrl when it is empty ('') — never overwrites existing URLs.
- * Fetches up to 10 candidates and selects the one whose name best matches
- * the English translation of the exercise name, to avoid mismatched GIFs.
- * No API key required.
+ * Enriches an array of exercises with GIF URLs using our local dataset of 1324 exercises.
+ * Only fills/overwrites gifUrl when it is empty or is a mock/placeholder URL.
+ * Resolves each exercise locally and accurately, mapping to a high-speed raw GitHub CDN URL.
  */
 async function enrichExercisesWithGifs(exercises = []) {
-  return Promise.all(
-    exercises.map(async (ex) => {
-      if (ex.gifUrl) return ex;
-      
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3500); // 3.5s limit per exercise
+  if (!localExercises.length) {
+    return exercises; // Fallback
+  }
 
-      try {
-        // Use the English name provided by Gemini directly; fall back to the
-        // static translation map only for exercises that predate this field.
-        const englishTerm = ex.nameEn || toEnglishSearchTerm(ex.name);
-        // limit=10: fetching a small candidate set (vs. limit=1) lets the word-overlap
-        // scorer pick the best-matching exercise name, avoiding mismatched GIFs (e.g.
-        // "lat pulldown" returning a lateral-raise gif). 10 is a deliberate balance
-        // between accuracy and API payload size — 3-5 candidates often omit the best match.
-        const url = `${EXERCISEDB_BASE}/exercises?name=${encodeURIComponent(englishTerm)}&limit=10`;
-        
-        const resp = await fetch(url, {
-          headers: { 'Accept': 'application/json' },
-          signal: controller.signal
-        });
-        
-        clearTimeout(timeoutId);
-        
-        if (!resp.ok) return ex;
-        const data = await resp.json();
-        const list = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : []);
-        if (!list.length) return ex;
+  return exercises.map((ex) => {
+    if (ex.gifUrl && !isMockOrEmptyGifUrl(ex.gifUrl)) return ex;
 
-        // Pick the candidate whose name best matches the English search term
-        const best = list.reduce(
-          (top, item) => {
-            const score = scoreExerciseMatch(item.name || '', englishTerm);
-            return score > top.score ? { score, gifUrl: item.gifUrl || '' } : top;
-          },
-          { score: -1, gifUrl: list[0]?.gifUrl || '' }
-        );
+    const englishTerm = ex.nameEn || toEnglishSearchTerm(ex.name);
+    let best = { score: -100, item: null };
 
-        return { ...ex, gifUrl: best.gifUrl };
-      } catch (err) {
-        clearTimeout(timeoutId);
-        // Silently log timeout or network error to avoid blocking the user
-        logInfo('ai.enrich_gifs.skip', { exercise: ex.name, reason: err.name === 'AbortError' ? 'timeout' : 'error' });
-        return ex; 
+    for (const item of localExercises) {
+      const score = scoreExerciseMatch(item.name, englishTerm);
+      if (score > best.score) {
+        best = { score, item };
       }
-    })
-  );
+    }
+
+    if (best.item && best.score > 0 && best.item.gif_url) {
+      const fullGifUrl = `https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/${best.item.gif_url}`;
+      return { ...ex, gifUrl: fullGifUrl };
+    }
+
+    return ex;
+  });
 }
 
 /**

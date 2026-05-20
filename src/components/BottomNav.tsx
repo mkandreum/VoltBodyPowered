@@ -31,7 +31,7 @@ export default function BottomNav() {
   const isHomeActive = currentTab === 'home';
 
   return (
-    <div className="fixed left-1/2 -translate-x-1/2 z-50 w-[96%] max-w-[520px] bottom-[calc(1rem+env(safe-area-inset-bottom))]">
+    <div className="fixed left-1/2 -translate-x-1/2 z-50 w-[96%] max-w-[520px] bottom-[calc(1rem+env(safe-area-inset-bottom))] lg:hidden">
       <div className="ios-pill-nav rounded-full p-2.5">
         <div className="grid grid-cols-[1fr_1fr_auto_1fr_1fr] gap-2 items-center">
           {navItems.slice(0, 2).map((item) => {
