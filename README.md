@@ -1,112 +1,58 @@
-# VoltBody Powered 🔋
+<div align="center">
 
-**Tu entrenador personal inteligente con IA** - Con autenticación de usuarios, base de datos PostgreSQL y despliegue automático en Coolify.
+# ⚡ VoltBodyPowered
 
-## 🚀 Características
+**Sistema avanzado de gestión para centros deportivos y gimnasios**
 
-- ✅ **Autenticación JWT**: Login y registro con email
-- ✅ **Perfiles Personalizados**: Cada usuario tiene sus propios datos
-- ✅ **IA con Google Gemini**: Rutinas y dietas generadas por IA
-- ✅ **Base de Datos PostgreSQL**: Todo se almacena persistentemente
-- ✅ **Docker Compose**: Despliegue automático en Coolify
+*Un producto de [Xyon Platforms](https://github.com/mkandreum)*
 
-## 🏃 Ejecutar Localmente
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat&logo=typescript&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-646CFF?style=flat&logo=vite&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=white)
 
-### Prerequisitos
-- Node.js 20+
-- Docker (para PostgreSQL)
+</div>
 
-### Instalación
+---
+
+## ¿Qué es VoltBodyPowered?
+
+VoltBodyPowered es la versión avanzada de la plataforma VoltBody, desarrollada por Xyon Platforms. Incorpora funcionalidades extendidas de gestión para centros deportivos de mayor envergadura: control de accesos, gestión de entrenadores, facturación y analítica.
+
+## ✨ Funcionalidades
+
+- **Gestión completa de socios** y membrecías avanzadas
+- **Control de accesos** con dispositivos de entrada
+- **Gestión de entrenadores** y asignación de clases
+- **Facturación y pagos** integrados
+- **Análitica y reportes** del centro
+- **Despliegue self-hosted** vía Docker y Coolify
+
+## 🛠️ Stack técnico
+
+| Capa | Tecnología |
+|------|----------|
+| Frontend | React + TypeScript + Vite |
+| Backend | Node.js + TypeScript |
+| Despliegue | Docker + Coolify |
+
+## 🚀 Instalación
 
 ```bash
-# 1. Instalar dependencias
-npm install
-
-# 2. Configurar variables de entorno
+git clone https://github.com/mkandreum/VoltBodyPowered.git
+cd VoltBodyPowered
 cp .env.example .env
-# Edita .env con tus valores (JWT_SECRET, GEMINI_API_KEY, etc.)
-
-# 3. Iniciar PostgreSQL
-docker run --name voltbody-db \
-  -e POSTGRES_PASSWORD=voltbody123 \
-  -e POSTGRES_USER=voltbody \
-  -e POSTGRES_DB=voltbody \
-  -p 5432:5432 -d postgres:16-alpine
-
-# 4. Setup automático (cliente Prisma + migraciones)
-npm run setup
-
-# 5. Iniciar aplicación completa (frontend + backend)
-npm run dev:all
+docker-compose up -d
 ```
 
-**Abrir:** http://localhost:3000
+### Desarrollo local
 
-## 🚢 Despliegue en Coolify
-
-### 1. Configuración en Coolify
-- Tipo: **Docker Compose**
-- Coolify detecta automáticamente `docker-compose.yaml`
-
-### 2. Variables de Entorno Requeridas
-
-**⚠️ IMPORTANTE:** NO configures `PORT` - Coolify lo gestiona automáticamente.
-
-```env
-# Base de Datos
-POSTGRES_USER=voltbody
-POSTGRES_PASSWORD=tu_password_segura_aqui
-POSTGRES_DB=voltbody
-DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
-
-# Aplicación
-NODE_ENV=production
-APP_URL=https://tu-dominio.coolify.app
-
-# Seguridad (CAMBIAR EN PRODUCCIÓN)
-JWT_SECRET=genera_una_clave_aleatoria_de_32_caracteres
-
-# Google Gemini AI
-GEMINI_API_KEY=tu-api-key-de-gemini
+```bash
+npm install
+npm run dev
 ```
 
-### 3. Deploy
-1. Conecta tu repositorio Git a Coolify
-2. Configura las variables de entorno
-3. Haz push al repositorio
-4. Coolify despliega automáticamente
+## 🏢 Xyon Platforms
 
-✅ **Incluye:**
-- Migraciones de Prisma automáticas
-- SSL con Let's Encrypt
-- Volúmenes persistentes (PostgreSQL + uploads)
-- Health checks
-- Reinicio automático
+VoltBodyPowered es un producto desarrollado y mantenido por **Xyon Platforms**, empresa especializada en soluciones digitales para negocios locales y pymes.
 
-## 🛠️ Stack Técnico
-
-| Categoría | Tecnología |
-|-----------|------------|
-| **Frontend** | React 19, TypeScript, TailwindCSS, Motion, Three.js |
-| **Backend** | Node.js, Express, Prisma ORM |
-| **Base de Datos** | PostgreSQL 16 |
-| **Autenticación** | JWT + bcryptjs |
-| **IA** | Google Gemini API |
-| **DevOps** | Docker, Docker Compose, Coolify |
-
-## 📦 Almacenamiento
-
-Toda la información generada por la IA se guarda en PostgreSQL:
-- ✅ Rutinas de entrenamiento
-- ✅ Planes de dieta
-- ✅ Insights y recomendaciones
-- ✅ Logs de ejercicios
-- ✅ Fotos de progreso
-
-## 🔐 Seguridad
-
-- Contraseñas hasheadas con bcrypt
-- Autenticación JWT con expiración
-- Variables de entorno seguras
-- HTTPS en producción (Coolify)
-- Protección SQL injection (Prisma)
+> © Xyon Platforms — Todos los derechos reservados
