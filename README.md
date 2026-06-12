@@ -110,7 +110,3 @@ Toda la información generada por la IA se guarda en PostgreSQL:
 - Variables de entorno seguras
 - HTTPS en producción (Coolify)
 - Protección SQL injection (Prisma)
-
----
-
-View original app in AI Studio: https://ai.studio/apps/c280fbb9-224f-4be6-8bd4-670aeef9ffbc
