@@ -24,8 +24,8 @@ const PORT = process.env.PORT || 3000;
 
 app.set('trust proxy', 1);
 
-// Startup delay to allow infrastructure to stabilize
-const STARTUP_DELAY = parseInt(process.env.STARTUP_DELAY_MS || '3000');
+// Startup delay (defaults to 0ms for instant start)
+const STARTUP_DELAY = parseInt(process.env.STARTUP_DELAY_MS || '0');
 if (STARTUP_DELAY > 0) {
   console.log(`Startup delay: ${STARTUP_DELAY}ms to allow infrastructure to stabilize`);
   await delay(STARTUP_DELAY);
