@@ -1,9 +1,11 @@
 import { Dumbbell, Calendar, User, Utensils, Zap, ShieldAlert, Check } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 import { useAppStore } from '../store/useAppStore';
 import { motion } from 'motion/react';
 import clsx from 'clsx';
 import { useMemo } from 'react';
 import { computeSmartStreak } from '../lib/routineWeek';
+import { Haptics } from '../lib/haptics';
 
 type TabId = 'home' | 'workout' | 'diet' | 'calendar' | 'profile';
 
@@ -14,13 +16,15 @@ type NavItem = {
 };
 
 export default function SidebarNav() {
-  const { currentTab, setTab, profile, logs, routine } = useAppStore();
-
-  const triggerHaptic = () => {
-    if (isSecureContext && typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
-      navigator.vibrate(8);
-    }
-  };
+  const { currentTab, setTab, profile, logs, routine } = useAppStore(
+    useShallow((s) => ({
+      currentTab: s.currentTab,
+      setTab: s.setTab,
+      profile: s.profile,
+      logs: s.logs,
+      routine: s.routine,
+    }))
+  );
 
   const navItems: NavItem[] = [
     { id: 'home', icon: Zap, label: 'Inicio' },
@@ -92,7 +96,7 @@ export default function SidebarNav() {
               key={item.id}
               type="button"
               onClick={() => {
-                triggerHaptic();
+                Haptics.selection();
                 setTab(item.id);
               }}
               className={clsx(

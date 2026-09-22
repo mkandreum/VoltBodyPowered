@@ -1,8 +1,10 @@
 import { Dumbbell, Calendar, User, Utensils, Zap } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 import { useAppStore } from '../store/useAppStore';
 import { motion, AnimatePresence } from 'motion/react';
 import clsx from 'clsx';
 import { iosSpring } from '../lib/motion';
+import { Haptics } from '../lib/haptics';
 
 type TabId = 'home' | 'workout' | 'diet' | 'calendar' | 'profile';
 
@@ -13,17 +15,9 @@ type NavItem = {
 };
 
 export default function BottomNav() {
-  const { currentTab, setTab } = useAppStore();
-
-  const triggerHaptic = () => {
-    if (typeof window !== 'undefined' && 'vibrate' in navigator && typeof navigator.vibrate === 'function') {
-      try {
-        navigator.vibrate(8);
-      } catch {
-        /* silent fallback for iOS */
-      }
-    }
-  };
+  const { currentTab, setTab } = useAppStore(
+    useShallow((s) => ({ currentTab: s.currentTab, setTab: s.setTab }))
+  );
 
   const navItems: NavItem[] = [
     { id: 'workout', icon: Dumbbell, label: 'Rutina' },
@@ -51,7 +45,7 @@ export default function BottomNav() {
                 key={item.id}
                 type="button"
                 onClick={() => {
-                  triggerHaptic();
+                  Haptics.selection();
                   setTab(item.id);
                 }}
                 aria-label={item.label}
@@ -79,7 +73,7 @@ export default function BottomNav() {
             type="button"
             whileTap={{ scale: 0.94 }}
             onClick={() => {
-              triggerHaptic();
+              Haptics.selection();
               setTab('home');
             }}
             aria-label="Inicio VoltBody"
@@ -114,7 +108,7 @@ export default function BottomNav() {
                 key={item.id}
                 type="button"
                 onClick={() => {
-                  triggerHaptic();
+                  Haptics.selection();
                   setTab(item.id);
                 }}
                 aria-label={item.label}

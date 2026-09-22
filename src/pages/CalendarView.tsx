@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useShallow } from 'zustand/react/shallow';
 import { useAppStore, WorkoutDay, Exercise } from '../store/useAppStore';
+import { Haptics } from '../lib/haptics';
 import {
   Calendar as CalendarIcon,
   ChevronLeft,
@@ -27,7 +29,25 @@ import {
 import { authService } from '../services/authService';
 
 export default function CalendarView() {
-  const { routine, logs, diet, setRoutine, authToken, showToast, setTab } = useAppStore();
+  const {
+    routine,
+    logs,
+    diet,
+    setRoutine,
+    authToken,
+    showToast,
+    setTab,
+  } = useAppStore(
+    useShallow((s) => ({
+      routine: s.routine,
+      logs: s.logs,
+      diet: s.diet,
+      setRoutine: s.setRoutine,
+      authToken: s.authToken,
+      showToast: s.showToast,
+      setTab: s.setTab,
+    }))
+  );
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isRescheduling, setIsRescheduling] = useState(false);

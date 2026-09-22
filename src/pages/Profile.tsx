@@ -1,6 +1,8 @@
 import { useState, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useShallow } from 'zustand/react/shallow';
 import { useAppStore } from '../store/useAppStore';
+import { Haptics } from '../lib/haptics';
 import { authService } from '../services/authService';
 import { workoutService } from '../services/workoutService';
 import {
@@ -66,7 +68,33 @@ export default function Profile() {
     toggleWeeklyGoal,
     notificationsEnabled,
     setNotificationsEnabled,
-  } = useAppStore();
+  } = useAppStore(
+    useShallow((s) => ({
+      profile: s.profile,
+      profilePhoto: s.profilePhoto,
+      progressPhotos: s.progressPhotos,
+      setProfilePhoto: s.setProfilePhoto,
+      addProgressPhoto: s.addProgressPhoto,
+      updateProfile: s.updateProfile,
+      logout: s.logout,
+      theme: s.theme,
+      setTheme: s.setTheme,
+      motivationPhrase: s.motivationPhrase,
+      motivationPhoto: s.motivationPhoto,
+      setMotivationPhrase: s.setMotivationPhrase,
+      setMotivationPhoto: s.setMotivationPhoto,
+      authToken: s.authToken,
+      showToast: s.showToast,
+      logs: s.logs,
+      routine: s.routine,
+      weightLogs: s.weightLogs,
+      addWeightLog: s.addWeightLog,
+      weeklyGoals: s.weeklyGoals,
+      toggleWeeklyGoal: s.toggleWeeklyGoal,
+      notificationsEnabled: s.notificationsEnabled,
+      setNotificationsEnabled: s.setNotificationsEnabled,
+    }))
+  );
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const progressInputRef = useRef<HTMLInputElement>(null);

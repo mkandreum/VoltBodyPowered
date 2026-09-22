@@ -1,7 +1,9 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
+import { useShallow } from 'zustand/react/shallow';
 import { useAppStore, Exercise, WorkoutDay, ExerciseType } from '../store/useAppStore';
+import { Haptics } from '../lib/haptics';
 import {
   ChevronLeft,
   Play,
@@ -98,7 +100,24 @@ export default function Workout() {
     logs,
     achievements,
     addAchievement,
-  } = useAppStore();
+  } = useAppStore(
+    useShallow((s) => ({
+      routine: s.routine,
+      addLog: s.addLog,
+      updateLog: s.updateLog,
+      customWorkout: s.customWorkout,
+      exerciseLibrary: s.exerciseLibrary,
+      addToCustomWorkout: s.addToCustomWorkout,
+      removeFromCustomWorkout: s.removeFromCustomWorkout,
+      setRoutine: s.setRoutine,
+      profile: s.profile,
+      authToken: s.authToken,
+      showToast: s.showToast,
+      logs: s.logs,
+      achievements: s.achievements,
+      addAchievement: s.addAchievement,
+    }))
+  );
 
   // SVG circle circumference for rest timer ring: 2π × r=10
   const TIMER_CIRCUMFERENCE = 2 * Math.PI * 10;

@@ -1,6 +1,8 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useShallow } from 'zustand/react/shallow';
 import { useAppStore, Meal } from '../store/useAppStore';
+import { Haptics } from '../lib/haptics';
 import {
   Utensils,
   Flame,
@@ -374,7 +376,17 @@ export default function Diet() {
     authToken,
     mealEatenRecord,
     toggleMealEaten,
-  } = useAppStore();
+  } = useAppStore(
+    useShallow((s) => ({
+      diet: s.diet,
+      profile: s.profile,
+      swapMeal: s.swapMeal,
+      showToast: s.showToast,
+      authToken: s.authToken,
+      mealEatenRecord: s.mealEatenRecord,
+      toggleMealEaten: s.toggleMealEaten,
+    }))
+  );
   const [loadingMealId, setLoadingMealId] = useState<string | null>(null);
   const [specialDishTarget, setSpecialDishTarget] = useState(390);
   const [macroQuickMode, setMacroQuickMode] = useState(false);

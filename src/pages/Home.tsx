@@ -1,5 +1,6 @@
 import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useShallow } from 'zustand/react/shallow';
 import { useAppStore } from '../store/useAppStore';
 import { Dumbbell, Utensils, Flame, Moon, Activity, Sparkles, Quote, Clock3, Camera, Zap, Heart, Bluetooth, BluetoothOff, BedDouble, Gauge } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
@@ -13,7 +14,7 @@ import { ACHIEVEMENTS_CATALOG } from '../lib/achievements';
 import { BLEHeartRateService, isBLESupported, type BLEConnectionState, type HRPayload } from '../services/BLEHeartRateService';
 import { computeFatigueIndex, fatigueStatusLabel, fatigueStatusColor } from '../lib/fatigueIndex';
 import { computeRecoveryScore, getRecoveryAdvice, type RecoveryLog } from '../lib/recoveryScore';
-import Avatar3D from '../components/Avatar3D';
+import { Haptics } from '../lib/haptics';
 
 /** Circular SVG progress ring */
 function CircularProgress({ value, size = 64 }: { value: number; size?: number }) {
@@ -68,7 +69,43 @@ function parseMealHour(time: string): number {
 }
 
 export default function Home() {
-  const { profile, routine, diet, logs, insights, setTab, motivationPhrase, motivationPhoto, showToast, addLog, authToken, mealEatenRecord, progressPhotos, achievements, recoveryLogs, addRecoveryLog } = useAppStore();
+  const {
+    profile,
+    routine,
+    diet,
+    logs,
+    insights,
+    setTab,
+    motivationPhrase,
+    motivationPhoto,
+    showToast,
+    addLog,
+    authToken,
+    mealEatenRecord,
+    progressPhotos,
+    achievements,
+    recoveryLogs,
+    addRecoveryLog,
+  } = useAppStore(
+    useShallow((s) => ({
+      profile: s.profile,
+      routine: s.routine,
+      diet: s.diet,
+      logs: s.logs,
+      insights: s.insights,
+      setTab: s.setTab,
+      motivationPhrase: s.motivationPhrase,
+      motivationPhoto: s.motivationPhoto,
+      showToast: s.showToast,
+      addLog: s.addLog,
+      authToken: s.authToken,
+      mealEatenRecord: s.mealEatenRecord,
+      progressPhotos: s.progressPhotos,
+      achievements: s.achievements,
+      recoveryLogs: s.recoveryLogs,
+      addRecoveryLog: s.addRecoveryLog,
+    }))
+  );
   const [syncState, setSyncState] = useState<'idle' | 'local' | 'syncing' | 'synced' | 'error'>('idle');
   const [reportLoading, setReportLoading] = useState(false);
   const [reportProgress, setReportProgress] = useState(0);
@@ -524,10 +561,6 @@ export default function Home() {
         <div className="flex flex-col lg:grid lg:grid-cols-[380px_1fr] lg:gap-8 lg:items-start pb-8">
           {/* ── Left Column (Sticky Sidebar on Desktop) ── */}
           <div className="order-2 lg:order-1 lg:sticky lg:top-6 space-y-6 flex flex-col">
-            <div className="hidden lg:block">
-              <Avatar3D />
-            </div>
-
             {/* ── Recovery Score ── */}
             <AppCard className={`p-4 sm:p-6 glass-panel border ${todayRecoveryLog ? recoveryAdvice.bannerClass : 'border-white/10'}`}>
               <div className="flex items-center justify-between mb-4">
