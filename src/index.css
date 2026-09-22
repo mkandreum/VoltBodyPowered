@@ -203,47 +203,44 @@ body[data-theme="ocaso-negro"] {
 .app-card {
   position: relative;
   overflow: hidden;
-  border-radius: 1.5rem;
-  background: var(--neuro-surface);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  border: 1px solid var(--app-border);
+  border-radius: 1.25rem;
+  background: rgba(20, 20, 26, 0.75);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.10);
   box-shadow:
-    0 12px 32px var(--neuro-shadow-dark),
-    inset 0 1px 1px var(--neuro-shadow-light),
-    0 0 0 1px color-mix(in srgb, var(--app-accent) 8%, transparent),
-    0 4px 18px color-mix(in srgb, var(--app-accent) 5%, transparent);
+    0 10px 30px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
   transition:
     transform var(--motion-base) cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow var(--motion-base);
+    box-shadow var(--motion-base),
+    border-color var(--motion-base);
 }
 
 .app-card::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(150deg, color-mix(in srgb, var(--app-accent) 5%, transparent), transparent 45%);
+  background: linear-gradient(150deg, color-mix(in srgb, var(--app-accent) 6%, transparent), transparent 45%);
   opacity: 0.25;
   pointer-events: none;
 }
 
 .glass-panel {
-  background: var(--neuro-surface) !important;
-  backdrop-filter: blur(6px) !important;
-  -webkit-backdrop-filter: blur(6px) !important;
-  border: 1px solid var(--app-border) !important;
+  background: rgba(20, 20, 26, 0.78) !important;
+  backdrop-filter: blur(24px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(190%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.11) !important;
   box-shadow:
-    0 16px 40px var(--neuro-shadow-dark),
-    inset 0 1px 1px var(--neuro-shadow-light),
-    0 0 0 1px color-mix(in srgb, var(--app-accent) 8%, transparent),
-    0 4px 18px color-mix(in srgb, var(--app-accent) 5%, transparent) !important;
+    0 12px 32px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.09) !important;
 }
 
 .app-card.interactive-card:hover {
   transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--app-accent) 35%, rgba(255, 255, 255, 0.12));
   box-shadow:
-    10px 10px 28px var(--neuro-shadow-dark),
-    -5px -5px 16px var(--neuro-shadow-light),
+    0 14px 36px rgba(0, 0, 0, 0.6),
     0 0 0 1px color-mix(in srgb, var(--app-accent) 22%, transparent);
 }
 
@@ -366,7 +363,11 @@ button:active {
 }
 
 .tap-target {
-  min-height: var(--touch-target-min);
+  min-height: max(44px, var(--touch-target-min));
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .interactive-tile {
@@ -608,17 +609,17 @@ button:active {
 }
 
 .nav-soft-btn {
-  height: 52px;
+  height: 48px;
   min-width: 48px;
-  border-radius: 14px;
+  border-radius: 12px;
   border: 1px solid transparent;
   background: transparent;
-  color: #aeb5c1;
+  color: #8e8e93;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   will-change: transform;
   backface-visibility: hidden;
   transition: color var(--motion-fast);
@@ -628,88 +629,43 @@ button:active {
   transition: transform var(--motion-fast), filter var(--motion-fast);
 }
 
-.nav-soft-btn:hover svg {
-  transform: scale(1.08);
-}
-
 .nav-soft-btn-active {
   color: var(--app-accent);
-  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--app-accent) 60%, transparent));
+}
+
+.ios-tab-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: rgba(14, 14, 18, 0.82);
+  backdrop-filter: blur(28px) saturate(190%);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
+  border-top: 0.5px solid rgba(255, 255, 255, 0.12);
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.45);
 }
 
 .ios-pill-nav {
   position: relative;
-  background:
-    linear-gradient(180deg, rgba(255,255,255,0.04) 0%, transparent 40%),
-    rgba(8, 8, 12, 0.96);
-  backdrop-filter: blur(24px) saturate(1.5);
-  -webkit-backdrop-filter: blur(24px) saturate(1.5);
-  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(18, 18, 24, 0.85);
+  backdrop-filter: blur(24px) saturate(1.8);
+  -webkit-backdrop-filter: blur(24px) saturate(1.8);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow:
-    /* Depth below */
     0 8px 32px rgba(0, 0, 0, 0.7),
-    /* Inner top highlight */
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
   will-change: transform;
   backface-visibility: hidden;
   contain: layout paint;
 }
 
-.ios-pill-nav:active::after {
-  opacity: 0.95;
-}
-
-.ios-pill-nav::after {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  border-radius: inherit;
-  pointer-events: none;
-  box-shadow: 0 0 22px color-mix(in srgb, var(--app-accent) 22%, transparent);
-  opacity: 0.6;
-}
-
-/* Active tab dot indicator */
-.nav-dot-indicator {
-  position: absolute;
-  bottom: 5px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 5px;
-  height: 5px;
-  border-radius: 9999px;
-  background: var(--app-accent);
-  box-shadow:
-    0 0 8px color-mix(in srgb, var(--app-accent) 80%, transparent),
-    0 0 16px color-mix(in srgb, var(--app-accent) 35%, transparent);
-  z-index: 2;
-}
-
-.liquid-indicator {
-  border-radius: inherit;
-  background:
-    radial-gradient(circle at 22% 32%, color-mix(in srgb, var(--app-accent) 38%, transparent), transparent 58%),
-    linear-gradient(140deg, color-mix(in srgb, var(--app-accent) 22%, transparent), color-mix(in srgb, var(--app-accent) 10%, transparent));
-  filter: blur(0.2px);
-  animation: liquid-shift 1.8s linear infinite;
-  z-index: 0;
-  will-change: transform, opacity;
-}
-
-.tab-switch-glow {
-  border-radius: 9999px;
-  background: radial-gradient(circle, color-mix(in srgb, var(--app-accent) 32%, transparent) 0%, transparent 68%);
-  filter: blur(5px);
-  opacity: 0.72;
-  z-index: 0;
-  will-change: transform, opacity;
-}
-
-.nav-soft-btn > svg,
-.nav-soft-btn > span,
-.nav-soft-btn > *:not(.liquid-indicator) {
-  position: relative;
-  z-index: 1;
+.nav-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1;
 }
 
 @keyframes liquid-shift {

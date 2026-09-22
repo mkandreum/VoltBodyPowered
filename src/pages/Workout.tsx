@@ -686,7 +686,7 @@ export default function Workout() {
                 </button>
               }
             />
-            <div className="grid grid-cols-7 gap-2">
+            <div className="grid grid-cols-7 gap-1.5">
               {WEEKDAY_LABELS.map((day, index) => {
                 const hasRoutine = Boolean(routinesByDay[index]);
                 const isSelected = selectedDayIndex === index;
@@ -698,15 +698,16 @@ export default function Workout() {
                     type="button"
                     onClick={() => void handleWeekdayTap(index)}
                     disabled={!isEditingDays && !hasRoutine}
+                    aria-label={`Día ${day.full}`}
                     className={[
-                      'tap-target rounded-xl border px-1 py-2 text-center text-[11px] font-semibold transition-all',
+                      'tap-target h-11 rounded-xl border flex flex-col items-center justify-center text-center text-xs font-semibold transition-all',
                       !isEditingDays && hasRoutine ? 'pressable cursor-pointer' : '',
-                      !isEditingDays && !hasRoutine ? 'cursor-not-allowed opacity-45' : '',
+                      !isEditingDays && !hasRoutine ? 'cursor-not-allowed opacity-40' : '',
                       isEditingDays && !hasRoutine ? 'cursor-pointer opacity-75' : '',
                       isEditingDays && isMoveSource ? 'border-amber-400 bg-amber-500/20 text-amber-200' : '',
                       isSelected
-                        ? 'border-[color:var(--app-accent)]/60 text-[var(--app-accent)] shadow-[inset_2px_2px_6px_var(--neuro-shadow-dark),0_0_10px_color-mix(in_srgb,var(--app-accent)_18%,transparent)]'
-                        : 'border-[color:var(--neuro-shadow-light)]/50 text-gray-300 shadow-[3px_3px_8px_var(--neuro-shadow-dark),-2px_-2px_6px_var(--neuro-shadow-light)]',
+                        ? 'border-[color:var(--app-accent)]/70 text-[var(--app-accent)] bg-[color:var(--app-accent)]/10 font-bold'
+                        : 'border-white/10 text-gray-300 bg-white/[0.03] hover:border-white/20',
                       isEditingDays && !hasRoutine ? 'border-dashed' : '',
                     ].join(' ')}
                   >
@@ -736,7 +737,7 @@ export default function Workout() {
             </div>
 
             <div className="grid grid-cols-3 gap-2 mb-4">
-              <StatPill label="estado" value={todayRoutine ? 'activo ✅' : 'custom'} />
+              <StatPill label="estado" value={todayRoutine ? 'activo' : 'custom'} />
               <StatPill label="ejercicios" value={`${totalTodayExercises}`} />
               <StatPill label="tu lista" value={`${customWorkout.length}`} />
             </div>
@@ -757,9 +758,9 @@ export default function Workout() {
                   message: `Enfócate en ${todayRoutine.focus}.`,
                 });
               }}
-              className="tap-target pressable pulse-surface primary-btn w-full rounded-xl font-bold py-3 px-4 transition-base"
+              className="tap-target pulse-surface primary-btn w-full rounded-xl font-bold py-3.5 px-4 transition-base text-sm"
             >
-              Empezar sesión 🚀
+              Iniciar Sesión
             </button>
           </AppCard>
           </motion.div>
@@ -1001,8 +1002,9 @@ export default function Workout() {
             {...slideUpSheet}
             className="fixed inset-0 z-[60] bg-[var(--app-bg)] flex flex-col"
           >
-            {/* Header with shared-element image transition */}
+            {/* Header with shared-element image transition & iOS grabber */}
             <div className="relative h-[30%] shrink-0 bg-[var(--app-surface)] overflow-hidden flex items-center justify-center">
+              <div className="absolute top-2 left-1/2 -translate-x-1/2 w-10 h-1.5 rounded-full bg-white/40 z-40" />
               <motion.div
                 layoutId={`ex-img-${selectedExercise.id}`}
                 className="w-full h-full"
@@ -1019,10 +1021,12 @@ export default function Workout() {
               </motion.div>
               <div className="absolute inset-0 bg-gradient-to-t from-[var(--app-bg)] via-transparent to-transparent z-20 pointer-events-none" />
               <button
+                type="button"
                 onClick={closeExercise}
-                className="absolute top-6 left-6 p-3 bg-black/50 backdrop-blur-md rounded-full border border-white/10 text-white z-30"
+                aria-label="Cerrar detalle de ejercicio"
+                className="tap-target absolute top-4 left-4 w-11 h-11 bg-black/60 backdrop-blur-md rounded-full border border-white/15 text-white z-30 flex items-center justify-center transition-transform active:scale-95"
               >
-                <ChevronLeft size={24} />
+                <ChevronLeft size={22} />
               </button>
             </div>
 
@@ -1178,7 +1182,7 @@ export default function Workout() {
                   const targetSets = Math.max(1, Number(selectedExercise.sets || 0));
                   const doneSets = setsByExercise.get(selectedExercise.id) ?? 0;
                   return (
-                    <div className="flex gap-2 mb-2 sm:mb-4 flex-wrap">
+                    <div className="flex gap-2.5 mb-3 sm:mb-4 flex-wrap">
                       {Array.from({ length: targetSets }, (_, i) => {
                         if (i < doneSets) {
                           const logIndex = todayExerciseLogIndices[i];
@@ -1187,12 +1191,13 @@ export default function Workout() {
                               key={i}
                               type="button"
                               title="Editar serie"
+                              aria-label={`Editar serie ${i + 1}`}
                               onClick={() => {
                                 if (logIndex === undefined) return;
                                 const log = logs[logIndex];
                                 setEditingSet({ logIndex, weight: log.weight, reps: log.reps, duration: log.duration, rpe: log.rpe });
                               }}
-                              className="w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold transition-all bg-[color:var(--app-accent)] text-black hover:opacity-80 active:scale-95 cursor-pointer"
+                              className="tap-target w-11 h-11 rounded-xl flex items-center justify-center text-sm font-bold transition-all bg-[color:var(--app-accent)] text-black hover:opacity-90 active:scale-95 cursor-pointer shadow-sm"
                             >
                               ✓
                             </button>
@@ -1201,7 +1206,7 @@ export default function Workout() {
                         return (
                           <div
                             key={i}
-                            className="w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold transition-all neuro-inset text-gray-500"
+                            className="tap-target w-11 h-11 rounded-xl flex items-center justify-center text-sm font-semibold transition-all neuro-inset text-gray-400"
                           >
                             {i + 1}
                           </div>

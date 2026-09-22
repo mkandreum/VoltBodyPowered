@@ -1,165 +1,92 @@
-import { Dumbbell, Calendar, User, Utensils, Zap } from 'lucide-react';
+import { Dumbbell, Calendar, User, Utensils, Home } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import clsx from 'clsx';
+import { iosSpring } from '../lib/motion';
 
 type TabId = 'home' | 'workout' | 'diet' | 'calendar' | 'profile';
 
 type NavItem = {
   id: TabId;
-  icon: typeof Dumbbell;
+  icon: typeof Home;
   label: string;
 };
 
 export default function BottomNav() {
   const { currentTab, setTab } = useAppStore();
-  const springTransition = { type: 'spring' as const, stiffness: 400, damping: 28 };
 
   const triggerHaptic = () => {
-    if (isSecureContext && typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
-      navigator.vibrate(8);
+    if (typeof window !== 'undefined' && 'vibrate' in navigator && typeof navigator.vibrate === 'function') {
+      try {
+        navigator.vibrate(8);
+      } catch {
+        /* silent fallback for iOS */
+      }
     }
   };
 
   const navItems: NavItem[] = [
+    { id: 'home', icon: Home, label: 'Inicio' },
     { id: 'workout', icon: Dumbbell, label: 'Rutina' },
     { id: 'diet', icon: Utensils, label: 'Dieta' },
     { id: 'calendar', icon: Calendar, label: 'Calendario' },
     { id: 'profile', icon: User, label: 'Perfil' },
   ];
 
-  const isHomeActive = currentTab === 'home';
-
   return (
-    <div className="fixed left-1/2 -translate-x-1/2 z-50 w-[96%] max-w-[520px] bottom-[calc(1rem+env(safe-area-inset-bottom))] lg:hidden">
-      <div className="ios-pill-nav rounded-full p-2.5">
-        <div className="grid grid-cols-[1fr_1fr_auto_1fr_1fr] gap-2 items-center">
-          {navItems.slice(0, 2).map((item) => {
-            const isActive = currentTab === item.id;
+    <nav
+      aria-label="Navegación principal"
+      className="ios-tab-bar lg:hidden"
+    >
+      <div className="grid grid-cols-5 h-[52px] max-w-[560px] mx-auto px-1 items-center">
+        {navItems.map((item) => {
+          const isActive = currentTab === item.id;
+          const Icon = item.icon;
 
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => {
-                  triggerHaptic();
-                  setTab(item.id);
-                }}
-                aria-label={item.label}
-                className={clsx(
-                  'relative overflow-hidden tap-target pressable pulse-surface nav-soft-btn',
-                  isActive && 'nav-soft-btn-active'
-                )}
-              >
-                {isActive && (
-                  <motion.span
-                    layoutId="nav-tab-glow"
-                    transition={springTransition}
-                    className="tab-switch-glow absolute -inset-2"
-                  />
-                )}
-                <item.icon size={16} className={clsx('relative z-[1] transition-transform', isActive && 'scale-110')} />
-                <AnimatePresence>
-                  {isActive && (
-                    <motion.span
-                      key="label-left"
-                      initial={{ opacity: 0, y: -3 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -3 }}
-                      transition={{ duration: 0.15, ease: [0.22, 1, 0.36, 1] }}
-                      className="nav-label relative z-[1]"
-                    >
-                      {item.label}
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-
-              </button>
-            );
-          })}
-
-          {/* ── Center VoltBody button ───────────────────────── */}
-          <motion.button
-            type="button"
-            whileTap={{ scale: 0.96 }}
-            onClick={() => {
-              triggerHaptic();
-              setTab('home');
-            }}
-            className="relative overflow-hidden tap-target px-2 sm:px-3 flex-1 max-w-[180px] min-w-[100px] sm:min-w-[120px] h-14 rounded-full border border-transparent transition-all text-center"
-          >
-            <span className="inline-flex items-center gap-1 sm:gap-2 text-[14px] sm:text-[18px] font-black tracking-[0.06em] sm:tracking-[0.15em] uppercase relative z-[1]">
-              <motion.span
-                key={isHomeActive ? 'bolt-active' : 'bolt-idle'}
-                animate={isHomeActive ? { scale: [1, 1.35, 1], rotate: [0, -10, 8, 0] } : { scale: 1, rotate: 0 }}
-                transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-                className="inline-flex"
-              >
-                <Zap
-                  size={22}
-                  className={clsx(
-                    'transition-all duration-200',
-                    isHomeActive
-                      ? 'text-amber-400 drop-shadow-[0_0_6px_#fbbf24]'
-                      : 'text-gray-500'
-                  )}
-                  fill={isHomeActive ? '#fbbf24' : 'none'}
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => {
+                triggerHaptic();
+                setTab(item.id);
+              }}
+              aria-label={item.label}
+              aria-current={isActive ? 'page' : undefined}
+              className={clsx(
+                'relative tap-target flex flex-col items-center justify-center w-full h-full py-1 text-center transition-colors',
+                isActive ? 'text-[var(--app-accent)]' : 'text-[#8e8e93] hover:text-[#d1d1d6]'
+              )}
+            >
+              {/* Active subtle pill background indicator */}
+              {isActive && (
+                <motion.div
+                  layoutId="active-tab-indicator"
+                  transition={iosSpring}
+                  className="absolute inset-x-2 inset-y-1 rounded-xl bg-[color:var(--app-accent)]/10 -z-10"
                 />
-              </motion.span>
-              <span className={clsx(
-                'transition-colors duration-200',
-                isHomeActive ? 'app-accent' : 'text-gray-400'
-              )}>
-                VoltBody
-              </span>
-            </span>
-          </motion.button>
+              )}
 
-          {navItems.slice(2).map((item) => {
-            const isActive = currentTab === item.id;
+              <motion.div
+                animate={{ scale: isActive ? 1.08 : 1, y: isActive ? -1 : 0 }}
+                transition={iosSpring}
+                className="flex items-center justify-center"
+              >
+                <Icon size={20} strokeWidth={isActive ? 2.3 : 1.8} />
+              </motion.div>
 
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => {
-                  triggerHaptic();
-                  setTab(item.id);
-                }}
-                aria-label={item.label}
+              <span
                 className={clsx(
-                  'relative overflow-hidden tap-target pressable pulse-surface nav-soft-btn',
-                  isActive && 'nav-soft-btn-active'
+                  'nav-label mt-1 transition-colors',
+                  isActive ? 'text-[var(--app-accent)] font-semibold' : 'text-[#8e8e93] font-medium'
                 )}
               >
-                {isActive && (
-                  <motion.span
-                    layoutId="nav-tab-glow"
-                    transition={springTransition}
-                    className="tab-switch-glow absolute -inset-2"
-                  />
-                )}
-                <item.icon size={16} className={clsx('relative z-[1] transition-transform', isActive && 'scale-110')} />
-                <AnimatePresence>
-                  {isActive && (
-                    <motion.span
-                      key="label-right"
-                      initial={{ opacity: 0, y: -3 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -3 }}
-                      transition={{ duration: 0.15, ease: [0.22, 1, 0.36, 1] }}
-                      className="nav-label relative z-[1]"
-                    >
-                      {item.label}
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-
-              </button>
-            );
-          })}
-        </div>
+                {item.label}
+              </span>
+            </button>
+          );
+        })}
       </div>
-    </div>
+    </nav>
   );
 }

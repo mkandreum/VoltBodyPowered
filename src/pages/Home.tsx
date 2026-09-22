@@ -537,24 +537,24 @@ export default function Home() {
                     recoveryScore >= 85 ? 'text-[var(--app-accent)]' :
                     recoveryScore >= 65 ? 'text-emerald-400' :
                     recoveryScore >= 40 ? 'text-yellow-400' : 'text-blue-400'
-                  }`}>{recoveryScore}<span className="text-sm font-normal text-gray-500">/100</span></span>
-                  <span className="text-[10px] text-gray-500 font-mono">{recoveryAdvice.intensityLabel}</span>
+                  }`}>{recoveryScore}<span className="text-sm font-normal text-gray-400">/100</span></span>
+                  <span className="text-xs text-gray-300 font-mono font-medium">{recoveryAdvice.intensityLabel}</span>
                 </div>
               )}
             </div>
 
             {!todayRecoveryLog ? (
               <>
-                <p className="text-xs text-gray-400 mb-4">
+                <p className="text-xs text-gray-300 mb-4">
                   Registra tus horas de sueño y HRV matutino para calcular tu Recovery Score y ajustar la intensidad del entreno de hoy.
                 </p>
                 {!showRecoveryCheckin ? (
                   <button
                     type="button"
                     onClick={() => setShowRecoveryCheckin(true)}
-                    className="flex items-center gap-2 tap-target primary-btn rounded-xl py-2.5 px-4 text-sm font-bold w-full justify-center"
+                    className="flex items-center gap-2 tap-target primary-btn rounded-xl py-3 px-4 text-sm font-bold w-full justify-center"
                   >
-                    <Gauge size={15} />
+                    <Gauge size={16} />
                     Check-in matutino
                   </button>
                 ) : (
@@ -565,8 +565,8 @@ export default function Home() {
                   >
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider">
-                          <BedDouble size={10} className="inline mr-1" />Horas de sueño
+                        <label className="block text-xs font-medium text-gray-300 mb-1 uppercase tracking-wider">
+                          <BedDouble size={12} className="inline mr-1" />Horas de sueño
                         </label>
                         <input
                           type="number"
@@ -581,8 +581,8 @@ export default function Home() {
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider">
-                          <Heart size={10} className="inline mr-1" />HRV (ms, opcional)
+                        <label className="block text-xs font-medium text-gray-300 mb-1 uppercase tracking-wider">
+                          <Heart size={12} className="inline mr-1" />HRV (ms, opcional)
                         </label>
                         <input
                           type="number"
@@ -596,7 +596,7 @@ export default function Home() {
                         />
                       </div>
                     </div>
-                    <p className="text-[10px] text-gray-600">
+                    <p className="text-xs text-gray-400">
                       HRV: mide el estrés fisiológico con tu smartwatch o Polar. Déjalo vacío si no tienes datos.
                     </p>
                     <div className="flex gap-2">
@@ -604,14 +604,14 @@ export default function Home() {
                         type="button"
                         disabled={!checkinSleep || parseFloat(checkinSleep) <= 0}
                         onClick={handleSaveRecovery}
-                        className="flex-1 tap-target primary-btn rounded-xl py-2.5 text-sm font-bold disabled:opacity-50"
+                        className="flex-1 tap-target primary-btn rounded-xl py-3 text-sm font-bold disabled:opacity-50"
                       >
                         Calcular Recovery
                       </button>
                       <button
                         type="button"
                         onClick={() => setShowRecoveryCheckin(false)}
-                        className="tap-target neuro-raised rounded-xl py-2.5 px-4 text-sm text-gray-400"
+                        className="tap-target neuro-raised rounded-xl py-3 px-4 text-sm text-gray-300"
                       >
                         Cancelar
                       </button>
@@ -623,17 +623,17 @@ export default function Home() {
               <div className="space-y-3">
                 <div className="flex gap-3">
                   <div className="flex-1 neuro-inset rounded-xl p-3 text-center">
-                    <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">😴 Sueño</p>
+                    <p className="text-xs uppercase tracking-wider text-gray-400 mb-1">😴 Sueño</p>
                     <p className="text-lg font-black text-white">{todayRecoveryLog.sleepHours}h</p>
                   </div>
                   {todayRecoveryLog.hrv !== undefined && (
                     <div className="flex-1 neuro-inset rounded-xl p-3 text-center">
-                      <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">❤️ HRV</p>
+                      <p className="text-xs uppercase tracking-wider text-gray-400 mb-1">❤️ HRV</p>
                       <p className="text-lg font-black text-white">{todayRecoveryLog.hrv} ms</p>
                     </div>
                   )}
                   <div className={`flex-1 neuro-inset rounded-xl p-3 text-center border ${recoveryAdvice.bannerClass}`}>
-                    <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">🎯 Score</p>
+                    <p className="text-xs uppercase tracking-wider text-gray-400 mb-1">🎯 Score</p>
                     <p className={`text-lg font-black ${
                       recoveryScore >= 85 ? 'text-[var(--app-accent)]' :
                       recoveryScore >= 65 ? 'text-emerald-400' :
@@ -641,11 +641,11 @@ export default function Home() {
                     }`}>{recoveryScore}/100</p>
                   </div>
                 </div>
-                <p className="text-sm text-gray-300">{recoveryAdvice.subtitle}</p>
+                <p className="text-sm text-gray-200">{recoveryAdvice.subtitle}</p>
                 <button
                   type="button"
                   onClick={() => setShowRecoveryCheckin(true)}
-                  className="text-xs text-gray-600 tap-target underline"
+                  className="tap-target text-xs text-[var(--app-accent)] font-semibold underline py-1"
                 >
                   Actualizar check-in
                 </button>
@@ -789,16 +789,17 @@ export default function Home() {
                   onTapStart={triggerHaptic}
                   className="tap-target pulse-surface pressable primary-btn rounded-xl py-3.5 px-4 font-bold text-sm transition-base flex items-center justify-center gap-2"
                 >
-                  <Zap size={15} className="shrink-0" />
-                  Empezar sesión
+                  <Zap size={16} className="shrink-0" />
+                  Iniciar Sesión
                 </motion.button>
                 <motion.button
                   onClick={() => setTab('diet')}
                   whileTap={{ scale: 0.97 }}
                   onTapStart={triggerHaptic}
-                  className="tap-target pulse-surface pressable secondary-btn rounded-xl text-white font-semibold py-3.5 px-4 hover:border-[color:var(--app-accent)]/40 transition-base"
+                  className="tap-target pulse-surface pressable secondary-btn rounded-xl text-white font-semibold py-3.5 px-4 hover:border-[color:var(--app-accent)]/40 transition-base flex items-center justify-center gap-2"
                 >
-                  Optimizar comida 🍽️
+                  <Utensils size={16} className="shrink-0 text-gray-400" />
+                  Plan Nutricional
                 </motion.button>
               </div>
             </AppCard>
@@ -815,9 +816,9 @@ export default function Home() {
                 <div className="flex items-center gap-2">
                   <Zap size={14} className="app-accent" />
                   <span className="text-sm font-black text-white">Nivel {level}</span>
-                  <span className="text-[10px] text-gray-500 font-mono">· {totalXP} XP total</span>
+                  <span className="text-xs text-gray-400 font-mono">· {totalXP} XP total</span>
                 </div>
-                <span className="text-[10px] font-mono text-gray-400">{xpInLevel}/{xpPerLevel} XP</span>
+                <span className="text-xs font-mono text-gray-300 font-semibold">{xpInLevel}/{xpPerLevel} XP</span>
               </div>
               <div className="h-2 w-full neuro-progress-track mb-3">
                 <motion.div
@@ -827,7 +828,7 @@ export default function Home() {
                   transition={{ duration: 0.9, ease: [0.34, 1.1, 0.64, 1], delay: 0.4 }}
                 />
               </div>
-              <div className="flex gap-5 flex-wrap text-xs text-gray-400">
+              <div className="flex gap-5 flex-wrap text-xs text-gray-300 font-medium">
                 <span>🔥 {currentStreak} días racha</span>
                 <span>💪 {logs.length} series totales</span>
                 <span>📊 {weeklyConsistency}% semana</span>

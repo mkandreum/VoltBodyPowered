@@ -558,22 +558,24 @@ export default function Onboarding() {
       <div className="page-wrap w-full">
       <div className="flex items-center justify-between mb-8 mt-1">
         <button
+          type="button"
           onClick={handleBack}
-          className={`pressable p-2 rounded-full app-surface border border-[var(--app-border)] ${currentStep === 0 ? 'opacity-0 pointer-events-none' : ''}`}
+          aria-label="Paso anterior"
+          className={`tap-target w-11 h-11 rounded-full app-surface border border-white/10 flex items-center justify-center transition-colors ${currentStep === 0 ? 'opacity-0 pointer-events-none' : 'hover:border-white/30'}`}
         >
-          <ChevronLeft size={24} className="text-white" />
+          <ChevronLeft size={22} className="text-white" />
         </button>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
           {steps.map((_, i) => (
             <div
               key={i}
               className={`h-2 rounded-full transition-all duration-300 ${
-                i === currentStep ? 'w-8 bg-[var(--app-accent)] glow-box' : 'w-2 bg-[var(--app-border)]'
+                i === currentStep ? 'w-8 bg-[var(--app-accent)] glow-box' : 'w-2 bg-white/20'
               }`}
             />
           ))}
         </div>
-        <div className="w-10" /> {/* Spacer */}
+        <div className="w-11" /> {/* Spacer */}
       </div>
 
       <div className="flex-1 glass-panel border border-[var(--app-border)] rounded-3xl p-5 md:p-6">
@@ -584,19 +586,20 @@ export default function Onboarding() {
           exit={{ opacity: 0, x: -20 }}
           className="h-full flex flex-col"
         >
-          <p className="text-xs uppercase tracking-[0.18em] text-gray-500 mb-2">Setup AI-First</p>
+          <p className="text-xs uppercase tracking-[0.18em] text-gray-400 mb-2">Setup AI-First</p>
           <h1 className="brutal-title mb-2 headline-gradient">{steps[currentStep].title}</h1>
-          <p className="text-gray-400 mb-8">Configura tu plan con precisión para resultados reales.</p>
+          <p className="text-gray-300 text-sm mb-6">Configura tu plan con precisión para resultados reales.</p>
           
           {renderStepContent()}
         </motion.div>
       </div>
 
       <button
+        type="button"
         onClick={handleNext}
-        className="tap-target pulse-surface pressable primary-btn w-full font-bold py-4 rounded-xl mt-8 flex items-center justify-center gap-2 transition-colors"
+        className="tap-target pulse-surface pressable primary-btn w-full font-bold py-4 rounded-xl mt-6 flex items-center justify-center gap-2 transition-colors text-base"
       >
-        {currentStep === steps.length - 1 ? 'Generar Plan' : 'Siguiente'}
+        {currentStep === steps.length - 1 ? 'Generar Plan Personalizado' : 'Continuar'}
         {currentStep < steps.length - 1 && <ChevronRight size={20} />}
       </button>
       </div>

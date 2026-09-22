@@ -21,19 +21,24 @@ const easeElastic = [0.68, -0.55, 0.265, 1.55] as const;
 
 export const easings = { easeOut, easeOvershoot, easeSpring, easeSettle, easeButter, easeElastic };
 
+// ── iOS Spring Physics ────────────────────────────────────────
+export const iosSpring = { type: 'spring' as const, stiffness: 380, damping: 32, mass: 1 };
+export const iosBouncySpring = { type: 'spring' as const, stiffness: 450, damping: 24, mass: 0.8 };
+export const iosSheetSpring = { type: 'spring' as const, stiffness: 340, damping: 34, mass: 1 };
+
 // ── Page & Tab Transitions ───────────────────────────────────
 export const pageTransition = {
-  initial: { opacity: 0, y: 8, scale: 0.995 },
-  animate: { opacity: 1, y: 0, scale: 1 },
-  exit: { opacity: 0, y: -6, scale: 0.998 },
-  transition: { duration: 0.22, ease: easeOut },
+  initial: { opacity: 0, scale: 0.99 },
+  animate: { opacity: 1, scale: 1 },
+  exit: { opacity: 0, scale: 0.99 },
+  transition: { duration: 0.18, ease: easeOut },
 };
 
 export const fadeSlideUp = {
-  initial: { opacity: 0, y: 18, scale: 0.97 },
+  initial: { opacity: 0, y: 12, scale: 0.98 },
   animate: { opacity: 1, y: 0, scale: 1 },
-  exit: { opacity: 0, y: 12, scale: 0.97 },
-  transition: { duration: motionTiming.base, ease: easeOut },
+  exit: { opacity: 0, y: 8, scale: 0.98 },
+  transition: { duration: 0.22, ease: easeOut },
 };
 
 // ── List & Stagger ──────────────────────────────────────────
@@ -127,7 +132,7 @@ export const slideUpSheet = {
   initial: { opacity: 0, y: '100%' },
   animate: { opacity: 1, y: 0 },
   exit: { opacity: 0, y: '100%' },
-  transition: { type: 'spring' as const, stiffness: 280, damping: 30 },
+  transition: iosSheetSpring,
 };
 
 /** Number counter roll — weight/stats change */

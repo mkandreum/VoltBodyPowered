@@ -714,7 +714,7 @@ export default function Profile() {
                 type="button"
                 whileTap={{ scale: 0.96 }}
                 onClick={() => setShowRankModal(false)}
-                className="mt-5 w-full py-2.5 rounded-xl bg-gray-800/60 text-white text-sm hover:text-[var(--app-accent)] font-bold transition-colors border border-gray-700/30"
+                className="tap-target mt-5 w-full py-3 rounded-xl bg-gray-800/80 text-white text-sm hover:text-[var(--app-accent)] font-bold transition-colors border border-white/10"
               >
                 Cerrar
               </motion.button>
@@ -729,7 +729,7 @@ export default function Profile() {
           <motion.div
             {...backdropFade}
             onClick={() => setActivePhoto(null)}
-            className="fixed inset-0 z-50 bg-black/92 modal-backdrop flex items-center justify-center p-4 cursor-zoom-out"
+            className="fixed inset-0 z-50 bg-black/90 modal-backdrop flex items-center justify-center p-4 cursor-zoom-out"
           >
             <motion.div
               {...lightboxZoom}
@@ -739,11 +739,12 @@ export default function Profile() {
               <img src={activePhoto} alt="Progreso ampliado" className="max-w-full max-h-[78vh] object-contain block mx-auto" />
               <motion.button
                 type="button"
+                aria-label="Cerrar foto"
                 whileTap={{ scale: 0.85 }}
                 onClick={() => setActivePhoto(null)}
-                className="absolute top-3 right-3 bg-black/60 text-white rounded-full p-2 hover:text-[var(--app-accent)] transition-colors border border-gray-700/30"
+                className="tap-target absolute top-3 right-3 w-10 h-10 bg-black/70 text-white rounded-full flex items-center justify-center hover:text-[var(--app-accent)] transition-colors border border-white/20"
               >
-                <X size={16} />
+                <X size={18} />
               </motion.button>
             </motion.div>
           </motion.div>

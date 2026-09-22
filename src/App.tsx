@@ -152,7 +152,7 @@ export default function App() {
         </motion.div>
       </AnimatePresence>
 
-      <div className="fixed top-[max(0.8rem,env(safe-area-inset-top))] right-4 z-[60] w-[min(92vw,360px)] space-y-2 pointer-events-none">
+      <div className="fixed top-[max(1rem,env(safe-area-inset-top))] left-1/2 -translate-x-1/2 z-[60] w-[min(94vw,400px)] space-y-2 pointer-events-none px-2">
         <AnimatePresence>
           {toasts.map((toast) => {
             const isSuccess = toast.type === 'success';
@@ -161,26 +161,27 @@ export default function App() {
             return (
               <motion.div
                 key={toast.id}
-                initial={fadeSlideUp.initial}
-                animate={fadeSlideUp.animate}
-                exit={fadeSlideUp.exit}
-                transition={fadeSlideUp.transition}
-                className="pointer-events-auto rounded-2xl border glass-panel border-[var(--app-border)] p-4 shadow-xl"
+                initial={{ opacity: 0, y: -20, scale: 0.94 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -16, scale: 0.94 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                className="pointer-events-auto rounded-2xl glass-panel border border-white/12 p-3.5 shadow-2xl backdrop-blur-2xl"
               >
-                <div className="flex items-start gap-3">
-                  {isSuccess && <CheckCircle2 className="text-emerald-400 mt-0.5" size={18} />}
-                  {isError && <AlertCircle className="text-red-400 mt-0.5" size={18} />}
-                  {!isSuccess && !isError && <Info className="text-[var(--app-accent)] mt-0.5" size={18} />}
+                <div className="flex items-center gap-3">
+                  {isSuccess && <CheckCircle2 className="text-emerald-400 shrink-0" size={20} />}
+                  {isError && <AlertCircle className="text-rose-400 shrink-0" size={20} />}
+                  {!isSuccess && !isError && <Info className="text-[var(--app-accent)] shrink-0" size={20} />}
 
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-white">{toast.title}</p>
-                    {toast.message && <p className="text-xs text-gray-400 mt-1">{toast.message}</p>}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-white truncate">{toast.title}</p>
+                    {toast.message && <p className="text-xs text-gray-300 mt-0.5 line-clamp-2">{toast.message}</p>}
                   </div>
 
                   <button
+                    type="button"
                     onClick={() => dismissToast(toast.id)}
                     aria-label="Cerrar notificación"
-                    className="text-gray-500 hover:text-white text-xs"
+                    className="tap-target w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-white transition-colors"
                   >
                     ✕
                   </button>

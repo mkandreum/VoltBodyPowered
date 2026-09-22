@@ -78,12 +78,13 @@ function WaterTracker() {
               <motion.button
                 key={idx}
                 type="button"
+                aria-label={`Vaso de agua ${idx + 1}, 250 mililitros`}
                 whileTap={{ scale: 0.88 }}
                 onClick={() => isFilled ? addWater(-250) : addWater(250)}
-                className="relative aspect-[3/4] rounded-xl border flex flex-col items-center justify-end overflow-hidden transition-colors"
+                className="tap-target relative aspect-[3/4] rounded-xl border flex flex-col items-center justify-end overflow-hidden transition-colors"
                 style={{
-                  borderColor: isFilled ? 'rgba(14, 165, 233, 0.4)' : 'rgba(14, 165, 233, 0.12)',
-                  background: isFilled ? 'rgba(14, 165, 233, 0.08)' : 'rgba(14, 165, 233, 0.02)',
+                  borderColor: isFilled ? 'rgba(14, 165, 233, 0.4)' : 'rgba(14, 165, 233, 0.15)',
+                  background: isFilled ? 'rgba(14, 165, 233, 0.12)' : 'rgba(14, 165, 233, 0.03)',
                 }}
               >
                 {/* Fluid fill */}
@@ -101,8 +102,8 @@ function WaterTracker() {
                     transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
                   />
                 )}
-                <div className="relative z-10 text-white font-mono text-[9px] font-bold select-none pb-1">
-                  {isFilled ? '💧' : <span className="text-gray-600">250</span>}
+                <div className="relative z-10 text-white font-mono text-[10px] font-bold select-none pb-1">
+                  {isFilled ? '💧' : <span className="text-gray-400">250</span>}
                 </div>
               </motion.button>
             );
@@ -113,26 +114,29 @@ function WaterTracker() {
         <div className="flex gap-2">
           <motion.button
             type="button"
+            aria-label="Añadir 250 mililitros de agua"
             whileTap={{ scale: 0.94 }}
             onClick={() => addWater(250)}
-            className="flex-1 text-xs py-2.5 px-3 rounded-2xl bg-sky-500/10 border border-sky-500/25 text-sky-300 font-bold transition-all"
+            className="tap-target flex-1 text-xs py-3 px-3 rounded-2xl bg-sky-500/10 border border-sky-500/25 text-sky-300 font-bold transition-all"
           >
             + 250ml 💧
           </motion.button>
           <motion.button
             type="button"
+            aria-label="Añadir 500 mililitros de agua"
             whileTap={{ scale: 0.94 }}
             onClick={() => addWater(500)}
-            className="flex-1 text-xs py-2.5 px-3 rounded-2xl bg-cyan-500/10 border border-cyan-500/25 text-cyan-300 font-bold transition-all"
+            className="tap-target flex-1 text-xs py-3 px-3 rounded-2xl bg-cyan-500/10 border border-cyan-500/25 text-cyan-300 font-bold transition-all"
           >
             + 500ml 🚰
           </motion.button>
           <motion.button
             type="button"
+            aria-label="Restar 250 mililitros de agua"
             whileTap={{ scale: 0.94 }}
             onClick={() => addWater(-250)}
             disabled={waterMl <= 0}
-            className="text-xs py-2.5 px-3 rounded-2xl bg-gray-500/8 border border-gray-700/40 text-gray-500 font-bold transition-all disabled:opacity-30"
+            className="tap-target text-xs py-3 px-4 rounded-2xl bg-gray-500/10 border border-gray-700/50 text-gray-300 font-bold transition-all disabled:opacity-30"
           >
             −
           </motion.button>
@@ -414,28 +418,29 @@ export default function Diet() {
                               <h3 className={`text-base font-bold leading-tight transition-colors ${isEaten ? 'line-through text-gray-500' : 'text-white'}`}>
                                 {withMealEmoji(meal)}
                               </h3>
-                              <p className="text-xs text-gray-500 mt-1 line-clamp-2">{meal.description}</p>
+                              <p className="text-xs text-gray-300 mt-1 line-clamp-2">{meal.description}</p>
                             </div>
                           </div>
                           <motion.button
                             type="button"
                             onClick={() => handleSwap(meal)}
                             disabled={isSwapping}
+                            aria-label="Cambiar comida con IA"
                             whileTap={{ scale: 0.9, rotate: 180 }}
                             transition={{ duration: 0.3 }}
-                            className="tap-target pressable pulse-surface p-2 neuro-raised rounded-full text-gray-500 hover:text-[var(--app-accent)] transition-colors disabled:opacity-40 flex-shrink-0"
+                            className="tap-target pressable pulse-surface w-10 h-10 neuro-raised rounded-full text-gray-300 hover:text-[var(--app-accent)] transition-colors disabled:opacity-40 flex-shrink-0 flex items-center justify-center"
                             title="Cambiar comida"
                           >
-                            <RefreshCw size={14} className={isSwapping ? 'animate-spin' : ''} />
+                            <RefreshCw size={15} className={isSwapping ? 'animate-spin' : ''} />
                           </motion.button>
                         </div>
 
                         {/* Meta row */}
-                        <div className="flex items-center justify-between gap-3">
-                          <span className="text-[10px] font-mono bg-black/30 text-gray-400 px-2 py-0.5 rounded-full whitespace-nowrap border border-gray-800/30">
+                        <div className="flex items-center justify-between gap-3 pt-1">
+                          <span className="text-xs font-mono bg-black/40 text-gray-300 px-2.5 py-1 rounded-full whitespace-nowrap border border-white/10">
                             ⏰ {meal.time}
                           </span>
-                          <div className="flex items-center gap-3 text-[10px] font-mono text-gray-500">
+                          <div className="flex items-center gap-2.5 text-xs font-mono text-gray-300 font-medium">
                             <span>P:{meal.protein}g</span>
                             <span>C:{meal.carbs}g</span>
                             <span>G:{meal.fat}g</span>
