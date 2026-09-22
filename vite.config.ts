@@ -64,10 +64,15 @@ export default defineConfig(() => {
       chunkSizeWarningLimit: 2000,
       rollupOptions: {
         output: {
-          manualChunks: {
-            'vendor': ['react', 'react-dom', 'zustand'],
-            '3d': ['three', '@react-three/fiber', '@react-three/drei'],
-            'ui': ['motion', 'lucide-react', 'recharts', 'date-fns'],
+          manualChunks(id) {
+            if (id.includes('node_modules')) {
+              if (id.includes('react') || id.includes('zustand')) {
+                return 'vendor';
+              }
+              if (id.includes('recharts') || id.includes('lucide-react') || id.includes('motion') || id.includes('date-fns')) {
+                return 'ui';
+              }
+            }
           },
         },
       },
