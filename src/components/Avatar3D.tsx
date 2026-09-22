@@ -195,7 +195,7 @@ export default function Avatar3D() {
   const gender = profile?.gender || 'Masculino';
 
   return (
-    <div className="w-full h-[300px] relative rounded-3xl overflow-hidden bg-gradient-to-b from-[#121212] to-black border border-[#262626] glow-box">
+    <div className="w-full h-[320px] relative rounded-3xl overflow-hidden bg-gradient-to-b from-zinc-900/70 to-black/90 border border-white/10 backdrop-blur-xl shadow-xl glow-box">
       <Canvas 
         camera={{ position: [0, 0, 5], fov: 50 }}
         gl={{ powerPreference: "high-performance", antialias: false, preserveDrawingBuffer: true }}
@@ -213,7 +213,8 @@ export default function Avatar3D() {
         <OrbitControls enableZoom={false} enablePan={false} maxPolarAngle={Math.PI / 2 + 0.1} minPolarAngle={Math.PI / 2 - 0.5} />
       </Canvas>
       
-      <div className="absolute top-4 left-4 bg-black/50 backdrop-blur-md px-3 py-1 rounded-full border border-[#39ff14]/30 text-xs text-[#39ff14] font-mono">
+      <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-xl px-3 py-1 rounded-full border border-[var(--app-accent)]/30 text-[11px] text-[var(--app-accent)] font-mono font-bold tracking-wider flex items-center gap-1.5 shadow-sm">
+        <span className="w-1.5 h-1.5 rounded-full bg-[var(--app-accent)] animate-pulse" />
         ESTADO FÍSICO 3D
       </div>
     </div>

@@ -15,10 +15,10 @@ export default function AppCard({ children, className, interactive = false, acce
   return (
     <div
       className={cn(
-        'app-card rounded-[1.35rem] border p-5 transition-all',
-        'bg-[linear-gradient(170deg,color-mix(in_srgb,var(--app-surface)_90%,black_10%),color-mix(in_srgb,var(--app-surface-elevated)_90%,black_10%))] border-[var(--app-border)]',
-        accent && 'border-[color:var(--app-accent)]/35 bg-[linear-gradient(170deg,color-mix(in_srgb,var(--app-accent)_7%,var(--app-surface)_93%),color-mix(in_srgb,var(--app-surface-elevated)_92%,black_8%))]',
-        interactive && 'interactive-card hover:border-[color:var(--app-accent)]/50',
+        'app-card rounded-2xl border p-4 sm:p-6 transition-all backdrop-blur-xl',
+        'bg-[linear-gradient(170deg,color-mix(in_srgb,var(--app-surface)_88%,black_12%),color-mix(in_srgb,var(--app-surface-elevated)_88%,black_12%))] border-white/10 shadow-lg shadow-black/25',
+        accent && 'border-[color:var(--app-accent)]/30 bg-[linear-gradient(170deg,color-mix(in_srgb,var(--app-accent)_8%,var(--app-surface)_92%),color-mix(in_srgb,var(--app-surface-elevated)_90%,black_10%))] shadow-[0_0_24px_-8px_var(--app-accent)]',
+        interactive && 'interactive-card hover:border-[color:var(--app-accent)]/40 active:scale-[0.99] duration-200 cursor-pointer',
         className
       )}
     >

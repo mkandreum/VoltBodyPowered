@@ -2,12 +2,43 @@ import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore, Exercise, WorkoutDay, ExerciseType } from '../store/useAppStore';
-import { ChevronLeft, Play, CheckCircle2, Dumbbell, PlusCircle, Trash2, Star, CalendarClock, Flame, BookOpen, Share2, Trophy, TrendingUp, History, Loader2, X, Timer, Square, Camera } from 'lucide-react';
+import {
+  ChevronLeft,
+  Play,
+  CheckCircle2,
+  Dumbbell,
+  PlusCircle,
+  Trash2,
+  Star,
+  CalendarClock,
+  Flame,
+  BookOpen,
+  Share2,
+  Trophy,
+  TrendingUp,
+  History,
+  Loader2,
+  X,
+  Timer,
+  Square,
+  Camera,
+  Plus,
+  Minus,
+  Sparkles,
+} from 'lucide-react';
 import { workoutService } from '../services/workoutService';
 import { authService } from '../services/authService';
 import { enrichRoutine, routineNeedsEnrichment } from '../services/exerciseImageService';
 import { AppCard, SectionHeader, StatPill, LazyImage } from '../components/ui';
-import { listStagger, slideUpSheet, checkBounce, successBurst, completionGlow, tapPulse, timelineStagger } from '../lib/motion';
+import {
+  listStagger,
+  slideUpSheet,
+  checkBounce,
+  completionGlow,
+  iosSheetSpring,
+  iosBouncySpring,
+  numberRoll,
+} from '../lib/motion';
 import { WEEKDAY_LABELS, getMondayFirstIndex, mapRoutineByWeekday, computeSmartStreak, WEEK_STARTS_ON_MONDAY } from '../lib/routineWeek';
 import { format, startOfWeek, addDays } from 'date-fns';
 import WeightCalculator from '../components/WeightCalculator';
@@ -17,7 +48,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'rec
 import WorkoutSummaryCard from '../components/WorkoutSummaryCard';
 import PoseCoach, { type PoseCoachExercise } from '../components/PoseCoach';
 
-/** Format seconds as MM:SS */
+/** Format seconds as MM:SS with monospace digits */
 function formatDuration(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
@@ -48,7 +79,7 @@ function detectPoseExercise(name: string, type: ExerciseType): PoseCoachExercise
   if (lower.includes('flexiones') || lower.includes('push') || lower.includes('fondos')) return 'pushup';
   if (type === 'isometric') return 'plank';
   if (type === 'bodyweight') return 'pushup';
-  return 'squat'; // best general feedback
+  return 'squat';
 }
 
 export default function Workout() {
@@ -68,6 +99,7 @@ export default function Workout() {
     achievements,
     addAchievement,
   } = useAppStore();
+
   // SVG circle circumference for rest timer ring: 2π × r=10
   const TIMER_CIRCUMFERENCE = 2 * Math.PI * 10;
   const REST_TIMER_SECONDS = 90;
@@ -100,6 +132,8 @@ export default function Workout() {
   // Completion celebration
   const [showCompletion, setShowCompletion] = useState(false);
   const completionShownRef = useRef(false);
+  // Set completion micro-glow state
+  const [lastLoggedExerciseId, setLastLoggedExerciseId] = useState<string | null>(null);
   // Share card state
   const [isSharing, setIsSharing] = useState(false);
   const summaryCardRef = useRef<HTMLDivElement>(null);
@@ -108,7 +142,7 @@ export default function Workout() {
   // PoseCoach state
   const [showPoseCoach, setShowPoseCoach] = useState(false);
 
-  // Stable callback passed to WeightCalculator — avoids stale-closure issue with onWeightChange
+  // Stable callback passed to WeightCalculator — avoids stale-closure issue
   const handleCalculatorWeightChange = useCallback((w: number) => setWeightInput(w), []);
 
   // Close exercise detail and clean up history state
@@ -140,18 +174,14 @@ export default function Workout() {
     historyPushedRef.current = true;
 
     const handlePopState = () => {
-      if (!historyPushedRef.current) return; // guard: already closed via UI button
+      if (!historyPushedRef.current) return;
       historyPushedRef.current = false;
       setSelectedExercise(null);
     };
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  // Re-run only when the selected exercise changes identity.
-  // `closeExercise` is intentionally excluded: `handlePopState` calls `setSelectedExercise`
-  // directly (stable useState setter) instead of going through `closeExercise`, so there is
-  // no stale-closure risk here.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedExercise?.id]);
 
   const routinesByDay = useMemo(() => mapRoutineByWeekday(routine), [routine]);
@@ -168,11 +198,13 @@ export default function Workout() {
     : exerciseLibrary.filter((item) => item.muscleGroup === selectedMuscleGroup);
   const totalTodayExercises = todayRoutine?.exercises?.length || 0;
   const todayDateKey = format(new Date(), 'yyyy-MM-dd');
-  // Date key for the selected weekday in the current week (used for per-day log display)
+
+  // Date key for selected weekday in current week
   const selectedDateKey = useMemo(() => {
     const weekStart = startOfWeek(new Date(), { weekStartsOn: WEEK_STARTS_ON_MONDAY });
     return format(addDays(weekStart, selectedDayIndex), 'yyyy-MM-dd');
   }, [selectedDayIndex]);
+
   const todayLogs = useMemo(() => logs.filter((log) => log.date.slice(0, 10) === selectedDateKey), [logs, selectedDateKey]);
   const setsByExercise = useMemo(() => {
     return todayLogs.reduce<Map<string, number>>((acc, log) => {
@@ -180,6 +212,7 @@ export default function Workout() {
       return acc;
     }, new Map());
   }, [todayLogs]);
+
   const plannedSets = useMemo(
     () => (todayRoutine?.exercises || []).reduce((sum, exercise) => sum + Math.max(1, Number(exercise.sets || 0)), 0),
     [todayRoutine]
@@ -219,10 +252,9 @@ export default function Workout() {
   const XP_PER_LEVEL = 250;
   const totalXP = useMemo(() => logs.length * XP_PER_LOG + currentStreak * XP_PER_STREAK_DAY, [logs.length, currentStreak]);
   const level = Math.floor(totalXP / XP_PER_LEVEL) + 1;
-  // XP gained today
   const todayXP = useMemo(() => todayLogs.length * XP_PER_LOG, [todayLogs.length]);
 
-  // Last session log for the selected exercise (most recent entry before today)
+  // Last session log for selected exercise
   const lastSessionLog = useMemo(() => {
     if (!selectedExercise) return null;
     const past = logs
@@ -231,13 +263,13 @@ export default function Workout() {
     return past[0] ?? null;
   }, [selectedExercise, logs, todayDateKey]);
 
-  // Progressive overload suggestion for the selected exercise
+  // Progressive overload suggestion
   const progressiveSuggestion = useMemo(
     () => (selectedExercise ? getProgressiveSuggestion(selectedExercise.id, logs) : null),
     [selectedExercise, logs],
   );
 
-  // Historical sessions for the selected exercise (for the chart)
+  // Historical sessions
   const exerciseHistory = useMemo(
     () => (selectedExercise ? getExerciseHistory(selectedExercise.id, logs) : []),
     [selectedExercise, logs],
@@ -252,7 +284,7 @@ export default function Workout() {
     }, new Map());
   }, [logs]);
 
-  // Best duration ever logged per exerciseId (for isometric exercises)
+  // Best duration ever logged per exerciseId
   const personalBestTimes = useMemo(() => {
     return logs.reduce<Map<string, number>>((acc, log) => {
       if (log.duration === undefined) return acc;
@@ -262,7 +294,7 @@ export default function Workout() {
     }, new Map());
   }, [logs]);
 
-  // Derived exercise type for the currently selected exercise
+  // Derived exercise type
   const currentExerciseType = useMemo((): ExerciseType => {
     if (!selectedExercise) return 'weighted';
     if (selectedExercise.exerciseType) return selectedExercise.exerciseType;
@@ -280,7 +312,7 @@ export default function Workout() {
     }, new Map());
   }, [logs]);
 
-  // Global indices (in `logs` array) of the selected day's logs for the currently selected exercise, in order
+  // Global indices of selected day's logs for the selected exercise
   const todayExerciseLogIndices = useMemo(() => {
     if (!selectedExercise) return [];
     return logs
@@ -311,8 +343,7 @@ export default function Workout() {
     if (activeTimerRef.current) clearInterval(activeTimerRef.current);
   }, []);
 
-  // Fire completion celebration once when all exercises are done; reset when session changes.
-  // Only trigger for today's session (not when viewing a past completed day).
+  // Completion celebration trigger
   useEffect(() => {
     const isToday = selectedDateKey === todayDateKey;
     if (allExercisesDone && !completionShownRef.current && isToday) {
@@ -336,14 +367,13 @@ export default function Workout() {
     }
   }, [selectedDayIndex, routinesByDay, activeDayIndexes]);
 
-  // Silently enrich GIFs for existing users whose routines have empty gifUrls
+  // Silently enrich GIFs
   useEffect(() => {
     if (!authToken || !routine.length || !routineNeedsEnrichment(routine)) return;
     let cancelled = false;
     (async () => {
       const enriched = await enrichRoutine(routine, authToken);
       if (cancelled || !routineNeedsEnrichment(enriched)) return;
-      // Only update if something actually changed
       const hasChanges = enriched.some((day, di) =>
         day.exercises.some((ex, ei) => ex.gifUrl !== routine[di]?.exercises[ei]?.gifUrl)
       );
@@ -351,11 +381,11 @@ export default function Workout() {
       setRoutine(enriched);
       try {
         await authService.updateProfile(authToken, { routine: enriched });
-      } catch { /* non-fatal: store is already updated locally */ }
+      } catch { /* store already updated locally */ }
     })();
     return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authToken]); // Run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authToken]);
 
   const moveTrainingDay = async (sourceIndex: number, targetIndex: number) => {
     const sourceRoutine = routinesByDay[sourceIndex];
@@ -389,7 +419,7 @@ export default function Workout() {
 
     showToast({
       type: 'success',
-      title: 'Dias de entreno actualizados',
+      title: 'Días de entreno actualizados',
       message: `${WEEKDAY_LABELS[sourceIndex].full} movido a ${WEEKDAY_LABELS[targetIndex].full}.`,
     });
   };
@@ -408,8 +438,8 @@ export default function Workout() {
       if (!hasRoutine) {
         showToast({
           type: 'info',
-          title: 'Elige un dia con entreno',
-          message: 'Primero selecciona el dia que quieres mover.',
+          title: 'Elige un día con entreno',
+          message: 'Primero selecciona el día que quieres mover.',
         });
         return;
       }
@@ -425,8 +455,8 @@ export default function Workout() {
     if (hasRoutine) {
       showToast({
         type: 'info',
-        title: 'Dia ocupado',
-        message: 'Selecciona un dia bloqueado para mover el entreno.',
+        title: 'Día ocupado',
+        message: 'Selecciona un día bloqueado para mover el entreno.',
       });
       return;
     }
@@ -438,6 +468,8 @@ export default function Workout() {
     if (!selectedExercise) return;
 
     const count = Math.max(1, setsInput);
+    setLastLoggedExerciseId(selectedExercise.id);
+    setTimeout(() => setLastLoggedExerciseId(null), 1200);
 
     // ── Isometric / Cardio (duration-based) ─────────────────────────
     if (currentExerciseType === 'isometric' || currentExerciseType === 'cardio') {
@@ -469,11 +501,10 @@ export default function Workout() {
         : formatDuration(durationInput);
       showToast({
         type: 'success',
-        title: count > 1 ? `${count} series guardadas 💪` : 'Serie guardada 💪',
+        title: count > 1 ? `${count} series registradas 💪` : 'Serie registrada 💪',
         message: rpeInput >= 1 ? `${durationLabel} · RPE ${rpeInput}` : durationLabel,
       });
 
-      // Progressive suggestion for isometric: beat target 3 times → suggest harder variant
       if (currentExerciseType === 'isometric' && selectedExercise.durationTarget) {
         const target = selectedExercise.durationTarget;
         if (durationInput >= target) {
@@ -497,7 +528,7 @@ export default function Workout() {
       return;
     }
 
-    // ── Bodyweight (reps, no weight required) ────────────────────────
+    // ── Bodyweight (reps, no external weight required) ──────────────
     if (currentExerciseType === 'bodyweight') {
       if (repsInput <= 0) return;
       const bodyWeight = profile?.weight ?? 0;
@@ -524,7 +555,7 @@ export default function Workout() {
 
       showToast({
         type: 'success',
-        title: count > 1 ? `${count} series guardadas 💪` : 'Serie guardada 💪',
+        title: count > 1 ? `${count} series registradas 💪` : 'Serie registrada 💪',
         message: rirInput >= 0 ? `${repsInput} reps · RIR ${rirInput}` : `${repsInput} reps`,
       });
 
@@ -552,7 +583,6 @@ export default function Workout() {
 
       newLogs.forEach((log) => addLog(log));
       setSyncStatus('local');
-      // Start the rest timer immediately after saving
       startRestTimer(90);
 
       if (authToken) {
@@ -568,11 +598,10 @@ export default function Workout() {
 
       showToast({
         type: 'success',
-        title: count > 1 ? `${count} series guardadas 💪` : 'Serie guardada 💪',
-        message: rirInput >= 0 ? `${weightInput}kg x ${repsInput} reps · RIR ${rirInput}` : `${weightInput}kg x ${repsInput} reps`,
+        title: count > 1 ? `${count} series registradas 💪` : 'Serie registrada 💪',
+        message: rirInput >= 0 ? `${weightInput}kg × ${repsInput} reps · RIR ${rirInput}` : `${weightInput}kg × ${repsInput} reps`,
       });
 
-      // Check achievements
       const newAchievements = checkNewAchievements(
         [...logs, ...newLogs],
         achievements.map((a) => a.id),
@@ -584,7 +613,6 @@ export default function Workout() {
         showToast({ type: 'success', title: `🏅 Logro desbloqueado: ${a.label}`, message: a.description });
       });
 
-      // Progressive overload suggestion
       const totalDone = (setsByExercise.get(selectedExercise.id) ?? 0) + count;
       const targetSets = Math.max(1, Number(selectedExercise.sets || 0));
       if (totalDone >= targetSets && weightInput >= selectedExercise.weight && selectedExercise.weight > 0) {
@@ -603,8 +631,6 @@ export default function Workout() {
     }
   };
 
-  // End of handleLog
-
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     e.currentTarget.src = 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=400&auto=format&fit=crop';
   };
@@ -613,7 +639,6 @@ export default function Workout() {
     if (isSharing) return;
     setIsSharing(true);
     try {
-      // Dynamically import html2canvas to avoid bundle bloat
       const { default: html2canvas } = await import('html2canvas');
       if (!summaryCardRef.current) throw new Error('No card ref');
       const canvas = await html2canvas(summaryCardRef.current, {
@@ -632,7 +657,6 @@ export default function Workout() {
       } else if (navigator.share) {
         await navigator.share({ title: '💪 VoltBody – Sesión completada', text: shareText });
       } else {
-        // Fallback: trigger download
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -652,1224 +676,1357 @@ export default function Workout() {
   return (
     <div className="min-h-screen app-shell px-4 safe-top md:px-6 safe-bottom">
       <div className="page-wrap">
-      <header className="mb-8 mt-2">
-        <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3 tracking-tight">
-          <Dumbbell className="app-accent" size={32} />
-          💪 Rutina de Hoy
-        </h1>
-        <p className="app-accent font-mono text-sm glow-text">{todayRoutine?.focus || 'Hoy toca activar el cuerpo'}</p>
-      </header>
+        <header className="mb-6 mt-2">
+          <h1 className="text-3xl font-bold text-white mb-1.5 flex items-center gap-3 tracking-tight">
+            <Dumbbell className="app-accent" size={32} />
+            💪 Rutina de Hoy
+          </h1>
+          <p className="app-accent font-mono text-sm glow-text">{todayRoutine?.focus || 'Hoy toca activar el cuerpo'}</p>
+        </header>
 
-      <div className="flex flex-col lg:grid lg:grid-cols-[380px_1fr] lg:gap-8 lg:items-start pb-8">
-        {/* Left Column (Sticky Sidebar on Desktop) */}
-        <div className="space-y-6 lg:sticky lg:top-6">
-          <motion.div {...listStagger(0)}>
-          <AppCard className="p-4 glass-panel">
-            <SectionHeader
-              title="Semana de entrenamiento"
-              subtitle={
-                isEditingDays
-                  ? 'Paso 1: toca un dia activo. Paso 2: toca un dia bloqueado para moverlo.'
-                  : 'Selecciona un dia. Los dias sin plan quedan bloqueados.'
-              }
-              right={
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsEditingDays((prev) => !prev);
-                    setMoveSourceDayIndex(null);
-                  }}
-                  aria-label={isEditingDays ? 'Cancelar edición de días' : 'Editar días de entrenamiento'}
-                  className="tap-target neuro-raised px-3 py-2 text-[11px] font-semibold text-gray-300 transition-all hover:text-white"
-                >
-                  {isEditingDays ? 'Cancelar' : 'Editar dias de entreno'}
-                </button>
-              }
-            />
-            <div className="grid grid-cols-7 gap-1.5">
-              {WEEKDAY_LABELS.map((day, index) => {
-                const hasRoutine = Boolean(routinesByDay[index]);
-                const isSelected = selectedDayIndex === index;
-                const isMoveSource = moveSourceDayIndex === index;
-
-                return (
-                  <button
-                    key={day.key}
-                    type="button"
-                    onClick={() => void handleWeekdayTap(index)}
-                    disabled={!isEditingDays && !hasRoutine}
-                    aria-label={`Día ${day.full}`}
-                    className={[
-                      'tap-target h-11 rounded-xl border flex flex-col items-center justify-center text-center text-xs font-semibold transition-all',
-                      !isEditingDays && hasRoutine ? 'pressable cursor-pointer' : '',
-                      !isEditingDays && !hasRoutine ? 'cursor-not-allowed opacity-40' : '',
-                      isEditingDays && !hasRoutine ? 'cursor-pointer opacity-75' : '',
-                      isEditingDays && isMoveSource ? 'border-amber-400 bg-amber-500/20 text-amber-200' : '',
-                      isSelected
-                        ? 'border-[color:var(--app-accent)]/70 text-[var(--app-accent)] bg-[color:var(--app-accent)]/10 font-bold'
-                        : 'border-white/10 text-gray-300 bg-white/[0.03] hover:border-white/20',
-                      isEditingDays && !hasRoutine ? 'border-dashed' : '',
-                    ].join(' ')}
-                  >
-                    {day.short}
-                  </button>
-                );
-              })}
-            </div>
-          </AppCard>
-          </motion.div>
-
-          <motion.div {...listStagger(1)}>
-          <AppCard accent interactive className="p-6 glass-panel">
-            <div className="flex items-start justify-between gap-4 mb-4">
-              <div>
-                <p className="text-xs uppercase tracking-[0.18em] text-gray-400 mb-2">🎯 Sesión Prioritaria</p>
-                <h2 className="text-3xl font-black leading-none tracking-tight headline-gradient">
-                  {todayRoutine?.focus || 'Crea tu sesión personalizada'}
-                </h2>
-                <p className="text-sm text-gray-300 mt-2">
-                  {todayRoutine
-                    ? `${totalTodayExercises} ejercicios listos para ejecutar. Hoy toca. Sin excusas.`
-                    : 'No hay rutina asignada hoy. Arma una sesión en 1 minuto.'}
-                </p>
-              </div>
-              <Flame className="app-accent shrink-0" />
-            </div>
-
-            <div className="grid grid-cols-3 gap-2 mb-4">
-              <StatPill label="estado" value={todayRoutine ? 'activo' : 'custom'} />
-              <StatPill label="ejercicios" value={`${totalTodayExercises}`} />
-              <StatPill label="tu lista" value={`${customWorkout.length}`} />
-            </div>
-
-            <button
-              onClick={() => {
-                if (!todayRoutine?.exercises?.length) {
-                  showToast({
-                    type: 'info',
-                    title: 'Sin rutina automática',
-                    message: 'Añade ejercicios en “Arma tu Entrenamiento”.',
-                  });
-                  return;
-                }
-                showToast({
-                  type: 'success',
-                  title: 'Sesión iniciada ⚡',
-                  message: `Enfócate en ${todayRoutine.focus}.`,
-                });
-              }}
-              className="tap-target pulse-surface primary-btn w-full rounded-xl font-bold py-3.5 px-4 transition-base text-sm"
-            >
-              Iniciar Sesión
-            </button>
-          </AppCard>
-          </motion.div>
-
-          <AppCard className="p-4 glass-panel">
-            <div className="mb-2 flex items-center justify-between text-xs text-gray-400">
-              <span>Checklist de sesion</span>
-              <span>{completedSets}/{plannedSets} series</span>
-            </div>
-            <div className="h-2.5 w-full neuro-progress-track">
-              <div className="neuro-progress-fill" style={{ width: `${sessionProgress}%` }} />
-            </div>
-            <div className="mt-2 flex items-center justify-between text-[11px]">
-              <span className="text-gray-400">Progreso: {sessionProgress}%</span>
-              <span className="text-gray-400">ETA: {etaMinutes} min</span>
-            </div>
-            <div className="mt-2 text-[11px] text-gray-400">
-              Sync:{' '}
-              <span className={syncStatus === 'synced' ? 'text-emerald-400' : syncStatus === 'error' ? 'text-amber-300' : 'text-gray-300'}>
-                {syncStatus === 'idle' && 'sin actividad'}
-                {syncStatus === 'local' && 'guardado local'}
-                {syncStatus === 'syncing' && 'sincronizando...'}
-                {syncStatus === 'synced' && 'sincronizado'}
-                {syncStatus === 'error' && 'error de sincronizacion'}
-              </span>
-            </div>
-          </AppCard>
-        </div>
-
-        {/* Right Column (Scrollable Main Content on Desktop) */}
-        <div className="space-y-6 lg:mt-0 flex-1 min-w-0">
-          {isSpecialClassToday && (
-            <AppCard className="border-[color:var(--app-accent)]/30 bg-[color:var(--app-accent)]/5">
-              <div className="flex items-center gap-3">
-                <CalendarClock className="app-accent" />
-                <div>
-                  <p className="text-sm font-bold text-white">Hoy toca clase especial 🎯</p>
-                  <p className="text-xs text-gray-300">Prioriza técnica y ritmo para sumar calidad al progreso.</p>
-                </div>
-              </div>
-            </AppCard>
-          )}
-
-          <div className="space-y-4">
-            {todayRoutine?.exercises.length ? todayRoutine.exercises.map((exercise, index) => {
-              const completedCount = setsByExercise.get(exercise.id) ?? 0;
-              const targetSets = Math.max(1, Number(exercise.sets || 0));
-              const isCompleted = completedCount >= targetSets;
-              const progressPct = Math.min(100, Math.round((completedCount / targetSets) * 100));
-
-              return (
-              <motion.div
-                key={exercise.id}
-                {...listStagger(index)}
-                whileTap={{ scale: 0.985 }}
-                onClick={() => setSelectedExercise(exercise)}
-                className={`panel-soft interactive-tile rounded-3xl overflow-hidden cursor-pointer transition-all group ripple-host ${
-                  isCompleted
-                    ? 'border-[color:var(--app-accent)]/60 bg-[color:var(--app-accent)]/5 anim-glow-pulse'
-                    : 'hover:border-[color:var(--app-accent)]/50'
-                }`}
-              >
-                <div className="p-5 flex items-center gap-4">
-                  <motion.div
-                    layoutId={`ex-img-${exercise.id}`}
-                    className="w-16 h-16 rounded-2xl overflow-hidden bg-[var(--app-surface)] flex-shrink-0 relative"
-                  >
-                    <LazyImage 
-                      src={exercise.gifUrl || 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=400&auto=format&fit=crop'} 
-                      alt={exercise.name} 
-                      onError={handleImageError}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
-                      referrerPolicy="no-referrer"
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 group-hover:bg-transparent transition-colors">
-                      <AnimatePresence mode="wait" initial={false}>
-                        {isCompleted ? (
-                          <motion.span key="done" {...checkBounce}>
-                            <CheckCircle2 className="text-[var(--app-accent)]" size={22} />
-                          </motion.span>
-                        ) : (
-                          <motion.span key="play" initial={{ opacity: 0.8 }} animate={{ opacity: 0.8 }}>
-                            <Play className="app-accent opacity-80" size={20} />
-                          </motion.span>
-                        )}
-                      </AnimatePresence>
-                    </div>
-                  </motion.div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-base font-semibold text-white mb-0.5 truncate">{exercise.name}</h3>
-                    <p className="text-sm text-gray-500 font-medium tabular-nums">
-                      {exercise.sets} sets × {exercise.reps} reps
-                    </p>
-                    {completedCount > 0 && (
-                      <AnimatePresence>
-                        <motion.p
-                          key={`${exercise.id}-count`}
-                          initial={{ opacity: 0, y: 4 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                          className="text-xs font-mono mt-0.5 text-[var(--app-accent)]"
-                        >
-                          {isCompleted ? '✅ Completado' : `${completedCount}/${targetSets} series`}
-                        </motion.p>
-                      </AnimatePresence>
-                    )}
-                  </div>
-                  <AnimatePresence mode="wait" initial={false}>
-                    {isCompleted ? (
-                      <motion.span key="done-icon" {...completionGlow}>
-                        <CheckCircle2 className="text-[var(--app-accent)]" size={20} />
-                      </motion.span>
-                    ) : (
-                      <motion.span key="chevron" initial={{ opacity: 1 }} animate={{ opacity: 1 }}>
-                        <ChevronLeft className="text-gray-600 rotate-180 group-hover:text-[var(--app-accent)] transition-colors" />
-                      </motion.span>
-                    )}
-                  </AnimatePresence>
-                </div>
-                {/* Ultra-thin series progress bar */}
-                <div className="h-[3px] w-full bg-white/5">
-                  <motion.div
-                    className="h-full rounded-full"
-                    style={{ background: isCompleted ? 'var(--app-accent)' : 'var(--app-accent)' }}
-                    initial={{ width: 0 }}
-                    animate={{ width: `${progressPct}%` }}
-                    transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-                  />
-                </div>
-              </motion.div>
-              );
-            }) : (
-              /* Empty state */
-              <motion.div
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-                className="flex flex-col items-center justify-center py-16 px-6 text-center"
-              >
-                <div className="relative mb-6">
-                  <svg width="96" height="96" viewBox="0 0 96 96" fill="none" className="opacity-20">
-                    <rect x="12" y="36" width="72" height="42" rx="6" stroke="currentColor" strokeWidth="1.5" strokeDasharray="4 3" />
-                    <circle cx="48" cy="24" r="12" stroke="currentColor" strokeWidth="1.5" strokeDasharray="4 3" />
-                    <line x1="32" y1="57" x2="64" y2="57" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                    <line x1="38" y1="65" x2="58" y2="65" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <Dumbbell className="app-accent opacity-60" size={32} />
-                  </div>
-                </div>
-                <p className="text-white/70 font-semibold text-base mb-1">Sin rutina para hoy</p>
-                <p className="text-gray-500 text-sm max-w-[220px]">Genera tu plan con IA o añade ejercicios en "Arma tu Entrenamiento"</p>
-              </motion.div>
-            )}
-          </div>
-
-          {profile?.weeklySpecialSession?.enabled && (
-            <AppCard accent>
-              <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-2">
-                <Star size={18} className="app-accent" />
-                ⭐ Clase Especial Semanal
-              </h3>
-              <p className="text-sm text-gray-300">
-                {profile.weeklySpecialSession.activity} • {profile.weeklySpecialSession.day} • {profile.weeklySpecialSession.durationMinutes} min
-              </p>
-            </AppCard>
-          )}
-
-          <AppCard className="glass-panel">
-            <SectionHeader title="🏋️ Arma tu Entrenamiento" />
-
-            <div className="flex flex-wrap gap-2 mb-4">
-              {muscleGroups.map((group) => (
-                <button
-                  key={group}
-                  onClick={() => setSelectedMuscleGroup(group)}
-                  className={`tap-target px-3 py-1.5 text-xs rounded-full border transition-colors ${
-                    selectedMuscleGroup === group
-                      ? 'border-[color:var(--app-accent)] bg-[color:var(--app-accent)]/10 text-[var(--app-accent)]'
-                      : 'border-[color:var(--neuro-shadow-light)]/50 text-gray-400 shadow-[3px_3px_8px_var(--neuro-shadow-dark),-1px_-1px_5px_var(--neuro-shadow-light)]'
-                  }`}
-                >
-                  {group}
-                </button>
-              ))}
-            </div>
-
-            <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-              {filteredLibrary.map((exercise) => {
-                const alreadyAdded = customWorkout.some((item) => item.id === exercise.id);
-
-                return (
-                  <div key={exercise.id} className="flex items-center justify-between neuro-inset p-3">
-                    <div>
-                      <p className="text-sm text-white font-medium">{exercise.name}</p>
-                      <p className="text-xs text-gray-500">{exercise.muscleGroup} • {exercise.defaultSets}x{exercise.defaultReps}</p>
-                    </div>
-                    <button
-                      onClick={() => addToCustomWorkout(exercise)}
-                      disabled={alreadyAdded}
-                      className="p-2 rounded-full neuro-raised text-gray-300 hover:text-[var(--app-accent)] disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      <PlusCircle size={16} />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          </AppCard>
-
-          {customWorkout.length > 0 && (
-            <AppCard className="glass-panel">
-              <SectionHeader title={`📋 Tu Rutina Personal (${customWorkout.length})`} />
-              <div className="space-y-2">
-                {customWorkout.map((exercise) => (
-                  <div key={exercise.id} className="flex items-center justify-between neuro-inset p-3">
-                    <div>
-                      <p className="text-sm text-white">{exercise.name}</p>
-                      <p className="text-xs text-gray-500">{exercise.muscleGroup}</p>
-                    </div>
-                    <button
-                      onClick={() => removeFromCustomWorkout(exercise.id)}
-                      className="p-2 rounded-full neuro-raised text-gray-300 hover:text-red-400"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </AppCard>
-          )}
-        </div>
-      </div>
-
-      {createPortal(
-        <AnimatePresence>
-        {selectedExercise && (
-          <motion.div
-            {...slideUpSheet}
-            className="fixed inset-0 z-[60] bg-[var(--app-bg)] flex flex-col"
-          >
-            {/* Header with shared-element image transition & iOS grabber */}
-            <div className="relative h-[30%] shrink-0 bg-[var(--app-surface)] overflow-hidden flex items-center justify-center">
-              <div className="absolute top-2 left-1/2 -translate-x-1/2 w-10 h-1.5 rounded-full bg-white/40 z-40" />
-              <motion.div
-                layoutId={`ex-img-${selectedExercise.id}`}
-                className="w-full h-full"
-                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              >
-                <LazyImage 
-                  src={selectedExercise.gifUrl || 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=400&auto=format&fit=crop'} 
-                  alt={selectedExercise.name} 
-                  onError={handleImageError}
-                  className="w-full h-full object-cover z-10" 
-                  referrerPolicy="no-referrer"
-                  loading="eager"
-                />
-              </motion.div>
-              <div className="absolute inset-0 bg-gradient-to-t from-[var(--app-bg)] via-transparent to-transparent z-20 pointer-events-none" />
-              <button
-                type="button"
-                onClick={closeExercise}
-                aria-label="Cerrar detalle de ejercicio"
-                className="tap-target absolute top-4 left-4 w-11 h-11 bg-black/60 backdrop-blur-md rounded-full border border-white/15 text-white z-30 flex items-center justify-center transition-transform active:scale-95"
-              >
-                <ChevronLeft size={22} />
-              </button>
-            </div>
-
-            <div className="flex-1 min-h-0 px-4 py-3 sm:p-6 flex flex-col overflow-y-auto">
-              <h2 className="text-xl sm:text-3xl font-bold text-white mb-1 sm:mb-2">{selectedExercise.name}</h2>
-              {(() => {
-                // Isometric: show best hold time
-                if (currentExerciseType === 'isometric') {
-                  const bestTime = personalBestTimes.get(selectedExercise.id);
-                  const lastLog = logs
-                    .filter((l) => l.exerciseId === selectedExercise.id && l.duration !== undefined)
-                    .sort((a, b) => b.date.localeCompare(a.date))[0];
-                  if (!bestTime && !lastLog) return null;
-                  return (
-                    <div className="flex flex-col gap-1 mb-2">
-                      {bestTime !== undefined && (
-                        <span className="text-xs font-mono text-yellow-400 flex items-center gap-1">
-                          <Trophy size={12} />
-                          Mejor tiempo: {formatDuration(bestTime)}
-                        </span>
-                      )}
-                      {lastLog?.duration !== undefined && (
-                        <span className="text-xs font-mono text-gray-400 flex items-center gap-1">
-                          Último: {formatDuration(lastLog.duration)}{lastLog.rpe ? ` · RPE ${lastLog.rpe}` : ''}
-                        </span>
-                      )}
-                    </div>
-                  );
-                }
-                // Weighted / bodyweight: show best weight
-                const prWeight = personalRecords.get(selectedExercise.id);
-                const lastEntry = lastWeights.get(selectedExercise.id);
-                if (!prWeight && !lastEntry) return null;
-                return (
-                  <div className="flex flex-col gap-1 mb-2">
-                    {prWeight && prWeight > 0 && (
-                      <span className="text-xs font-mono text-yellow-400 flex items-center gap-1">
-                        <Trophy size={12} />
-                        Mejor marca: {prWeight}kg
-                      </span>
-                    )}
-                    {lastEntry && lastEntry.weight > 0 && (
-                      <span className="text-xs font-mono text-gray-400 flex items-center gap-1">
-                        Último peso registrado: {lastEntry.weight}kg
-                      </span>
-                    )}
-                  </div>
-                );
-              })()}
-              <div className="flex flex-wrap gap-2 mb-3 sm:mb-6">
-                <span className="neuro-inset px-4 py-2 rounded-full text-sm app-accent font-mono glow-box">
-                  {selectedExercise.muscleGroup}
-                </span>
-                <span className="neuro-inset px-4 py-2 rounded-full text-sm text-gray-300 font-mono">
-                  {currentExerciseType === 'isometric' ? '⏱ Isométrico' :
-                   currentExerciseType === 'bodyweight' ? '🤸 Peso corporal' :
-                   currentExerciseType === 'cardio' ? '🏃 Cardio' : '🏋️ Con peso'}
-                </span>
-                <span className="neuro-inset px-4 py-2 rounded-full text-sm text-gray-300 font-mono">
-                  {selectedExercise.sets} x {selectedExercise.reps}
-                </span>
-                {currentExerciseType === 'weighted' && selectedExercise.weight > 0 && (
-                  <span className="neuro-inset px-4 py-2 rounded-full text-sm text-gray-300 font-mono">
-                    Meta: <span className="app-accent font-bold">{selectedExercise.weight} kg</span>
-                  </span>
-                )}
-              </div>
-
-              {/* Progressive overload suggestion (weighted only) */}
-              {progressiveSuggestion && currentExerciseType === 'weighted' && (
-                <motion.div
-                  initial={{ opacity: 0, y: -8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="mb-3 sm:mb-5 flex items-center gap-3 neuro-inset rounded-2xl p-3 sm:p-4 border border-[color:var(--app-accent)]/30"
-                >
-                  <TrendingUp className="app-accent shrink-0" size={18} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-[var(--app-accent)]">📈 Sobrecarga progresiva</p>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      Completaste {progressiveSuggestion.currentWeight} kg las últimas {progressiveSuggestion.sessionsAnalyzed} sesiones → prueba <strong className="text-white">{progressiveSuggestion.suggestedWeight} kg</strong>
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setWeightInput(progressiveSuggestion.suggestedWeight)}
-                    className="tap-target shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold primary-btn"
-                  >
-                    Usar
-                  </button>
-                </motion.div>
-              )}
-
-              {/* PoseCoach button */}
-              {(currentExerciseType === 'weighted' || currentExerciseType === 'bodyweight' || currentExerciseType === 'isometric') && (
-                <motion.button
-                  type="button"
-                  onClick={() => setShowPoseCoach(true)}
-                  whileTap={{ scale: 0.96 }}
-                  className="tap-target mb-3 sm:mb-5 w-full flex items-center justify-center gap-2.5 neuro-inset rounded-2xl py-3 px-4 border border-[color:var(--app-accent)]/25 hover:border-[color:var(--app-accent)]/50 transition-colors"
-                >
-                  <Camera size={16} className="app-accent shrink-0" />
-                  <div className="text-left">
-                    <p className="text-sm font-bold text-white">🎥 PoseCoach — Análisis de postura</p>
-                    <p className="text-[10px] text-gray-500">Detección en tiempo real con IA (MediaPipe)</p>
-                  </div>
-                </motion.button>
-              )}
-
-              {/* Técnica */}
-              {(() => {
-                const libEntry = exerciseLibrary.find((e) => e.id === selectedExercise.id);
-                const technique = libEntry?.technique ?? selectedExercise.technique;
-                if (!technique) return null;
-                return (
-                  <div className="mb-3 sm:mb-6">
+        <div className="flex flex-col lg:grid lg:grid-cols-[380px_1fr] lg:gap-8 lg:items-start pb-8">
+          {/* Left Column (Sticky Sidebar on Desktop) */}
+          <div className="space-y-4 lg:sticky lg:top-6">
+            <motion.div {...listStagger(0)}>
+              <AppCard className="p-4 glass-panel">
+                <SectionHeader
+                  title="Semana de entrenamiento"
+                  subtitle={
+                    isEditingDays
+                      ? 'Paso 1: toca un día activo. Paso 2: toca un día bloqueado para moverlo.'
+                      : 'Selecciona un día. Los días sin plan quedan bloqueados.'
+                  }
+                  right={
                     <button
                       type="button"
-                      onClick={() => setShowTechnique((v) => !v)}
-                      className="tap-target flex items-center gap-2 text-sm font-semibold app-accent mb-2"
+                      onClick={() => {
+                        setIsEditingDays((prev) => !prev);
+                        setMoveSourceDayIndex(null);
+                      }}
+                      aria-label={isEditingDays ? 'Cancelar edición de días' : 'Editar días de entrenamiento'}
+                      className="min-h-[36px] px-3 py-1.5 rounded-xl text-[11px] font-semibold text-gray-300 bg-white/5 border border-white/10 hover:border-white/20 transition-all active:scale-95 touch-manipulation"
                     >
-                      <BookOpen size={15} />
-                      {showTechnique ? 'Ocultar técnica' : 'Ver técnica'}
+                      {isEditingDays ? 'Cancelar' : 'Editar días'}
                     </button>
-                    <AnimatePresence>
-                      {showTechnique && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: 'auto' }}
-                          exit={{ opacity: 0, height: 0 }}
-                          transition={{ duration: 0.2 }}
-                          className="overflow-hidden"
-                        >
-                          <div className="neuro-inset rounded-2xl p-4 space-y-2">
-                            {technique.split('\n').map((step, i) => (
-                              <p key={i} className="text-sm text-gray-300 leading-relaxed">{step}</p>
-                            ))}
+                  }
+                />
+                <div className="grid grid-cols-7 gap-1.5 mt-2">
+                  {WEEKDAY_LABELS.map((day, index) => {
+                    const hasRoutine = Boolean(routinesByDay[index]);
+                    const isSelected = selectedDayIndex === index;
+                    const isMoveSource = moveSourceDayIndex === index;
+
+                    return (
+                      <button
+                        key={day.key}
+                        type="button"
+                        onClick={() => void handleWeekdayTap(index)}
+                        disabled={!isEditingDays && !hasRoutine}
+                        aria-label={`Día ${day.full}`}
+                        className={[
+                          'min-h-[44px] min-w-[38px] rounded-xl border flex flex-col items-center justify-center text-center text-xs font-semibold transition-all touch-manipulation',
+                          !isEditingDays && hasRoutine ? 'cursor-pointer active:scale-95' : '',
+                          !isEditingDays && !hasRoutine ? 'cursor-not-allowed opacity-35' : '',
+                          isEditingDays && !hasRoutine ? 'cursor-pointer opacity-75' : '',
+                          isEditingDays && isMoveSource ? 'border-amber-400 bg-amber-500/20 text-amber-200' : '',
+                          isSelected
+                            ? 'border-[color:var(--app-accent)]/80 text-[var(--app-accent)] bg-[color:var(--app-accent)]/15 font-bold shadow-[0_0_12px_rgba(57,255,20,0.2)]'
+                            : 'border-white/10 text-gray-300 bg-white/[0.03] hover:border-white/20',
+                          isEditingDays && !hasRoutine ? 'border-dashed' : '',
+                        ].join(' ')}
+                      >
+                        {day.short}
+                      </button>
+                    );
+                  })}
+                </div>
+              </AppCard>
+            </motion.div>
+
+            <motion.div {...listStagger(1)}>
+              <AppCard accent interactive className="p-6 glass-panel">
+                <div className="flex items-start justify-between gap-4 mb-4">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.18em] text-gray-400 mb-2">🎯 Sesión Prioritaria</p>
+                    <h2 className="text-3xl font-black leading-none tracking-tight headline-gradient">
+                      {todayRoutine?.focus || 'Crea tu sesión personalizada'}
+                    </h2>
+                    <p className="text-sm text-gray-300 mt-2">
+                      {todayRoutine
+                        ? `${totalTodayExercises} ejercicios listos para ejecutar. Hoy toca. Sin excusas.`
+                        : 'No hay rutina asignada hoy. Arma una sesión en 1 minuto.'}
+                    </p>
+                  </div>
+                  <Flame className="app-accent shrink-0" size={28} />
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 mb-4">
+                  <StatPill label="estado" value={todayRoutine ? 'activo' : 'custom'} />
+                  <StatPill label="ejercicios" value={`${totalTodayExercises}`} />
+                  <StatPill label="tu lista" value={`${customWorkout.length}`} />
+                </div>
+
+                <button
+                  onClick={() => {
+                    if (!todayRoutine?.exercises?.length) {
+                      showToast({
+                        type: 'info',
+                        title: 'Sin rutina automática',
+                        message: 'Añade ejercicios en “Arma tu Entrenamiento”.',
+                      });
+                      return;
+                    }
+                    showToast({
+                      type: 'success',
+                      title: 'Sesión iniciada ⚡',
+                      message: `Enfócate en ${todayRoutine.focus}.`,
+                    });
+                  }}
+                  className="w-full min-h-[48px] primary-btn rounded-2xl font-bold py-3 px-4 transition-all text-sm active:scale-[0.98] touch-manipulation shadow-lg"
+                >
+                  Iniciar Sesión
+                </button>
+              </AppCard>
+            </motion.div>
+
+            <AppCard className="p-4 glass-panel space-y-3">
+              <div className="flex items-center justify-between text-xs text-gray-400 font-mono">
+                <span>Checklist de sesión</span>
+                <span className="text-white font-bold tabular-nums">{completedSets}/{plannedSets} series</span>
+              </div>
+              <div className="h-2.5 w-full neuro-progress-track rounded-full overflow-hidden">
+                <motion.div
+                  className="neuro-progress-fill h-full rounded-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${sessionProgress}%` }}
+                  transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                />
+              </div>
+              <div className="flex items-center justify-between text-[11px] font-mono tabular-nums text-gray-400">
+                <span>Progreso: <strong className="text-[var(--app-accent)]">{sessionProgress}%</strong></span>
+                <span>ETA: <strong className="text-gray-300">{etaMinutes} min</strong></span>
+              </div>
+              <div className="text-[11px] font-mono text-gray-400 pt-1 border-t border-white/5">
+                Sync:{' '}
+                <span className={syncStatus === 'synced' ? 'text-emerald-400 font-semibold' : syncStatus === 'error' ? 'text-amber-300' : 'text-gray-300'}>
+                  {syncStatus === 'idle' && 'sin actividad'}
+                  {syncStatus === 'local' && 'guardado local'}
+                  {syncStatus === 'syncing' && 'sincronizando...'}
+                  {syncStatus === 'synced' && 'sincronizado ✅'}
+                  {syncStatus === 'error' && 'error de sincronización'}
+                </span>
+              </div>
+            </AppCard>
+          </div>
+
+          {/* Right Column (Scrollable Main Content on Desktop) */}
+          <div className="space-y-4 lg:mt-0 flex-1 min-w-0">
+            {isSpecialClassToday && (
+              <AppCard className="border-[color:var(--app-accent)]/30 bg-[color:var(--app-accent)]/5">
+                <div className="flex items-center gap-3">
+                  <CalendarClock className="app-accent shrink-0" size={24} />
+                  <div>
+                    <p className="text-sm font-bold text-white">Hoy toca clase especial 🎯</p>
+                    <p className="text-xs text-gray-300">Prioriza técnica y ritmo para sumar calidad al progreso.</p>
+                  </div>
+                </div>
+              </AppCard>
+            )}
+
+            <div className="space-y-3">
+              {todayRoutine?.exercises.length ? todayRoutine.exercises.map((exercise, index) => {
+                const completedCount = setsByExercise.get(exercise.id) ?? 0;
+                const targetSets = Math.max(1, Number(exercise.sets || 0));
+                const isCompleted = completedCount >= targetSets;
+                const progressPct = Math.min(100, Math.round((completedCount / targetSets) * 100));
+                const isJustLogged = lastLoggedExerciseId === exercise.id;
+
+                return (
+                  <motion.div
+                    key={exercise.id}
+                    {...listStagger(index)}
+                    whileTap={{ scale: 0.985 }}
+                    onClick={() => setSelectedExercise(exercise)}
+                    className={`panel-soft interactive-tile rounded-3xl overflow-hidden cursor-pointer transition-all group touch-manipulation border ${
+                      isCompleted
+                        ? 'border-[color:var(--app-accent)]/60 bg-[color:var(--app-accent)]/5 shadow-[0_0_20px_rgba(57,255,20,0.12)]'
+                        : isJustLogged
+                        ? 'border-[color:var(--app-accent)] bg-[color:var(--app-accent)]/10 shadow-[0_0_24px_rgba(57,255,20,0.25)]'
+                        : 'border-white/10 hover:border-[color:var(--app-accent)]/50'
+                    }`}
+                  >
+                    <div className="p-4 flex items-center gap-3.5">
+                      <motion.div
+                        layoutId={`ex-img-${exercise.id}`}
+                        className="w-16 h-16 rounded-2xl overflow-hidden bg-[var(--app-surface)] flex-shrink-0 relative border border-white/10"
+                      >
+                        <LazyImage
+                          src={exercise.gifUrl || 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=400&auto=format&fit=crop'}
+                          alt={exercise.name}
+                          onError={handleImageError}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          referrerPolicy="no-referrer"
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 group-hover:bg-transparent transition-colors">
+                          <AnimatePresence mode="wait" initial={false}>
+                            {isCompleted ? (
+                              <motion.span key="done" {...checkBounce}>
+                                <CheckCircle2 className="text-[var(--app-accent)]" size={24} />
+                              </motion.span>
+                            ) : (
+                              <motion.span key="play" initial={{ opacity: 0.8 }} animate={{ opacity: 0.8 }}>
+                                <Play className="app-accent opacity-90" size={20} />
+                              </motion.span>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      </motion.div>
+
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-base font-semibold text-white mb-0.5 truncate tracking-tight">{exercise.name}</h3>
+                        <p className="text-xs text-gray-400 font-mono tabular-nums">
+                          {exercise.sets} sets × {exercise.reps} reps
+                        </p>
+                        {completedCount > 0 && (
+                          <AnimatePresence>
+                            <motion.p
+                              key={`${exercise.id}-count`}
+                              initial={{ opacity: 0, y: 3 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="text-xs font-mono tabular-nums mt-0.5 text-[var(--app-accent)] font-semibold flex items-center gap-1"
+                            >
+                              {isCompleted ? '✅ Completado' : `${completedCount}/${targetSets} series completadas`}
+                            </motion.p>
+                          </AnimatePresence>
+                        )}
+                      </div>
+
+                      <div className="min-w-[44px] min-h-[44px] flex items-center justify-center">
+                        <AnimatePresence mode="wait" initial={false}>
+                          {isCompleted ? (
+                            <motion.span key="done-icon" {...completionGlow}>
+                              <CheckCircle2 className="text-[var(--app-accent)]" size={22} />
+                            </motion.span>
+                          ) : (
+                            <motion.span key="chevron" initial={{ opacity: 1 }} animate={{ opacity: 1 }}>
+                              <ChevronLeft className="text-gray-500 rotate-180 group-hover:text-[var(--app-accent)] transition-colors" size={20} />
+                            </motion.span>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    </div>
+
+                    {/* Series progress bar */}
+                    <div className="h-[3px] w-full bg-white/5">
+                      <motion.div
+                        className="h-full rounded-full bg-[var(--app-accent)]"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${progressPct}%` }}
+                        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                      />
+                    </div>
+                  </motion.div>
+                );
+              }) : (
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                  className="flex flex-col items-center justify-center py-16 px-6 text-center glass-panel rounded-3xl"
+                >
+                  <div className="relative mb-4">
+                    <Dumbbell className="app-accent opacity-50" size={40} />
+                  </div>
+                  <p className="text-white/80 font-bold text-base mb-1">Sin rutina para hoy</p>
+                  <p className="text-gray-400 text-xs max-w-[240px]">Genera tu plan con IA o añade ejercicios desde “Arma tu Entrenamiento”</p>
+                </motion.div>
+              )}
+            </div>
+
+            {profile?.weeklySpecialSession?.enabled && (
+              <AppCard accent className="p-4">
+                <h3 className="text-base font-bold text-white flex items-center gap-2 mb-1.5">
+                  <Star size={16} className="app-accent" />
+                  ⭐ Clase Especial Semanal
+                </h3>
+                <p className="text-xs text-gray-300 font-mono">
+                  {profile.weeklySpecialSession.activity} • {profile.weeklySpecialSession.day} • {profile.weeklySpecialSession.durationMinutes} min
+                </p>
+              </AppCard>
+            )}
+
+            <AppCard className="glass-panel p-4">
+              <SectionHeader title="🏋️ Arma tu Entrenamiento" />
+
+              <div className="flex flex-wrap gap-2 mb-4 mt-2">
+                {muscleGroups.map((group) => (
+                  <button
+                    key={group}
+                    onClick={() => setSelectedMuscleGroup(group)}
+                    className={`min-h-[36px] px-3.5 py-1.5 text-xs font-semibold rounded-full border transition-all active:scale-95 touch-manipulation ${
+                      selectedMuscleGroup === group
+                        ? 'border-[color:var(--app-accent)] bg-[color:var(--app-accent)]/15 text-[var(--app-accent)] shadow-[0_0_10px_rgba(57,255,20,0.15)] font-bold'
+                        : 'border-white/10 text-gray-400 bg-white/[0.03] hover:text-white'
+                    }`}
+                  >
+                    {group}
+                  </button>
+                ))}
+              </div>
+
+              <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                {filteredLibrary.map((exercise) => {
+                  const alreadyAdded = customWorkout.some((item) => item.id === exercise.id);
+
+                  return (
+                    <div key={exercise.id} className="flex items-center justify-between neuro-inset p-3 rounded-2xl">
+                      <div className="min-w-0 flex-1 pr-2">
+                        <p className="text-sm text-white font-medium truncate">{exercise.name}</p>
+                        <p className="text-xs text-gray-400 font-mono">{exercise.muscleGroup} • {exercise.defaultSets}x{exercise.defaultReps}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => addToCustomWorkout(exercise)}
+                        disabled={alreadyAdded}
+                        aria-label={`Añadir ${exercise.name}`}
+                        className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center bg-white/[0.05] hover:bg-white/[0.1] text-gray-300 hover:text-[var(--app-accent)] disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 transition-all touch-manipulation"
+                      >
+                        <PlusCircle size={20} />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </AppCard>
+
+            {customWorkout.length > 0 && (
+              <AppCard className="glass-panel p-4">
+                <SectionHeader title={`📋 Tu Rutina Personal (${customWorkout.length})`} />
+                <div className="space-y-2 mt-2">
+                  {customWorkout.map((exercise) => (
+                    <div key={exercise.id} className="flex items-center justify-between neuro-inset p-3 rounded-2xl">
+                      <div>
+                        <p className="text-sm text-white font-medium">{exercise.name}</p>
+                        <p className="text-xs text-gray-400 font-mono">{exercise.muscleGroup}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeFromCustomWorkout(exercise.id)}
+                        aria-label={`Eliminar ${exercise.name}`}
+                        className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center bg-white/[0.05] hover:bg-red-500/20 text-gray-400 hover:text-red-400 active:scale-95 transition-all touch-manipulation"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </AppCard>
+            )}
+          </div>
+        </div>
+
+        {/* Exercise detail bottom sheet */}
+        {createPortal(
+          <AnimatePresence>
+            {selectedExercise && (
+              <motion.div
+                {...slideUpSheet}
+                className="fixed inset-0 z-[60] bg-[var(--app-bg)] flex flex-col"
+              >
+                {/* Header with image & grabber */}
+                <div className="relative h-[28%] min-h-[160px] shrink-0 bg-[var(--app-surface)] overflow-hidden flex items-center justify-center">
+                  <div className="absolute top-2.5 left-1/2 -translate-x-1/2 w-12 h-1.5 rounded-full bg-white/40 z-40" />
+                  <motion.div
+                    layoutId={`ex-img-${selectedExercise.id}`}
+                    className="w-full h-full"
+                    transition={{ type: 'spring', stiffness: 320, damping: 30 }}
+                  >
+                    <LazyImage
+                      src={selectedExercise.gifUrl || 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=400&auto=format&fit=crop'}
+                      alt={selectedExercise.name}
+                      onError={handleImageError}
+                      className="w-full h-full object-cover z-10"
+                      referrerPolicy="no-referrer"
+                      loading="eager"
+                    />
+                  </motion.div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-[var(--app-bg)] via-black/30 to-transparent z-20 pointer-events-none" />
+                  <button
+                    type="button"
+                    onClick={closeExercise}
+                    aria-label="Cerrar detalle de ejercicio"
+                    className="min-w-[44px] min-h-[44px] w-11 h-11 absolute top-4 left-4 bg-black/60 backdrop-blur-xl rounded-full border border-white/20 text-white z-30 flex items-center justify-center transition-transform active:scale-95 touch-manipulation"
+                  >
+                    <ChevronLeft size={22} />
+                  </button>
+                </div>
+
+                <div className="flex-1 min-h-0 px-4 py-3 sm:p-6 flex flex-col overflow-y-auto space-y-4">
+                  <div>
+                    <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">{selectedExercise.name}</h2>
+                    {(() => {
+                      if (currentExerciseType === 'isometric') {
+                        const bestTime = personalBestTimes.get(selectedExercise.id);
+                        const lastLog = logs
+                          .filter((l) => l.exerciseId === selectedExercise.id && l.duration !== undefined)
+                          .sort((a, b) => b.date.localeCompare(a.date))[0];
+                        if (!bestTime && !lastLog) return null;
+                        return (
+                          <div className="flex flex-wrap gap-2 mt-1 font-mono text-xs tabular-nums">
+                            {bestTime !== undefined && (
+                              <span className="text-amber-400 flex items-center gap-1">
+                                <Trophy size={13} />
+                                PR: {formatDuration(bestTime)}
+                              </span>
+                            )}
+                            {lastLog?.duration !== undefined && (
+                              <span className="text-gray-400 flex items-center gap-1">
+                                Último: {formatDuration(lastLog.duration)}{lastLog.rpe ? ` · RPE ${lastLog.rpe}` : ''}
+                              </span>
+                            )}
                           </div>
+                        );
+                      }
+                      const prWeight = personalRecords.get(selectedExercise.id);
+                      const lastEntry = lastWeights.get(selectedExercise.id);
+                      if (!prWeight && !lastEntry) return null;
+                      return (
+                        <div className="flex flex-wrap gap-3 mt-1 font-mono text-xs tabular-nums">
+                          {prWeight && prWeight > 0 && (
+                            <span className="text-amber-400 font-semibold flex items-center gap-1">
+                              <Trophy size={13} />
+                              PR: {prWeight} kg
+                            </span>
+                          )}
+                          {lastEntry && lastEntry.weight > 0 && (
+                            <span className="text-gray-400 flex items-center gap-1">
+                              Último: {lastEntry.weight} kg
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <span className="neuro-inset px-3.5 py-1.5 rounded-full text-xs app-accent font-mono font-semibold">
+                      {selectedExercise.muscleGroup}
+                    </span>
+                    <span className="neuro-inset px-3.5 py-1.5 rounded-full text-xs text-gray-300 font-mono">
+                      {currentExerciseType === 'isometric' ? '⏱ Isométrico' :
+                       currentExerciseType === 'bodyweight' ? '🤸 Peso corporal' :
+                       currentExerciseType === 'cardio' ? '🏃 Cardio' : '🏋️ Con peso'}
+                    </span>
+                    <span className="neuro-inset px-3.5 py-1.5 rounded-full text-xs text-gray-300 font-mono tabular-nums">
+                      {selectedExercise.sets} × {selectedExercise.reps}
+                    </span>
+                    {currentExerciseType === 'weighted' && selectedExercise.weight > 0 && (
+                      <span className="neuro-inset px-3.5 py-1.5 rounded-full text-xs text-gray-300 font-mono tabular-nums">
+                        Meta: <span className="app-accent font-bold">{selectedExercise.weight} kg</span>
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Progressive overload suggestion */}
+                  {progressiveSuggestion && currentExerciseType === 'weighted' && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="flex items-center gap-3 neuro-inset rounded-2xl p-3 border border-[color:var(--app-accent)]/30"
+                    >
+                      <TrendingUp className="app-accent shrink-0" size={18} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-[var(--app-accent)]">📈 Sobrecarga Progresiva Sugerida</p>
+                        <p className="text-xs text-gray-300 mt-0.5 font-mono tabular-nums">
+                          {progressiveSuggestion.currentWeight} kg en {progressiveSuggestion.sessionsAnalyzed} sesiones → prueba <strong className="text-white">{progressiveSuggestion.suggestedWeight} kg</strong>
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setWeightInput(progressiveSuggestion.suggestedWeight)}
+                        className="min-h-[44px] min-w-[54px] px-3 py-1.5 rounded-xl text-xs font-bold primary-btn flex items-center justify-center active:scale-95 touch-manipulation"
+                      >
+                        Usar
+                      </button>
+                    </motion.div>
+                  )}
+
+                  {/* PoseCoach Trigger */}
+                  {(currentExerciseType === 'weighted' || currentExerciseType === 'bodyweight' || currentExerciseType === 'isometric') && (
+                    <button
+                      type="button"
+                      onClick={() => setShowPoseCoach(true)}
+                      className="w-full min-h-[48px] flex items-center justify-between neuro-inset rounded-2xl p-3.5 border border-[color:var(--app-accent)]/30 hover:border-[color:var(--app-accent)]/60 transition-all active:scale-[0.98] touch-manipulation"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <Camera size={18} className="app-accent shrink-0" />
+                        <div className="text-left">
+                          <p className="text-sm font-bold text-white">🎥 PoseCoach — Análisis de postura</p>
+                          <p className="text-[11px] text-gray-400">Corrección angular en tiempo real con IA</p>
+                        </div>
+                      </div>
+                      <span className="text-xs font-mono text-[var(--app-accent)] font-semibold">Abrir →</span>
+                    </button>
+                  )}
+
+                  {/* Technique Accordion */}
+                  {(() => {
+                    const libEntry = exerciseLibrary.find((e) => e.id === selectedExercise.id);
+                    const technique = libEntry?.technique ?? selectedExercise.technique;
+                    if (!technique) return null;
+                    return (
+                      <div>
+                        <button
+                          type="button"
+                          onClick={() => setShowTechnique((v) => !v)}
+                          className="min-h-[40px] flex items-center gap-2 text-xs font-bold app-accent active:scale-95 transition-all touch-manipulation"
+                        >
+                          <BookOpen size={14} />
+                          {showTechnique ? 'Ocultar guía técnica' : 'Ver guía técnica'}
+                        </button>
+                        <AnimatePresence>
+                          {showTechnique && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: 'auto' }}
+                              exit={{ opacity: 0, height: 0 }}
+                              transition={{ duration: 0.2 }}
+                              className="overflow-hidden mt-1.5"
+                            >
+                              <div className="neuro-inset rounded-2xl p-4 space-y-2 border border-white/5">
+                                {technique.split('\n').map((step, i) => (
+                                  <p key={i} className="text-xs text-gray-300 leading-relaxed">{step}</p>
+                                ))}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Series Logging Card */}
+                  <div className="neuro-raised rounded-3xl p-4 sm:p-6 border border-white/10">
+                    <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+                      <CheckCircle2 className="app-accent" size={16} />
+                      Registrar Series
+                    </h3>
+
+                    {/* Set Progress Dots with 44x44px touch targets */}
+                    {(() => {
+                      const targetSets = Math.max(1, Number(selectedExercise.sets || 0));
+                      const doneSets = setsByExercise.get(selectedExercise.id) ?? 0;
+                      return (
+                        <div className="flex gap-2 mb-4 flex-wrap">
+                          {Array.from({ length: targetSets }, (_, i) => {
+                            if (i < doneSets) {
+                              const logIndex = todayExerciseLogIndices[i];
+                              return (
+                                <button
+                                  key={i}
+                                  type="button"
+                                  title="Editar serie"
+                                  aria-label={`Editar serie ${i + 1}`}
+                                  onClick={() => {
+                                    if (logIndex === undefined) return;
+                                    const log = logs[logIndex];
+                                    setEditingSet({ logIndex, weight: log.weight, reps: log.reps, duration: log.duration, rpe: log.rpe });
+                                  }}
+                                  className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-sm font-bold font-mono transition-all bg-[color:var(--app-accent)] text-black hover:opacity-90 active:scale-90 touch-manipulation shadow-[0_0_10px_rgba(57,255,20,0.3)]"
+                                >
+                                  ✓
+                                </button>
+                              );
+                            }
+                            return (
+                              <div
+                                key={i}
+                                className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-sm font-semibold font-mono transition-all neuro-inset text-gray-400"
+                              >
+                                {i + 1}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
+
+                    {/* Inline edit form */}
+                    <AnimatePresence>
+                      {editingSet && (
+                        <motion.div
+                          key="edit-set"
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 8 }}
+                          transition={{ duration: 0.2 }}
+                          className="mb-4 neuro-inset rounded-2xl p-4 border border-white/10"
+                        >
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                              ✏️ Editar serie realizada
+                            </h4>
+                            <button
+                              type="button"
+                              onClick={() => setEditingSet(null)}
+                              className="min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-400 hover:text-white"
+                              aria-label="Cerrar edición"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                          {currentExerciseType === 'isometric' || currentExerciseType === 'cardio' ? (
+                            <div className="mb-3">
+                              <label className="block text-[10px] font-mono text-gray-400 mb-1 uppercase tracking-wider">
+                                {currentExerciseType === 'cardio' ? 'Duración (min)' : 'Duración (seg)'}
+                              </label>
+                              <input
+                                type="number"
+                                inputMode="numeric"
+                                value={editingSet.duration ?? ''}
+                                onChange={(e) => setEditingSet((prev) => prev ? { ...prev, duration: Number(e.target.value) } : null)}
+                                className="w-full input-field rounded-xl p-3 text-lg font-bold font-mono tabular-nums text-center"
+                                placeholder="0"
+                              />
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-2 gap-2 mb-3">
+                              <div>
+                                <label className="block text-[10px] font-mono text-gray-400 mb-1 uppercase tracking-wider">
+                                  {currentExerciseType === 'bodyweight' ? 'Peso ref. (kg)' : 'Peso (kg)'}
+                                </label>
+                                <input
+                                  type="number"
+                                  inputMode="decimal"
+                                  value={editingSet.weight || ''}
+                                  onChange={(e) => setEditingSet((prev) => prev ? { ...prev, weight: Number(e.target.value) } : null)}
+                                  className="w-full input-field rounded-xl p-3 text-lg font-bold font-mono tabular-nums text-center"
+                                  placeholder="0"
+                                  readOnly={currentExerciseType === 'bodyweight'}
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-mono text-gray-400 mb-1 uppercase tracking-wider">Reps</label>
+                                <input
+                                  type="number"
+                                  inputMode="numeric"
+                                  value={editingSet.reps || ''}
+                                  onChange={(e) => setEditingSet((prev) => prev ? { ...prev, reps: Number(e.target.value) } : null)}
+                                  className="w-full input-field rounded-xl p-3 text-lg font-bold font-mono tabular-nums text-center"
+                                  placeholder="0"
+                                />
+                              </div>
+                            </div>
+                          )}
+                          <button
+                            type="button"
+                            disabled={
+                              (currentExerciseType === 'isometric' || currentExerciseType === 'cardio')
+                                ? !editingSet.duration
+                                : !editingSet.reps
+                            }
+                            onClick={() => {
+                              if (!editingSet) return;
+                              if (currentExerciseType === 'isometric' || currentExerciseType === 'cardio') {
+                                updateLog(editingSet.logIndex, { duration: editingSet.duration });
+                                showToast({ type: 'success', title: 'Serie actualizada ✏️', message: `${editingSet.duration}s` });
+                              } else {
+                                updateLog(editingSet.logIndex, { weight: editingSet.weight, reps: editingSet.reps });
+                                showToast({ type: 'success', title: 'Serie actualizada ✏️', message: `${editingSet.weight}kg × ${editingSet.reps} reps` });
+                              }
+                              setEditingSet(null);
+                            }}
+                            className="w-full min-h-[44px] primary-btn font-bold py-2.5 rounded-xl active:scale-95 transition-all touch-manipulation disabled:opacity-50"
+                          >
+                            Guardar cambios
+                          </button>
                         </motion.div>
                       )}
                     </AnimatePresence>
-                  </div>
-                );
-              })()}
 
-              <div className="neuro-raised rounded-3xl p-4 sm:p-6">
-                <h3 className="text-base font-semibold text-white/90 mb-2 sm:mb-4 flex items-center gap-2">
-                  <CheckCircle2 className="app-accent" size={16} />
-                  Registrar Series
-                </h3>
-
-                {/* Set dots */}
-                {(() => {
-                  const targetSets = Math.max(1, Number(selectedExercise.sets || 0));
-                  const doneSets = setsByExercise.get(selectedExercise.id) ?? 0;
-                  return (
-                    <div className="flex gap-2.5 mb-3 sm:mb-4 flex-wrap">
-                      {Array.from({ length: targetSets }, (_, i) => {
-                        if (i < doneSets) {
-                          const logIndex = todayExerciseLogIndices[i];
-                          return (
-                            <button
-                              key={i}
-                              type="button"
-                              title="Editar serie"
-                              aria-label={`Editar serie ${i + 1}`}
-                              onClick={() => {
-                                if (logIndex === undefined) return;
-                                const log = logs[logIndex];
-                                setEditingSet({ logIndex, weight: log.weight, reps: log.reps, duration: log.duration, rpe: log.rpe });
-                              }}
-                              className="tap-target w-11 h-11 rounded-xl flex items-center justify-center text-sm font-bold transition-all bg-[color:var(--app-accent)] text-black hover:opacity-90 active:scale-95 cursor-pointer shadow-sm"
-                            >
-                              ✓
-                            </button>
-                          );
-                        }
-                        return (
-                          <div
-                            key={i}
-                            className="tap-target w-11 h-11 rounded-xl flex items-center justify-center text-sm font-semibold transition-all neuro-inset text-gray-400"
-                          >
-                            {i + 1}
+                    {/* ── Isometric / Cardio Form ── */}
+                    {(currentExerciseType === 'isometric' || currentExerciseType === 'cardio') && (
+                      <div className="space-y-4">
+                        {currentExerciseType === 'isometric' && (
+                          <div className="neuro-inset rounded-2xl p-4 border border-white/10">
+                            <div className="flex items-center justify-between mb-3">
+                              <span className="text-xs uppercase tracking-wider text-gray-400 font-mono">Timer en vivo</span>
+                              <span className="text-2xl font-black text-white font-mono tabular-nums">
+                                {formatDuration(isometricElapsed)}
+                              </span>
+                            </div>
+                            {isometricRunning ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setIsometricRunning(false);
+                                  if (activeTimerRef.current) {
+                                    clearInterval(activeTimerRef.current);
+                                    activeTimerRef.current = null;
+                                  }
+                                  setDurationInput(isometricElapsed);
+                                  setIsometricElapsed(0);
+                                }}
+                                className="w-full min-h-[44px] flex items-center justify-center gap-2 py-3 rounded-xl bg-red-500/20 border border-red-500/40 text-red-400 font-bold text-sm active:scale-95 touch-manipulation"
+                              >
+                                <Square size={14} fill="currentColor" />
+                                DETENER — {formatDuration(isometricElapsed)}
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setIsometricElapsed(0);
+                                  setIsometricRunning(true);
+                                  if (activeTimerRef.current) clearInterval(activeTimerRef.current);
+                                  activeTimerRef.current = setInterval(() => {
+                                    setIsometricElapsed((prev) => prev + 1);
+                                  }, 1000);
+                                }}
+                                className="w-full min-h-[44px] flex items-center justify-center gap-2 py-3 rounded-xl bg-[color:var(--app-accent)]/10 border border-[color:var(--app-accent)]/30 text-[var(--app-accent)] font-bold text-sm active:scale-95 touch-manipulation"
+                              >
+                                <Timer size={16} />
+                                Iniciar serie en vivo
+                              </button>
+                            )}
                           </div>
-                        );
-                      })}
-                    </div>
-                  );
-                })()}
+                        )}
 
-                {/* Inline edit form for a logged set */}
-                <AnimatePresence>
-                  {editingSet && (
-                    <motion.div
-                      key="edit-set"
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 8 }}
-                      transition={{ duration: 0.2 }}
-                      className="mb-3 sm:mb-4 neuro-inset rounded-2xl p-4"
-                    >
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="text-sm font-semibold text-white flex items-center gap-1">
-                          ✏️ Editar serie
-                        </h4>
-                        <button
-                          type="button"
-                          onClick={() => setEditingSet(null)}
-                          className="tap-target text-gray-400 hover:text-white text-base leading-none px-1"
-                          aria-label="Cerrar edición"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                      {currentExerciseType === 'isometric' || currentExerciseType === 'cardio' ? (
-                        <div className="mb-3">
-                          <label className="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider">
-                            {currentExerciseType === 'cardio' ? 'Duración (min)' : 'Duración (seg)'}
-                          </label>
-                          <input
-                            type="number"
-                            inputMode="numeric"
-                            value={editingSet.duration ?? ''}
-                            onChange={(e) => setEditingSet((prev) => prev ? { ...prev, duration: Number(e.target.value) } : null)}
-                            className="w-full input-field rounded-2xl p-2.5 text-lg font-semibold text-center"
-                            placeholder="0"
-                          />
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-2 gap-3 mb-3">
+                        <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <label className="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider">
-                              {currentExerciseType === 'bodyweight' ? 'Peso corporal (kg)' : 'Peso (kg)'}
+                            <label className="block text-[11px] font-mono text-gray-400 mb-1.5 uppercase tracking-wider">
+                              {currentExerciseType === 'cardio' ? 'Duración (min)' : 'Duración (seg)'}
+                            </label>
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                aria-label="Restar 5 segundos"
+                                onClick={() => setDurationInput((prev) => Math.max(0, prev - 5))}
+                                className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/10 flex items-center justify-center text-white active:scale-95"
+                              >
+                                <Minus size={16} />
+                              </button>
+                              <input
+                                type="number"
+                                inputMode="numeric"
+                                value={durationInput || ''}
+                                onChange={(e) => setDurationInput(Math.max(0, Number(e.target.value)))}
+                                className="w-full h-11 input-field rounded-xl font-mono tabular-nums text-lg font-bold text-center"
+                                placeholder="0"
+                              />
+                              <button
+                                type="button"
+                                aria-label="Añadir 5 segundos"
+                                onClick={() => setDurationInput((prev) => prev + 5)}
+                                className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/10 flex items-center justify-center text-white active:scale-95"
+                              >
+                                <Plus size={16} />
+                              </button>
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-mono text-gray-400 mb-1.5 uppercase tracking-wider">Series</label>
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                aria-label="Restar serie"
+                                onClick={() => setSetsInput((prev) => Math.max(1, prev - 1))}
+                                className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/10 flex items-center justify-center text-white active:scale-95"
+                              >
+                                <Minus size={16} />
+                              </button>
+                              <input
+                                type="number"
+                                inputMode="numeric"
+                                min={1}
+                                max={10}
+                                value={setsInput || ''}
+                                onChange={(e) => setSetsInput(Math.max(1, Number(e.target.value)))}
+                                className="w-full h-11 input-field rounded-xl font-mono tabular-nums text-lg font-bold text-center"
+                                placeholder="1"
+                              />
+                              <button
+                                type="button"
+                                aria-label="Añadir serie"
+                                onClick={() => setSetsInput((prev) => Math.min(10, prev + 1))}
+                                className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/10 flex items-center justify-center text-white active:scale-95"
+                              >
+                                <Plus size={16} />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* RPE */}
+                        {currentExerciseType === 'isometric' && (
+                          <div>
+                            <label className="block text-[11px] font-mono text-gray-400 mb-2 uppercase tracking-wider">
+                              RPE <span className="normal-case text-gray-500">(esfuerzo 1-10)</span>
+                            </label>
+                            <div className="flex gap-1.5 flex-wrap">
+                              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((r) => (
+                                <button
+                                  key={r}
+                                  type="button"
+                                  onClick={() => setRpeInput((prev) => (prev === r ? -1 : r))}
+                                  className={`w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl text-sm font-bold font-mono transition-all active:scale-95 touch-manipulation ${
+                                    rpeInput === r
+                                      ? 'bg-[color:var(--app-accent)] text-black shadow-[0_0_10px_rgba(57,255,20,0.4)]'
+                                      : 'neuro-inset text-gray-400 hover:text-white'
+                                  }`}
+                                >
+                                  {r}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* ── Bodyweight Form ── */}
+                    {currentExerciseType === 'bodyweight' && (
+                      <div className="space-y-4">
+                        {profile?.weight && (
+                          <div className="neuro-inset rounded-2xl p-3 flex items-center gap-3 border border-white/5">
+                            <span className="text-2xl">🤸</span>
+                            <div>
+                              <p className="text-[10px] text-gray-400 uppercase font-mono tracking-wider">Peso corporal de referencia</p>
+                              <p className="text-base font-black font-mono text-white">{profile.weight} kg</p>
+                            </div>
+                          </div>
+                        )}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-[11px] font-mono text-gray-400 mb-1.5 uppercase tracking-wider">Reps</label>
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                aria-label="Restar repetición"
+                                onClick={() => setRepsInput((prev) => Math.max(0, prev - 1))}
+                                className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/10 flex items-center justify-center text-white active:scale-95"
+                              >
+                                <Minus size={16} />
+                              </button>
+                              <input
+                                type="number"
+                                inputMode="numeric"
+                                value={repsInput || ''}
+                                onChange={(e) => setRepsInput(Number(e.target.value))}
+                                className="w-full h-11 input-field rounded-xl font-mono tabular-nums text-lg font-bold text-center"
+                                placeholder="0"
+                              />
+                              <button
+                                type="button"
+                                aria-label="Añadir repetición"
+                                onClick={() => setRepsInput((prev) => prev + 1)}
+                                className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/10 flex items-center justify-center text-white active:scale-95"
+                              >
+                                <Plus size={16} />
+                              </button>
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-mono text-gray-400 mb-1.5 uppercase tracking-wider">Series</label>
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                aria-label="Restar serie"
+                                onClick={() => setSetsInput((prev) => Math.max(1, prev - 1))}
+                                className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/10 flex items-center justify-center text-white active:scale-95"
+                              >
+                                <Minus size={16} />
+                              </button>
+                              <input
+                                type="number"
+                                inputMode="numeric"
+                                min={1}
+                                max={10}
+                                value={setsInput || ''}
+                                onChange={(e) => setSetsInput(Math.max(1, Number(e.target.value)))}
+                                className="w-full h-11 input-field rounded-xl font-mono tabular-nums text-lg font-bold text-center"
+                                placeholder="1"
+                              />
+                              <button
+                                type="button"
+                                aria-label="Añadir serie"
+                                onClick={() => setSetsInput((prev) => Math.min(10, prev + 1))}
+                                className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/10 flex items-center justify-center text-white active:scale-95"
+                              >
+                                <Plus size={16} />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* RIR */}
+                        <div>
+                          <label className="block text-[11px] font-mono text-gray-400 mb-2 uppercase tracking-wider">
+                            RIR <span className="normal-case text-gray-500">(reps en reserva)</span>
+                          </label>
+                          <div className="grid grid-cols-5 gap-2">
+                            {[0, 1, 2, 3, 4].map((r) => (
+                              <button
+                                key={r}
+                                type="button"
+                                onClick={() => setRirInput((prev) => (prev === r ? -1 : r))}
+                                className={`min-h-[44px] rounded-xl text-sm font-bold font-mono transition-all active:scale-95 touch-manipulation ${
+                                  rirInput === r
+                                    ? 'bg-[color:var(--app-accent)] text-black shadow-[0_0_10px_rgba(57,255,20,0.4)]'
+                                    : 'neuro-inset text-gray-400 hover:text-white'
+                                }`}
+                              >
+                                {r}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ── Weighted Form (Default) ── */}
+                    {currentExerciseType === 'weighted' && (
+                      <div className="space-y-4">
+                        {/* Weight Calculator component */}
+                        <WeightCalculator
+                          exerciseId={selectedExercise.id}
+                          exerciseName={selectedExercise.name}
+                          targetWeight={selectedExercise.weight}
+                          userBodyweight={profile?.weight}
+                          onWeightChange={handleCalculatorWeightChange}
+                        />
+
+                        <div className="grid grid-cols-3 gap-2">
+                          <div>
+                            <label className="block text-[10px] font-mono text-gray-400 mb-1.5 uppercase tracking-wider text-center">
+                              Peso (kg)
                             </label>
                             <input
                               type="number"
                               inputMode="decimal"
-                              value={editingSet.weight || ''}
-                              onChange={(e) => setEditingSet((prev) => prev ? { ...prev, weight: Number(e.target.value) } : null)}
-                              className="w-full input-field rounded-2xl p-2.5 text-lg font-semibold text-center"
+                              value={weightInput || ''}
+                              onChange={(e) => setWeightInput(Number(e.target.value))}
+                              className="w-full h-11 input-field rounded-xl font-mono tabular-nums text-lg font-bold text-center"
                               placeholder="0"
-                              readOnly={currentExerciseType === 'bodyweight'}
                             />
                           </div>
                           <div>
-                            <label className="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider">Reps</label>
+                            <label className="block text-[10px] font-mono text-gray-400 mb-1.5 uppercase tracking-wider text-center">
+                              Reps
+                            </label>
                             <input
                               type="number"
                               inputMode="numeric"
-                              value={editingSet.reps || ''}
-                              onChange={(e) => setEditingSet((prev) => prev ? { ...prev, reps: Number(e.target.value) } : null)}
-                              className="w-full input-field rounded-2xl p-2.5 text-lg font-semibold text-center"
+                              value={repsInput || ''}
+                              onChange={(e) => setRepsInput(Number(e.target.value))}
+                              className="w-full h-11 input-field rounded-xl font-mono tabular-nums text-lg font-bold text-center"
                               placeholder="0"
                             />
                           </div>
+                          <div>
+                            <label className="block text-[10px] font-mono text-gray-400 mb-1.5 uppercase tracking-wider text-center">
+                              Series
+                            </label>
+                            <input
+                              type="number"
+                              inputMode="numeric"
+                              min={1}
+                              max={10}
+                              value={setsInput || ''}
+                              onChange={(e) => setSetsInput(Math.max(1, Number(e.target.value)))}
+                              className="w-full h-11 input-field rounded-xl font-mono tabular-nums text-lg font-bold text-center"
+                              placeholder="1"
+                            />
+                          </div>
                         </div>
-                      )}
-                      <button
-                        type="button"
-                        disabled={
-                          (currentExerciseType === 'isometric' || currentExerciseType === 'cardio')
-                            ? !editingSet.duration
-                            : !editingSet.reps
-                        }
-                        onClick={() => {
-                          if (!editingSet) return;
-                          if (currentExerciseType === 'isometric' || currentExerciseType === 'cardio') {
-                            updateLog(editingSet.logIndex, { duration: editingSet.duration });
-                            showToast({ type: 'success', title: 'Serie actualizada ✏️', message: `${editingSet.duration}s` });
-                          } else {
-                            updateLog(editingSet.logIndex, { weight: editingSet.weight, reps: editingSet.reps });
-                            showToast({ type: 'success', title: 'Serie actualizada ✏️', message: `${editingSet.weight}kg × ${editingSet.reps} reps` });
-                          }
-                          setEditingSet(null);
-                        }}
-                        className="w-full primary-btn font-bold py-2.5 rounded-xl tap-target disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        Guardar cambios
-                      </button>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
 
-                {/* ── Isometric form ── */}
-                {(currentExerciseType === 'isometric' || currentExerciseType === 'cardio') && (
-                  <div className="space-y-3 mb-3">
-                    {/* Active hold timer (isometric only) */}
-                    {currentExerciseType === 'isometric' && (
-                      <div className="neuro-inset rounded-2xl p-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <span className="text-xs uppercase tracking-wider text-gray-500 font-medium">Timer en vivo</span>
-                          <span className="text-2xl font-black text-white tabular-nums">
-                            {formatDuration(isometricElapsed)}
-                          </span>
-                        </div>
-                        {isometricRunning ? (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setIsometricRunning(false);
-                              if (activeTimerRef.current) {
-                                clearInterval(activeTimerRef.current);
-                                activeTimerRef.current = null;
-                              }
-                              setDurationInput(isometricElapsed);
-                              setIsometricElapsed(0);
-                            }}
-                            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-red-500/20 border border-red-500/40 text-red-400 font-bold text-sm tap-target"
-                          >
-                            <Square size={14} fill="currentColor" />
-                            DETENER — {formatDuration(isometricElapsed)}
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setIsometricElapsed(0);
-                              setIsometricRunning(true);
-                              if (activeTimerRef.current) clearInterval(activeTimerRef.current);
-                              activeTimerRef.current = setInterval(() => {
-                                setIsometricElapsed((prev) => prev + 1);
-                              }, 1000);
-                            }}
-                            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-[color:var(--app-accent)]/10 border border-[color:var(--app-accent)]/30 text-[var(--app-accent)] font-bold text-sm tap-target"
-                          >
-                            <Timer size={14} />
-                            Iniciar serie en vivo
-                          </button>
-                        )}
-                      </div>
-                    )}
-
-                    <div className="grid grid-cols-2 gap-2 sm:gap-3">
-                      <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1 sm:mb-2 uppercase tracking-wider">
-                          {currentExerciseType === 'cardio' ? 'Duración (min)' : 'Duración (seg)'}
-                        </label>
-                        <input
-                          type="number"
-                          inputMode="numeric"
-                          value={durationInput || ''}
-                          onChange={(e) => setDurationInput(Math.max(0, Number(e.target.value)))}
-                          className="w-full input-field rounded-2xl p-2.5 sm:p-4 text-lg sm:text-2xl font-semibold text-center"
-                          placeholder="0"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1 sm:mb-2 uppercase tracking-wider">Series</label>
-                        <input
-                          type="number"
-                          inputMode="numeric"
-                          min={1}
-                          max={10}
-                          value={setsInput || ''}
-                          onChange={(e) => setSetsInput(Math.max(1, Number(e.target.value)))}
-                          className="w-full input-field rounded-2xl p-2.5 sm:p-4 text-lg sm:text-2xl font-semibold text-center"
-                          placeholder="1"
-                        />
-                      </div>
-                    </div>
-
-                    {/* RPE (isometric only) */}
-                    {currentExerciseType === 'isometric' && (
-                      <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-2 uppercase tracking-wider">
-                          RPE <span className="normal-case text-gray-600">(esfuerzo 1-10, opcional)</span>
-                        </label>
-                        <div className="flex gap-1.5 flex-wrap">
-                          {[1,2,3,4,5,6,7,8,9,10].map((r) => (
+                        {/* Quick +/- Increment Steppers */}
+                        <div className="grid grid-cols-3 gap-2">
+                          <div className="flex gap-1">
                             <button
-                              key={r}
                               type="button"
-                              onClick={() => setRpeInput((prev) => prev === r ? -1 : r)}
-                              className={`w-9 h-9 rounded-xl text-sm font-bold transition-all tap-target ${
-                                rpeInput === r
-                                  ? 'bg-[color:var(--app-accent)] text-black'
-                                  : 'neuro-inset text-gray-500 hover:text-white'
-                              }`}
+                              aria-label="Restar 2.5 kg"
+                              onClick={() => setWeightInput((prev) => Math.max(0, Math.round((prev - 2.5) * 10) / 10))}
+                              className="flex-1 h-9 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/5 flex items-center justify-center text-xs font-mono font-bold text-gray-300 active:scale-95"
                             >
-                              {r}
+                              -2.5
                             </button>
-                          ))}
+                            <button
+                              type="button"
+                              aria-label="Sumar 2.5 kg"
+                              onClick={() => setWeightInput((prev) => Math.round((prev + 2.5) * 10) / 10)}
+                              className="flex-1 h-9 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/5 flex items-center justify-center text-xs font-mono font-bold text-gray-300 active:scale-95"
+                            >
+                              +2.5
+                            </button>
+                          </div>
+                          <div className="flex gap-1">
+                            <button
+                              type="button"
+                              aria-label="Restar rep"
+                              onClick={() => setRepsInput((prev) => Math.max(0, prev - 1))}
+                              className="flex-1 h-9 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/5 flex items-center justify-center text-xs font-mono font-bold text-gray-300 active:scale-95"
+                            >
+                              -1
+                            </button>
+                            <button
+                              type="button"
+                              aria-label="Sumar rep"
+                              onClick={() => setRepsInput((prev) => prev + 1)}
+                              className="flex-1 h-9 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/5 flex items-center justify-center text-xs font-mono font-bold text-gray-300 active:scale-95"
+                            >
+                              +1
+                            </button>
+                          </div>
+                          <div className="flex gap-1">
+                            <button
+                              type="button"
+                              aria-label="Restar serie"
+                              onClick={() => setSetsInput((prev) => Math.max(1, prev - 1))}
+                              className="flex-1 h-9 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/5 flex items-center justify-center text-xs font-mono font-bold text-gray-300 active:scale-95"
+                            >
+                              -1
+                            </button>
+                            <button
+                              type="button"
+                              aria-label="Sumar serie"
+                              onClick={() => setSetsInput((prev) => Math.min(10, prev + 1))}
+                              className="flex-1 h-9 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/5 flex items-center justify-center text-xs font-mono font-bold text-gray-300 active:scale-95"
+                            >
+                              +1
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    )}
 
-                    {/* Last session context for isometric */}
-                    {lastSessionLog?.duration !== undefined && (
-                      <p className="text-xs text-gray-500 text-center tabular-nums">
-                        Última vez: <span className="text-white/70 font-medium">{formatDuration(lastSessionLog.duration)}</span>
-                        {lastSessionLog.rpe ? <span className="text-gray-500"> · RPE {lastSessionLog.rpe}</span> : null}
-                      </p>
-                    )}
-                  </div>
-                )}
+                        {/* 1RM Estimate */}
+                        {weightInput > 0 && repsInput > 1 && (
+                          <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/5 text-center">
+                            <p className="text-xs text-gray-400 font-mono tabular-nums">
+                              1RM estimado (Epley):{' '}
+                              <strong className="text-[var(--app-accent)] font-bold">
+                                {Math.round(weightInput * (1 + repsInput / 30))} kg
+                              </strong>
+                            </p>
+                          </div>
+                        )}
 
-                {/* ── Bodyweight form ── */}
-                {currentExerciseType === 'bodyweight' && (
-                  <div className="space-y-3 mb-3">
-                    {profile?.weight && (
-                      <div className="neuro-inset rounded-xl p-3 flex items-center gap-3">
-                        <span className="text-2xl">🤸</span>
+                        {/* RIR Selection */}
                         <div>
-                          <p className="text-xs text-gray-500 uppercase tracking-wider">Peso corporal (referencia)</p>
-                          <p className="text-lg font-black text-white">{profile.weight} kg</p>
-                        </div>
-                      </div>
-                    )}
-                    <div className="grid grid-cols-2 gap-2 sm:gap-3">
-                      <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1 sm:mb-2 uppercase tracking-wider">Reps</label>
-                        <input
-                          type="number"
-                          inputMode="numeric"
-                          value={repsInput || ''}
-                          onChange={(e) => setRepsInput(Number(e.target.value))}
-                          className="w-full input-field rounded-2xl p-2.5 sm:p-4 text-lg sm:text-2xl font-semibold text-center"
-                          placeholder="0"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1 sm:mb-2 uppercase tracking-wider">Series</label>
-                        <input
-                          type="number"
-                          inputMode="numeric"
-                          min={1}
-                          max={10}
-                          value={setsInput || ''}
-                          onChange={(e) => setSetsInput(Math.max(1, Number(e.target.value)))}
-                          className="w-full input-field rounded-2xl p-2.5 sm:p-4 text-lg sm:text-2xl font-semibold text-center"
-                          placeholder="1"
-                        />
-                      </div>
-                    </div>
-                    {/* RIR */}
-                    <div>
-                      <label className="block text-xs font-medium text-gray-500 mb-2 uppercase tracking-wider">
-                        RIR <span className="normal-case text-gray-600">(reps al fallo, opcional)</span>
-                      </label>
-                      <div className="flex gap-2">
-                        {[0,1,2,3,4].map((r) => (
-                          <button
-                            key={r}
-                            type="button"
-                            onClick={() => setRirInput((prev) => prev === r ? -1 : r)}
-                            className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all tap-target ${
-                              rirInput === r ? 'bg-[color:var(--app-accent)] text-black' : 'neuro-inset text-gray-500'
-                            }`}
-                          >
-                            {r}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    {lastSessionLog && lastSessionLog.reps > 0 && (
-                      <p className="text-xs text-gray-500 text-center tabular-nums">
-                        Última vez: <span className="text-white/70 font-medium">{lastSessionLog.reps} reps</span>
-                        {lastSessionLog.rir !== undefined ? <span className="text-gray-500"> · RIR {lastSessionLog.rir}</span> : null}
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {/* ── Weighted form (default) ── */}
-                {currentExerciseType === 'weighted' && (
-                  <div className="space-y-3 mb-3">
-                    {/* Smart Weight Calculator */}
-                    <WeightCalculator
-                      exerciseId={selectedExercise.id}
-                      exerciseName={selectedExercise.name}
-                      targetWeight={selectedExercise.weight}
-                      userBodyweight={profile?.weight}
-                      onWeightChange={handleCalculatorWeightChange}
-                    />
-
-                    <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                      <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1 sm:mb-2 uppercase tracking-wider">Peso (kg)</label>
-                        <input
-                          type="number"
-                          inputMode="decimal"
-                          value={weightInput || ''}
-                          onChange={(e) => setWeightInput(Number(e.target.value))}
-                          className="w-full input-field rounded-2xl p-2.5 sm:p-4 text-lg sm:text-2xl font-semibold text-center"
-                          placeholder="0"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1 sm:mb-2 uppercase tracking-wider">Reps</label>
-                        <input
-                          type="number"
-                          inputMode="numeric"
-                          value={repsInput || ''}
-                          onChange={(e) => setRepsInput(Number(e.target.value))}
-                          className="w-full input-field rounded-2xl p-2.5 sm:p-4 text-lg sm:text-2xl font-semibold text-center"
-                          placeholder="0"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1 sm:mb-2 uppercase tracking-wider">Series</label>
-                        <input
-                          type="number"
-                          inputMode="numeric"
-                          min={1}
-                          max={10}
-                          value={setsInput || ''}
-                          onChange={(e) => setSetsInput(Math.max(1, Number(e.target.value)))}
-                          className="w-full input-field rounded-2xl p-2.5 sm:p-4 text-lg sm:text-2xl font-semibold text-center"
-                          placeholder="1"
-                        />
-                      </div>
-                    </div>
-
-                    {/* 1RM estimate — Epley formula: 1RM = weight × (1 + reps/30) */}
-                    {weightInput > 0 && repsInput > 1 && (
-                      <p className="text-xs text-center text-gray-500 tabular-nums">
-                        1RM estimado (Epley):{' '}
-                        <span className="text-[var(--app-accent)] font-bold">
-                          {Math.round(weightInput * (1 + repsInput / 30))} kg
-                        </span>
-                      </p>
-                    )}
-
-                    {/* RIR */}
-                    <div>
-                      <label className="block text-xs font-medium text-gray-500 mb-2 uppercase tracking-wider">
-                        RIR <span className="normal-case text-gray-600">(reps al fallo, opcional)</span>
-                      </label>
-                      <div className="flex gap-2">
-                        {[0,1,2,3,4].map((r) => (
-                          <button
-                            key={r}
-                            type="button"
-                            onClick={() => setRirInput((prev) => prev === r ? -1 : r)}
-                            className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all tap-target ${
-                              rirInput === r ? 'bg-[color:var(--app-accent)] text-black' : 'neuro-inset text-gray-500'
-                            }`}
-                          >
-                            {r}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Last session context */}
-                    {lastSessionLog && lastSessionLog.weight > 0 && (
-                      <p className="text-xs text-gray-500 text-center tabular-nums">
-                        Última vez:{' '}
-                        <span className="text-white/70 font-medium">
-                          {lastSessionLog.weight}kg × {lastSessionLog.reps} reps
-                        </span>
-                        {lastSessionLog.rir !== undefined ? <span className="text-gray-500"> · RIR {lastSessionLog.rir}</span> : null}
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Exercise history */}
-              <div className="mt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowHistory((v) => !v)}
-                  className="tap-target flex items-center gap-2 text-sm font-semibold app-accent mb-3"
-                >
-                  <History size={15} />
-                  {showHistory ? 'Ocultar historial' : 'Ver historial'}
-                  {exerciseHistory.length > 0 && (
-                    <span className="text-gray-500 font-normal">({exerciseHistory.length} sesiones)</span>
-                  )}
-                </button>
-                <AnimatePresence>
-                  {showHistory && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.25 }}
-                      className="overflow-hidden"
-                    >
-                      {exerciseHistory.length === 0 ? (
-                        <p className="text-gray-500 text-sm text-center py-4">Sin registros anteriores.</p>
-                      ) : (
-                        <div className="neuro-inset rounded-2xl p-4">
-                          {/* PR summary */}
-                          {currentExerciseType === 'isometric' ? (
-                            <div className="flex gap-3 mb-4">
-                              <div className="flex-1 neuro-raised rounded-xl p-3 text-center">
-                                <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">⏱ PR Tiempo</p>
-                                <p className="text-lg font-black text-yellow-400">
-                                  {formatDuration(personalBestTimes.get(selectedExercise.id) ?? 0)}
-                                </p>
-                              </div>
-                              <div className="flex-1 neuro-raised rounded-xl p-3 text-center">
-                                <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">📊 Sesiones</p>
-                                <p className="text-lg font-black text-yellow-400">{exerciseHistory.length}</p>
-                              </div>
-                            </div>
-                          ) : (
-                            (() => {
-                              const prWeight = Math.max(...exerciseHistory.map((s) => s.maxWeight));
-                              const prReps = Math.max(...exerciseHistory.map((s) => s.maxReps));
-                              return (
-                                <div className="flex gap-3 mb-4">
-                                  <div className="flex-1 neuro-raised rounded-xl p-3 text-center">
-                                    <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">🥇 PR Peso</p>
-                                    <p className="text-lg font-black text-yellow-400">{prWeight} kg</p>
-                                  </div>
-                                  <div className="flex-1 neuro-raised rounded-xl p-3 text-center">
-                                    <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">🔁 PR Reps</p>
-                                    <p className="text-lg font-black text-yellow-400">{prReps}</p>
-                                  </div>
-                                </div>
-                              );
-                            })()
-                          )}
-
-                          {/* Progression chart */}
-                          <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-2">
-                            {currentExerciseType === 'isometric' ? 'Progresión de tiempo' : 'Progresión de peso'}
-                          </p>
-                          <ResponsiveContainer width="100%" height={120}>
-                            <LineChart data={exerciseHistory} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-                              <XAxis
-                                dataKey="date"
-                                tick={{ fill: '#6b7280', fontSize: 9 }}
-                                tickFormatter={(d: string) => d.slice(5)}
-                                interval="preserveStartEnd"
-                              />
-                              <YAxis tick={{ fill: '#6b7280', fontSize: 9 }} domain={['auto', 'auto']} />
-                              <Tooltip
-                                contentStyle={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)', borderRadius: 8, fontSize: 11 }}
-                                labelFormatter={(d: string) => d}
-                                formatter={(v: number) => [currentExerciseType === 'isometric' ? `${v}s` : `${v} kg`, currentExerciseType === 'isometric' ? 'Duración' : 'Peso']}
-                              />
-                              <Line
-                                type="monotone"
-                                dataKey="maxWeight"
-                                stroke="var(--app-accent)"
-                                strokeWidth={2}
-                                dot={{ fill: 'var(--app-accent)', r: 3 }}
-                                activeDot={{ r: 5 }}
-                              />
-                            </LineChart>
-                          </ResponsiveContainer>
-
-                          {/* Recent sessions list */}
-                          <p className="text-[10px] uppercase tracking-wider text-gray-500 mt-4 mb-2">Últimas sesiones</p>
-                          <div className="space-y-1.5 max-h-40 overflow-y-auto">
-                            {[...exerciseHistory].reverse().map((s) => (
-                              <div key={s.date} className="flex items-center justify-between text-xs">
-                                <span className="text-gray-400 font-mono">{s.date}</span>
-                                {currentExerciseType === 'isometric' ? (
-                                  <span className="text-white font-medium">{formatDuration(s.maxWeight)}</span>
-                                ) : (
-                                  <span className="text-white font-medium">{s.maxWeight} kg</span>
-                                )}
-                                <span className="text-gray-500">{s.sets} sets</span>
-                                {currentExerciseType !== 'isometric' && (
-                                  <span className="text-gray-500">Vol: {Math.round(s.totalVolume)}</span>
-                                )}
-                              </div>
+                          <label className="block text-[11px] font-mono text-gray-400 mb-2 uppercase tracking-wider">
+                            RIR <span className="normal-case text-gray-500">(reps en reserva)</span>
+                          </label>
+                          <div className="grid grid-cols-5 gap-2">
+                            {[0, 1, 2, 3, 4].map((r) => (
+                              <button
+                                key={r}
+                                type="button"
+                                onClick={() => setRirInput((prev) => (prev === r ? -1 : r))}
+                                className={`min-h-[44px] rounded-xl text-sm font-bold font-mono transition-all active:scale-95 touch-manipulation ${
+                                  rirInput === r
+                                    ? 'bg-[color:var(--app-accent)] text-black shadow-[0_0_10px_rgba(57,255,20,0.4)]'
+                                    : 'neuro-inset text-gray-400 hover:text-white'
+                                }`}
+                              >
+                                {r}
+                              </button>
                             ))}
                           </div>
                         </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* History Toggle */}
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowHistory((v) => !v)}
+                      className="min-h-[44px] flex items-center gap-2 text-xs font-bold app-accent active:scale-95 transition-all touch-manipulation"
+                    >
+                      <History size={16} />
+                      {showHistory ? 'Ocultar historial' : 'Ver historial de progresiones'}
+                      {exerciseHistory.length > 0 && (
+                        <span className="text-gray-400 font-mono font-normal">({exerciseHistory.length} sesiones)</span>
                       )}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </div>
+                    </button>
 
-            {/* Sticky save button – always visible at the bottom of the sheet */}
-            <div className="px-6 pt-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] border-t border-[var(--app-border)] bg-[var(--app-bg)]">
-              {(() => {
-                const isDisabled =
-                  currentExerciseType === 'isometric' || currentExerciseType === 'cardio'
-                    ? durationInput <= 0
-                    : currentExerciseType === 'bodyweight'
-                    ? repsInput <= 0
-                    : !weightInput || !repsInput;
-                return (
-                  <motion.button
-                    onClick={handleLog}
-                    disabled={isDisabled}
-                    whileTap={isDisabled ? {} : { scale: [1, 1.06, 0.97, 1.02, 1] }}
-                    transition={{ duration: 0.45, ease: [0.2, 0.9, 0.4, 1.1] }}
-                    className="w-full tap-target primary-btn ripple-host font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {setsInput > 1 ? `Guardar ${setsInput} series 💾` : 'Guardar Serie 💾'}
-                  </motion.button>
-                );
-              })()}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>,
-      document.body
-      )}
+                    <AnimatePresence>
+                      {showHistory && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.25 }}
+                          className="overflow-hidden mt-2"
+                        >
+                          {exerciseHistory.length === 0 ? (
+                            <p className="text-gray-400 text-xs text-center py-4 font-mono">Sin registros anteriores en este ejercicio.</p>
+                          ) : (
+                            <div className="neuro-inset rounded-2xl p-4 space-y-4 border border-white/10">
+                              {/* PR Summary */}
+                              {currentExerciseType === 'isometric' ? (
+                                <div className="grid grid-cols-2 gap-2">
+                                  <div className="neuro-raised rounded-xl p-3 text-center">
+                                    <p className="text-[10px] uppercase font-mono text-gray-400 mb-1">⏱ PR TIEMPO</p>
+                                    <p className="text-base font-black font-mono text-amber-400">
+                                      {formatDuration(personalBestTimes.get(selectedExercise.id) ?? 0)}
+                                    </p>
+                                  </div>
+                                  <div className="neuro-raised rounded-xl p-3 text-center">
+                                    <p className="text-[10px] uppercase font-mono text-gray-400 mb-1">📊 SESIONES</p>
+                                    <p className="text-base font-black font-mono text-amber-400">{exerciseHistory.length}</p>
+                                  </div>
+                                </div>
+                              ) : (
+                                (() => {
+                                  const prWeight = Math.max(...exerciseHistory.map((s) => s.maxWeight));
+                                  const prReps = Math.max(...exerciseHistory.map((s) => s.maxReps));
+                                  return (
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <div className="neuro-raised rounded-xl p-3 text-center">
+                                        <p className="text-[10px] uppercase font-mono text-gray-400 mb-1">🥇 PR PESO</p>
+                                        <p className="text-base font-black font-mono text-amber-400">{prWeight} kg</p>
+                                      </div>
+                                      <div className="neuro-raised rounded-xl p-3 text-center">
+                                        <p className="text-[10px] uppercase font-mono text-gray-400 mb-1">🔁 PR REPS</p>
+                                        <p className="text-base font-black font-mono text-amber-400">{prReps}</p>
+                                      </div>
+                                    </div>
+                                  );
+                                })()
+                              )}
 
-      {/* PoseCoach overlay — rendered via portal to escape z-index stacking */}
-      {showPoseCoach && selectedExercise && createPortal(
-        <PoseCoach
-          exercise={detectPoseExercise(selectedExercise.name, currentExerciseType)}
-          exerciseName={selectedExercise.name}
-          onClose={() => setShowPoseCoach(false)}
-        />,
-        document.body
-      )}
+                              {/* Progression Chart */}
+                              <div>
+                                <p className="text-[10px] uppercase font-mono text-gray-400 mb-2">
+                                  {currentExerciseType === 'isometric' ? 'Progresión de tiempo' : 'Progresión de peso'}
+                                </p>
+                                <ResponsiveContainer width="100%" height={120}>
+                                  <LineChart data={exerciseHistory} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                                    <XAxis
+                                      dataKey="date"
+                                      tick={{ fill: '#6b7280', fontSize: 9 }}
+                                      tickFormatter={(d: string) => d.slice(5)}
+                                      interval="preserveStartEnd"
+                                    />
+                                    <YAxis tick={{ fill: '#6b7280', fontSize: 9 }} domain={['auto', 'auto']} />
+                                    <Tooltip
+                                      contentStyle={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)', borderRadius: 12, fontSize: 11, fontFamily: 'monospace' }}
+                                      labelFormatter={(d: string) => d}
+                                      formatter={(v: number) => [currentExerciseType === 'isometric' ? `${v}s` : `${v} kg`, currentExerciseType === 'isometric' ? 'Duración' : 'Peso']}
+                                    />
+                                    <Line
+                                      type="monotone"
+                                      dataKey="maxWeight"
+                                      stroke="var(--app-accent)"
+                                      strokeWidth={2.5}
+                                      dot={{ fill: 'var(--app-accent)', r: 3 }}
+                                      activeDot={{ r: 5 }}
+                                    />
+                                  </LineChart>
+                                </ResponsiveContainer>
+                              </div>
 
-      {/* Floating rest timer pill */}
-      <AnimatePresence>
-        {restSeconds > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.9 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-            className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-[55] flex items-center gap-3 px-5 py-2.5 rounded-full glass-panel border border-[var(--app-border)]"
-          >
-            <div className="w-6 h-6 relative flex items-center justify-center">
-              <svg className="absolute inset-0 -rotate-90" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.1)" strokeWidth="2" />
-                <circle
-                  cx="12" cy="12" r="10"
-                  stroke="var(--app-accent)"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeDasharray={`${TIMER_CIRCUMFERENCE * (restSeconds / REST_TIMER_SECONDS)} ${TIMER_CIRCUMFERENCE}`}
-                  style={{ transition: 'stroke-dasharray 1s linear' }}
-                />
-              </svg>
-            </div>
-            <span className="text-white font-semibold text-sm tabular-nums">
-              Descanso: {Math.floor(restSeconds / 60)}:{String(restSeconds % 60).padStart(2, '0')}
-            </span>
-            <button
-              onClick={() => { setRestSeconds(0); if (restIntervalRef.current) clearInterval(restIntervalRef.current); }}
-              className="text-gray-500 hover:text-white text-xs ml-1 transition-colors"
-            >
-              ✕
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Completion celebration – top banner */}
-      <AnimatePresence>
-        {showCompletion && (
-          <motion.div
-            initial={{ opacity: 0, y: -100 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -100 }}
-            transition={{ type: 'spring', stiffness: 340, damping: 30 }}
-            className="fixed top-0 left-0 right-0 z-[80] border-b border-[color:var(--app-accent)]/30 bg-[var(--app-surface)]/95 backdrop-blur-xl shadow-[0_4px_32px_color-mix(in_srgb,var(--app-accent)_20%,transparent)]"
-          >
-            {/* Accent line at very top */}
-            <div className="h-[3px] w-full bg-gradient-to-r from-transparent via-[color:var(--app-accent)] to-transparent" />
-
-            <div className="px-4 py-3">
-              {/* Row 1: icon + title + close */}
-              <div className="flex items-center gap-3">
-                <motion.span
-                  animate={{ rotate: [0, -12, 12, -7, 7, 0], scale: [1, 1.2, 1] }}
-                  transition={{ duration: 0.7, ease: 'easeInOut' }}
-                  className="text-3xl shrink-0"
-                >
-                  🏆
-                </motion.span>
-
-                <div className="flex-1 min-w-0">
-                  <p className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--app-accent)] font-bold leading-none mb-0.5">
-                    ¡Sesión completada!
-                  </p>
-                  <p className="text-base font-black text-white truncate leading-tight">
-                    {todayRoutine?.focus || 'Entrenamiento'}
-                  </p>
+                              {/* Recent Sessions List */}
+                              <div>
+                                <p className="text-[10px] uppercase font-mono text-gray-400 mb-2">Últimas sesiones</p>
+                                <div className="space-y-1.5 max-h-36 overflow-y-auto">
+                                  {[...exerciseHistory].reverse().map((s) => (
+                                    <div key={s.date} className="flex items-center justify-between text-xs font-mono tabular-nums p-2 rounded-lg bg-white/[0.02]">
+                                      <span className="text-gray-400">{s.date}</span>
+                                      {currentExerciseType === 'isometric' ? (
+                                        <span className="text-white font-bold">{formatDuration(s.maxWeight)}</span>
+                                      ) : (
+                                        <span className="text-white font-bold">{s.maxWeight} kg</span>
+                                      )}
+                                      <span className="text-gray-400">{s.sets} sets</span>
+                                      {currentExerciseType !== 'isometric' && (
+                                        <span className="text-gray-400">Vol: {Math.round(s.totalVolume)}</span>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
                 </div>
 
-                {/* Close X */}
-                <button
-                  type="button"
-                  onClick={() => setShowCompletion(false)}
-                  className="shrink-0 tap-target w-8 h-8 flex items-center justify-center rounded-full bg-white/10 text-gray-300 hover:bg-white/20 hover:text-white transition-colors"
-                  aria-label="Cerrar"
-                >
-                  <X size={16} />
-                </button>
-              </div>
+                {/* Sticky Action Button */}
+                <div className="px-4 py-3 sm:px-6 sm:py-4 border-t border-white/10 bg-[var(--app-bg)]/90 backdrop-blur-xl pb-[max(1rem,env(safe-area-inset-bottom))]">
+                  {(() => {
+                    const isDisabled =
+                      currentExerciseType === 'isometric' || currentExerciseType === 'cardio'
+                        ? durationInput <= 0
+                        : currentExerciseType === 'bodyweight'
+                        ? repsInput <= 0
+                        : !weightInput || !repsInput;
+                    return (
+                      <motion.button
+                        onClick={handleLog}
+                        disabled={isDisabled}
+                        whileTap={isDisabled ? {} : { scale: 0.97 }}
+                        className="w-full min-h-[52px] primary-btn font-bold py-3.5 rounded-2xl flex items-center justify-center gap-2 text-base transition-all disabled:opacity-40 disabled:cursor-not-allowed touch-manipulation shadow-lg"
+                      >
+                        <Sparkles size={18} />
+                        {setsInput > 1 ? `Guardar ${setsInput} series 💾` : 'Guardar Serie 💾'}
+                      </motion.button>
+                    );
+                  })()}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>,
+          document.body
+        )}
 
-              {/* Row 2: quick stats + share */}
-              <div className="flex items-center gap-2 mt-2.5">
-                {/* Stats pills */}
-                <div className="flex gap-1.5 flex-1 min-w-0">
+        {/* PoseCoach Overlay via Portal */}
+        {showPoseCoach && selectedExercise && createPortal(
+          <PoseCoach
+            exercise={detectPoseExercise(selectedExercise.name, currentExerciseType)}
+            exerciseName={selectedExercise.name}
+            onClose={() => setShowPoseCoach(false)}
+          />,
+          document.body
+        )}
+
+        {/* Floating Rest Timer Pill */}
+        <AnimatePresence>
+          {restSeconds > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 24, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 24, scale: 0.9 }}
+              transition={iosBouncySpring}
+              className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-[55] flex items-center gap-3 px-5 py-2.5 rounded-full bg-black/80 backdrop-blur-2xl border border-white/15 shadow-[0_12px_32px_rgba(0,0,0,0.8),0_0_20px_rgba(57,255,20,0.2)]"
+            >
+              <div className="w-6 h-6 relative flex items-center justify-center">
+                <svg className="absolute inset-0 -rotate-90" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.12)" strokeWidth="2.5" />
+                  <circle
+                    cx="12" cy="12" r="10"
+                    stroke="var(--app-accent)"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeDasharray={`${TIMER_CIRCUMFERENCE * (restSeconds / REST_TIMER_SECONDS)} ${TIMER_CIRCUMFERENCE}`}
+                    style={{ transition: 'stroke-dasharray 1s linear' }}
+                  />
+                </svg>
+              </div>
+              <span className="text-white font-mono font-bold text-sm tabular-nums tracking-tight">
+                Descanso: {Math.floor(restSeconds / 60)}:{String(restSeconds % 60).padStart(2, '0')}
+              </span>
+              <button
+                type="button"
+                aria-label="Cerrar temporizador de descanso"
+                onClick={() => {
+                  setRestSeconds(0);
+                  if (restIntervalRef.current) clearInterval(restIntervalRef.current);
+                }}
+                className="w-7 h-7 min-w-[28px] min-h-[28px] rounded-full bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white flex items-center justify-center text-xs ml-1 transition-all active:scale-90"
+              >
+                ✕
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Completion Celebration — Peak-End Liquid Glass Banner */}
+        <AnimatePresence>
+          {showCompletion && (
+            <motion.div
+              initial={{ opacity: 0, y: -120, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -120, scale: 0.95 }}
+              transition={iosSheetSpring}
+              className="fixed top-3 left-4 right-4 md:left-auto md:right-6 md:w-[420px] z-[80] rounded-3xl border border-[color:var(--app-accent)]/50 bg-[var(--app-surface-elevated)]/90 backdrop-blur-2xl shadow-[0_16px_48px_rgba(0,0,0,0.8),0_0_32px_rgba(57,255,20,0.2)] overflow-hidden"
+            >
+              {/* Top Neon Highlight Line */}
+              <div className="h-1 w-full bg-gradient-to-r from-[color:var(--app-accent)] via-emerald-300 to-[color:var(--app-accent)]" />
+
+              <div className="p-4 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <motion.span
+                      animate={{ rotate: [0, -14, 14, -8, 8, 0], scale: [1, 1.25, 1] }}
+                      transition={{ duration: 0.8, ease: 'easeInOut' }}
+                      className="text-3xl shrink-0"
+                    >
+                      🏆
+                    </motion.span>
+                    <div className="min-w-0">
+                      <p className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--app-accent)] font-bold leading-none mb-1">
+                        ¡SESIÓN COMPLETADA!
+                      </p>
+                      <p className="text-base font-black text-white truncate leading-tight">
+                        {todayRoutine?.focus || 'Entrenamiento'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowCompletion(false)}
+                    className="w-9 h-9 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-full bg-white/10 text-gray-300 hover:bg-white/20 hover:text-white transition-colors active:scale-95"
+                    aria-label="Cerrar celebración"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+
+                {/* Stats Pills Grid */}
+                <div className="grid grid-cols-4 gap-1.5 font-mono tabular-nums text-xs">
                   {[
                     { icon: '💪', value: String(totalTodayExercises) },
                     { icon: '✅', value: `${completedSets}/${plannedSets}` },
-                    { icon: '⚡', value: `+${todayXP} XP` },
+                    { icon: '⚡', value: `+${todayXP}` },
                     { icon: '🔥', value: `${currentStreak}d` },
                   ].map(({ icon, value }) => (
-                    <span key={icon} className="flex items-center gap-1 px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-white text-[11px] font-semibold whitespace-nowrap">
-                      <span>{icon}</span>
-                      <span>{value}</span>
-                    </span>
+                    <div key={icon} className="flex flex-col items-center justify-center py-1.5 px-1 rounded-xl bg-white/[0.04] border border-white/5 text-white font-bold">
+                      <span className="text-xs">{icon}</span>
+                      <span className="text-[11px] mt-0.5">{value}</span>
+                    </div>
                   ))}
                 </div>
 
-                {/* Share button */}
                 <motion.button
-                  whileTap={{ scale: 0.95 }}
+                  whileTap={{ scale: 0.97 }}
                   onClick={() => void handleShare()}
                   disabled={isSharing}
-                  className="shrink-0 tap-target primary-btn rounded-xl px-3 py-2 text-xs font-bold flex items-center gap-1.5 disabled:opacity-70"
+                  className="w-full min-h-[44px] primary-btn rounded-xl px-4 py-2.5 text-xs font-bold flex items-center justify-center gap-2 shadow-md"
                 >
                   {isSharing ? (
-                    <><Loader2 size={13} className="animate-spin" /> Generando...</>
+                    <><Loader2 size={15} className="animate-spin" /> Generando tarjeta...</>
                   ) : (
-                    <><Share2 size={13} /> Compartir</>
+                    <><Share2 size={15} /> Compartir Logro</>
                   )}
                 </motion.button>
               </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-      {/* Off-screen workout summary card rendered for html2canvas capture */}
-      <div style={{ position: 'fixed', bottom: 0, left: 0, transform: 'translateX(-9999px)', opacity: 0, pointerEvents: 'none', zIndex: -1 }} aria-hidden="true">
-        <WorkoutSummaryCard
-          ref={summaryCardRef}
-          data={{
-            focus: todayRoutine?.focus || 'Entrenamiento',
-            exerciseCount: totalTodayExercises,
-            completedSets,
-            plannedSets,
-            streak: currentStreak,
-            level,
-            totalXP,
-            xpGained: todayXP,
-            userName: profile?.name,
-            exercises: (todayRoutine?.exercises || []).map((ex) => ({ name: ex.name, sets: Number(ex.sets), reps: ex.reps })),
-          }}
-        />
-      </div>
+        {/* Off-screen WorkoutSummaryCard for sharing */}
+        <div style={{ position: 'fixed', bottom: 0, left: 0, transform: 'translateX(-9999px)', opacity: 0, pointerEvents: 'none', zIndex: -1 }} aria-hidden="true">
+          <WorkoutSummaryCard
+            ref={summaryCardRef}
+            data={{
+              focus: todayRoutine?.focus || 'Entrenamiento',
+              exerciseCount: totalTodayExercises,
+              completedSets,
+              plannedSets,
+              streak: currentStreak,
+              level,
+              totalXP,
+              xpGained: todayXP,
+              userName: profile?.name,
+              exercises: (todayRoutine?.exercises || []).map((ex) => ({ name: ex.name, sets: Number(ex.sets), reps: ex.reps })),
+            }}
+          />
+        </div>
       </div>
     </div>
   );

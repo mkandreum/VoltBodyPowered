@@ -23,7 +23,7 @@ function CircularProgress({ value, size = 64 }: { value: number; size?: number }
   const dashArray = `${(filled / 100) * circumference} ${circumference}`;
 
   return (
-    <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
+    <div className="relative flex items-center justify-center shrink-0" style={{ width: size, height: size }}>
       <svg width={size} height={size} viewBox="0 0 56 56">
         <circle cx="28" cy="28" r={radius} className="circular-ring-track" />
         <circle
@@ -36,14 +36,14 @@ function CircularProgress({ value, size = 64 }: { value: number; size?: number }
           style={{ transformOrigin: '28px 28px' }}
         />
       </svg>
-      <span className="absolute text-[10px] font-black text-white">{filled}%</span>
+      <span className="absolute text-xs font-mono font-bold text-white tabular-nums">{filled}%</span>
     </div>
   );
 }
 
 function FlipMetric({ value, label }: { value: string; label: string }) {
   return (
-    <div className="neuro-inset px-3 py-2">
+    <div className="neuro-inset px-4 py-3 rounded-xl">
       <AnimatePresence mode="wait">
         <motion.p
           key={value}
@@ -51,12 +51,12 @@ function FlipMetric({ value, label }: { value: string; label: string }) {
           animate={{ opacity: 1, y: 0, rotateX: 0 }}
           exit={{ opacity: 0, y: -8, rotateX: 45 }}
           transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-          className="text-xl font-black text-white tracking-tight"
+          className="text-xl sm:text-2xl font-mono font-black text-white tracking-tight tabular-nums"
         >
           {value}
         </motion.p>
       </AnimatePresence>
-      <p className="text-[10px] uppercase tracking-wider text-gray-400">{label}</p>
+      <p className="text-[10px] uppercase tracking-wider text-zinc-400 font-medium mt-0.5">{label}</p>
     </div>
   );
 }
@@ -292,11 +292,10 @@ export default function Home() {
   const nutritionAdherence = mealCount > 0 ? Math.min(100, Math.round((mealCount / 5) * 100)) : 0;
 
   // ── Gamification XP / Level ──────────────────────────────
-  // XP gains: 12 per completed set (more impactful), 8 per streak day (consistency bonus)
   const XP_PER_LOG = 12;
   const XP_PER_STREAK_DAY = 8;
   const XP_PER_LEVEL = 250;
-  const MINUTES_PER_EXERCISE = 5; // average time estimate per exercise including rest
+  const MINUTES_PER_EXERCISE = 5;
 
   const totalXP = useMemo(() => logs.length * XP_PER_LOG + currentStreak * XP_PER_STREAK_DAY, [logs.length, currentStreak]);
   const xpPerLevel = XP_PER_LEVEL;
@@ -483,7 +482,7 @@ export default function Home() {
       showToast({
         type: 'error',
         title: 'No se pudo generar el informe',
-        message: error instanceof Error ? error.message : 'Intentalo de nuevo en unos segundos.',
+        message: error instanceof Error ? error.message : 'Inténtalo de nuevo en unos segundos.',
       });
     } finally {
       setReportLoading(false);
@@ -493,640 +492,661 @@ export default function Home() {
   return (
     <div className="min-h-screen app-shell px-4 safe-top md:px-6 safe-bottom">
       <div className="page-wrap">
-      <header className="flex justify-between items-center mb-7 mt-2">
-        <div>
-          <p className="text-xs uppercase tracking-[0.23em] text-gray-500">⚡ VoltBody OS</p>
-          <h1 className="brutal-title text-white leading-none mt-1.5">
-            {profile?.name ? `👋 Hola, ${profile.name}` : '🦁 Modo Bestia'}
-          </h1>
-          <p className="text-gray-400 capitalize text-sm mt-2">{today} · {routineCompletion}% sesión</p>
-        </div>
-        <div className="w-12 h-12 panel-soft rounded-2xl flex items-center justify-center">
-          <Flame className="app-accent" />
-        </div>
-      </header>
-
-      {insights?.dailyQuote && (
-        <motion.div
-          initial={fadeSlideUp.initial}
-          animate={fadeSlideUp.animate}
-          transition={fadeSlideUp.transition}
-          className="mb-8"
-        >
-          <AppCard accent className="rounded-2xl p-4 flex gap-3 items-start glass-panel">
-            <Quote className="app-accent flex-shrink-0 mt-1" size={20} />
-            <p className="text-sm app-accent italic font-medium">{insights.dailyQuote}</p>
-          </AppCard>
-        </motion.div>
-      )}
-
-      <div className="flex flex-col lg:grid lg:grid-cols-[380px_1fr] lg:gap-8 lg:items-start pb-8">
-        {/* ── Left Column (Sticky Sidebar on Desktop) ── */}
-        <div className="order-2 lg:order-1 lg:sticky lg:top-6 space-y-6 flex flex-col">
-          <div className="hidden lg:block">
-            <Avatar3D />
+        <header className="flex justify-between items-center mb-8 mt-2">
+          <div>
+            <p className="text-xs uppercase tracking-widest text-zinc-500 font-medium">⚡ VoltBody OS</p>
+            <h1 className="brutal-title text-white leading-tight mt-2 text-2xl sm:text-3xl font-black tracking-tight">
+              {profile?.name ? `👋 Hola, ${profile.name}` : '🦁 Modo Bestia'}
+            </h1>
+            <p className="text-zinc-400 capitalize text-xs sm:text-sm mt-1 font-medium">
+              {today} · <span className="font-mono tabular-nums text-zinc-300">{routineCompletion}%</span> sesión
+            </p>
           </div>
+          <div className="w-12 h-12 panel-soft rounded-2xl flex items-center justify-center border border-white/10 shadow-sm shrink-0">
+            <Flame className="app-accent" size={24} />
+          </div>
+        </header>
 
-          {/* ── Recovery Score ── */}
-          <AppCard className={`p-5 glass-panel border ${todayRecoveryLog ? recoveryAdvice.bannerClass : 'border-white/10'}`}>
-            <div className="flex items-center justify-between mb-3">
-              <SectionHeader title="💤 Recovery Score" icon={BedDouble} subtitle="Check-in matutino de recuperación" />
-              {todayRecoveryLog && (
-                <div className="flex flex-col items-end shrink-0">
-                  <span className={`text-2xl font-black ${
-                    recoveryScore >= 85 ? 'text-[var(--app-accent)]' :
-                    recoveryScore >= 65 ? 'text-emerald-400' :
-                    recoveryScore >= 40 ? 'text-yellow-400' : 'text-blue-400'
-                  }`}>{recoveryScore}<span className="text-sm font-normal text-gray-400">/100</span></span>
-                  <span className="text-xs text-gray-300 font-mono font-medium">{recoveryAdvice.intensityLabel}</span>
-                </div>
-              )}
-            </div>
-
-            {!todayRecoveryLog ? (
-              <>
-                <p className="text-xs text-gray-300 mb-4">
-                  Registra tus horas de sueño y HRV matutino para calcular tu Recovery Score y ajustar la intensidad del entreno de hoy.
-                </p>
-                {!showRecoveryCheckin ? (
-                  <button
-                    type="button"
-                    onClick={() => setShowRecoveryCheckin(true)}
-                    className="flex items-center gap-2 tap-target primary-btn rounded-xl py-3 px-4 text-sm font-bold w-full justify-center"
-                  >
-                    <Gauge size={16} />
-                    Check-in matutino
-                  </button>
-                ) : (
-                  <motion.div
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="space-y-3"
-                  >
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs font-medium text-gray-300 mb-1 uppercase tracking-wider">
-                          <BedDouble size={12} className="inline mr-1" />Horas de sueño
-                        </label>
-                        <input
-                          type="number"
-                          inputMode="decimal"
-                          step="0.5"
-                          min="0"
-                          max="14"
-                          value={checkinSleep}
-                          onChange={(e) => setCheckinSleep(e.target.value)}
-                          placeholder="7.5"
-                          className="w-full input-field rounded-xl p-2.5 text-lg font-semibold text-center"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-300 mb-1 uppercase tracking-wider">
-                          <Heart size={12} className="inline mr-1" />HRV (ms, opcional)
-                        </label>
-                        <input
-                          type="number"
-                          inputMode="numeric"
-                          min="0"
-                          max="200"
-                          value={checkinHRV}
-                          onChange={(e) => setCheckinHRV(e.target.value)}
-                          placeholder="60"
-                          className="w-full input-field rounded-xl p-2.5 text-lg font-semibold text-center"
-                        />
-                      </div>
-                    </div>
-                    <p className="text-xs text-gray-400">
-                      HRV: mide el estrés fisiológico con tu smartwatch o Polar. Déjalo vacío si no tienes datos.
-                    </p>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        disabled={!checkinSleep || parseFloat(checkinSleep) <= 0}
-                        onClick={handleSaveRecovery}
-                        className="flex-1 tap-target primary-btn rounded-xl py-3 text-sm font-bold disabled:opacity-50"
-                      >
-                        Calcular Recovery
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setShowRecoveryCheckin(false)}
-                        className="tap-target neuro-raised rounded-xl py-3 px-4 text-sm text-gray-300"
-                      >
-                        Cancelar
-                      </button>
-                    </div>
-                  </motion.div>
-                )}
-              </>
-            ) : (
-              <div className="space-y-3">
-                <div className="flex gap-3">
-                  <div className="flex-1 neuro-inset rounded-xl p-3 text-center">
-                    <p className="text-xs uppercase tracking-wider text-gray-400 mb-1">😴 Sueño</p>
-                    <p className="text-lg font-black text-white">{todayRecoveryLog.sleepHours}h</p>
-                  </div>
-                  {todayRecoveryLog.hrv !== undefined && (
-                    <div className="flex-1 neuro-inset rounded-xl p-3 text-center">
-                      <p className="text-xs uppercase tracking-wider text-gray-400 mb-1">❤️ HRV</p>
-                      <p className="text-lg font-black text-white">{todayRecoveryLog.hrv} ms</p>
-                    </div>
-                  )}
-                  <div className={`flex-1 neuro-inset rounded-xl p-3 text-center border ${recoveryAdvice.bannerClass}`}>
-                    <p className="text-xs uppercase tracking-wider text-gray-400 mb-1">🎯 Score</p>
-                    <p className={`text-lg font-black ${
-                      recoveryScore >= 85 ? 'text-[var(--app-accent)]' :
-                      recoveryScore >= 65 ? 'text-emerald-400' :
-                      recoveryScore >= 40 ? 'text-yellow-400' : 'text-blue-400'
-                    }`}>{recoveryScore}/100</p>
-                  </div>
-                </div>
-                <p className="text-sm text-gray-200">{recoveryAdvice.subtitle}</p>
-                <button
-                  type="button"
-                  onClick={() => setShowRecoveryCheckin(true)}
-                  className="tap-target text-xs text-[var(--app-accent)] font-semibold underline py-1"
-                >
-                  Actualizar check-in
-                </button>
-              </div>
-            )}
-          </AppCard>
-
-          {/* ── BLE Heart Rate Monitor ── */}
-          <AppCard className="p-5 glass-panel">
-            <div className="flex items-center justify-between mb-4">
-              <SectionHeader title="❤️ Monitor de FC" icon={Heart} subtitle="Sensor Bluetooth (Polar, Garmin…)" />
-              {bleState === 'connected' && <StatPill label="sensor" value="live" />}
-              {bleState === 'disconnected' && <StatPill label="sensor" value="desconectado" />}
-              {bleState === 'connecting' && <StatPill label="sensor" value="conectando…" />}
-              {bleState === 'error' && <StatPill label="sensor" value="error" />}
-            </div>
-
-            {bleState === 'connected' && heartRate !== null && (
-              <motion.div
-                key={heartRate}
-                initial={{ opacity: 0.6, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="flex items-center gap-3 mb-4 neuro-inset rounded-2xl p-4"
-              >
-                <Heart className="text-red-400 shrink-0" size={28} fill="currentColor" />
-                <div>
-                  <p className="text-3xl font-black text-white tabular-nums leading-none">{heartRate} <span className="text-base font-normal text-gray-400">bpm</span></p>
-                  {bleDeviceName && <p className="text-xs text-gray-500 mt-0.5">{bleDeviceName}</p>}
-                </div>
-              </motion.div>
-            )}
-
-            {!isBLESupported() ? (
-              <p className="text-xs text-gray-500 mb-4">
-                ⚠️ Web Bluetooth no está disponible en este navegador. Usa Chrome en Android o desktop.
-              </p>
-            ) : (
-              <p className="text-xs text-gray-500 mb-4">
-                Conecta un sensor de frecuencia cardíaca BLE estándar para ver datos reales durante el entrenamiento.
-              </p>
-            )}
-
-            <div className="flex gap-3">
-              {bleState !== 'connected' ? (
-                <button
-                  type="button"
-                  disabled={!isBLESupported() || bleState === 'connecting'}
-                  onClick={() => void connectBLE()}
-                  className="flex items-center gap-2 tap-target primary-btn rounded-xl py-2.5 px-4 text-sm font-bold disabled:opacity-50 w-full justify-center"
-                >
-                  <Bluetooth size={15} />
-                  {bleState === 'connecting' ? 'Conectando…' : 'Conectar sensor'}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={disconnectBLE}
-                  className="flex items-center gap-2 tap-target neuro-raised rounded-xl py-2.5 px-4 text-sm font-semibold text-gray-300 w-full justify-center"
-                >
-                  <BluetoothOff size={15} />
-                  Desconectar
-                </button>
-              )}
-            </div>
-          </AppCard>
-
-          {/* ── Fatigue Index ── */}
-          {fatigueData.length > 0 && (
-            <AppCard className="p-5 glass-panel">
-              <SectionHeader title="⚡ Índice de Fatiga" icon={Activity} subtitle="Volumen vs MRV por grupo muscular" />
-              <p className="text-xs text-gray-500 mb-4">
-                Compara tus series semanales con el MRV. Reduce intensidad cuando un grupo llega al 75%+.
-              </p>
-              <div className="space-y-3">
-                {fatigueData.map((entry) => (
-                  <div key={entry.muscleGroup}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm text-white font-medium">{entry.muscleGroup}</span>
-                      <div className="flex items-center gap-2">
-                        <span className={`text-xs font-semibold ${fatigueStatusColor(entry.status)}`}>
-                          {fatigueStatusLabel(entry.status)}
-                        </span>
-                        <span className="text-[10px] font-mono text-gray-500">{entry.weeklyVolume}/{entry.mrv} series</span>
-                      </div>
-                    </div>
-                    <div className="h-2 rounded-full bg-white/10 overflow-hidden">
-                      <motion.div
-                        className={`h-full rounded-full transition-all ${
-                          entry.status === 'fresh' ? 'bg-emerald-400' :
-                          entry.status === 'moderate' ? 'bg-yellow-400' :
-                          entry.status === 'high' ? 'bg-orange-400' : 'bg-red-400'
-                        }`}
-                        initial={{ width: 0 }}
-                        animate={{ width: `${Math.min(100, entry.percent)}%` }}
-                        transition={{ duration: 0.6, ease: 'easeOut' }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </AppCard>
-          )}
-        </div>
-
-        {/* ── Right Column (Main Content) ── */}
-        <div className="order-1 lg:order-2 space-y-6 flex flex-col">
-          {/* ── Hoy Conquistas ── */}
+        {insights?.dailyQuote && (
           <motion.div
             initial={fadeSlideUp.initial}
             animate={fadeSlideUp.animate}
             transition={fadeSlideUp.transition}
+            className="mb-8"
           >
-            <AppCard accent interactive className="p-6 glass-panel dynamic-glow-card">
-              <div className="flex items-start justify-between gap-4 mb-5">
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs uppercase tracking-[0.18em] text-gray-400 mb-2">🏆 Hoy conquistas</p>
-                  <h2 className="text-3xl font-black leading-none tracking-tight">
-                    <span className="headline-gradient">
-                      {todayRoutine?.focus || 'Recuperación activa'}
+            <AppCard accent className="rounded-2xl p-4 flex gap-3 items-start glass-panel">
+              <Quote className="app-accent shrink-0 mt-1" size={20} />
+              <p className="text-sm app-accent italic font-medium leading-relaxed">{insights.dailyQuote}</p>
+            </AppCard>
+          </motion.div>
+        )}
+
+        <div className="flex flex-col lg:grid lg:grid-cols-[380px_1fr] lg:gap-8 lg:items-start pb-8">
+          {/* ── Left Column (Sticky Sidebar on Desktop) ── */}
+          <div className="order-2 lg:order-1 lg:sticky lg:top-6 space-y-6 flex flex-col">
+            <div className="hidden lg:block">
+              <Avatar3D />
+            </div>
+
+            {/* ── Recovery Score ── */}
+            <AppCard className={`p-4 sm:p-6 glass-panel border ${todayRecoveryLog ? recoveryAdvice.bannerClass : 'border-white/10'}`}>
+              <div className="flex items-center justify-between mb-4">
+                <SectionHeader title="💤 Recovery Score" icon={BedDouble} subtitle="Check-in matutino de recuperación" />
+                {todayRecoveryLog && (
+                  <div className="flex flex-col items-end shrink-0">
+                    <span className={`text-2xl sm:text-3xl font-mono font-black tabular-nums ${
+                      recoveryScore >= 85 ? 'text-[var(--app-accent)]' :
+                      recoveryScore >= 65 ? 'text-emerald-400' :
+                      recoveryScore >= 40 ? 'text-yellow-400' : 'text-blue-400'
+                    }`}>
+                      {recoveryScore}<span className="text-xs font-normal text-zinc-400">/100</span>
                     </span>
-                    {todayRoutine?.focus && <span> 💀🔥</span>}
-                  </h2>
-                  <p className="text-sm text-gray-300 mt-3">
-                    {todayRoutine
-                      ? `⚡ ${estimatedMinutes} min · 🔥 ${caloriesTarget} kcal · ${todayRoutine.exercises.length} ejercicios`
-                      : 'Sin rutina cargada. Activa una sesión rápida en menos de 2 min'}
+                    <span className="text-xs text-zinc-300 font-mono font-medium">{recoveryAdvice.intensityLabel}</span>
+                  </div>
+                )}
+              </div>
+
+              {!todayRecoveryLog ? (
+                <>
+                  <p className="text-xs text-zinc-300 mb-4 leading-relaxed">
+                    Registra tus horas de sueño y HRV matutino para calcular tu Recovery Score y calibrar la intensidad del entrenamiento.
                   </p>
-                </div>
-                <CircularProgress value={routineCompletion} size={68} />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 mb-5">
-                <FlipMetric value={`${currentStreak}🔥`} label="Racha días" />
-                <FlipMetric value={`Nv. ${level} ⚡`} label={`${xpInLevel}/${xpPerLevel} XP`} />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <motion.button
-                  onClick={() => setTab('workout')}
-                  whileTap={{ scale: 0.96 }}
-                  onTapStart={triggerHaptic}
-                  className="tap-target pulse-surface pressable primary-btn rounded-xl py-3.5 px-4 font-bold text-sm transition-base flex items-center justify-center gap-2"
-                >
-                  <Zap size={16} className="shrink-0" />
-                  Iniciar Sesión
-                </motion.button>
-                <motion.button
-                  onClick={() => setTab('diet')}
-                  whileTap={{ scale: 0.97 }}
-                  onTapStart={triggerHaptic}
-                  className="tap-target pulse-surface pressable secondary-btn rounded-xl text-white font-semibold py-3.5 px-4 hover:border-[color:var(--app-accent)]/40 transition-base flex items-center justify-center gap-2"
-                >
-                  <Utensils size={16} className="shrink-0 text-gray-400" />
-                  Plan Nutricional
-                </motion.button>
-              </div>
-            </AppCard>
-          </motion.div>
-
-          {/* ── Gamification XP bar ── */}
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.26, delay: 0.12, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <AppCard className="p-4 glass-panel">
-              <div className="flex items-center justify-between mb-2.5">
-                <div className="flex items-center gap-2">
-                  <Zap size={14} className="app-accent" />
-                  <span className="text-sm font-black text-white">Nivel {level}</span>
-                  <span className="text-xs text-gray-400 font-mono">· {totalXP} XP total</span>
-                </div>
-                <span className="text-xs font-mono text-gray-300 font-semibold">{xpInLevel}/{xpPerLevel} XP</span>
-              </div>
-              <div className="h-2 w-full neuro-progress-track mb-3">
-                <motion.div
-                  className="xp-bar-fill"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${xpProgress}%` }}
-                  transition={{ duration: 0.9, ease: [0.34, 1.1, 0.64, 1], delay: 0.4 }}
-                />
-              </div>
-              <div className="flex gap-5 flex-wrap text-xs text-gray-300 font-medium">
-                <span>🔥 {currentStreak} días racha</span>
-                <span>💪 {logs.length} series totales</span>
-                <span>📊 {weeklyConsistency}% semana</span>
-              </div>
-            </AppCard>
-          </motion.div>
-
-          {/* ── Achievements ── */}
-          {achievements.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.26, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
-            >
-              <AppCard className="p-4 glass-panel">
-                <SectionHeader title="🏅 Logros desbloqueados" subtitle={`${achievements.length} de ${ACHIEVEMENTS_CATALOG.length}`} />
-                <div className="flex flex-wrap gap-2 mt-3">
-                  {achievements.map((a) => (
-                    <div
-                      key={a.id}
-                      title={a.description}
-                      className="flex items-center gap-1.5 px-3 py-1.5 neuro-inset rounded-full text-xs font-semibold text-white"
+                  {!showRecoveryCheckin ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowRecoveryCheckin(true)}
+                      className="flex items-center gap-2 tap-target primary-btn min-h-[44px] rounded-xl py-3 px-4 text-sm font-bold w-full justify-center active:scale-[0.98] transition-transform"
                     >
-                      <span>{a.icon}</span>
-                      <span>{a.label}</span>
+                      <Gauge size={18} />
+                      Check-in matutino
+                    </button>
+                  ) : (
+                    <motion.div
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="space-y-4"
+                    >
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-zinc-300 mb-1.5 uppercase tracking-wider">
+                            <BedDouble size={14} className="inline mr-1 text-[var(--app-accent)]" />Horas de sueño
+                          </label>
+                          <input
+                            type="number"
+                            inputMode="decimal"
+                            step="0.5"
+                            min="0"
+                            max="14"
+                            value={checkinSleep}
+                            onChange={(e) => setCheckinSleep(e.target.value)}
+                            placeholder="7.5"
+                            className="w-full input-field min-h-[44px] rounded-xl p-3 text-base sm:text-lg font-mono font-semibold text-center tabular-nums"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-zinc-300 mb-1.5 uppercase tracking-wider">
+                            <Heart size={14} className="inline mr-1 text-red-400" />HRV (ms, opcional)
+                          </label>
+                          <input
+                            type="number"
+                            inputMode="numeric"
+                            min="0"
+                            max="200"
+                            value={checkinHRV}
+                            onChange={(e) => setCheckinHRV(e.target.value)}
+                            placeholder="60"
+                            className="w-full input-field min-h-[44px] rounded-xl p-3 text-base sm:text-lg font-mono font-semibold text-center tabular-nums"
+                          />
+                        </div>
+                      </div>
+                      <p className="text-[11px] text-zinc-400 leading-normal">
+                        HRV: variabilidad cardíaca de tu smartwatch o banda Polar. Déjalo en blanco si no dispones del dato.
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          disabled={!checkinSleep || parseFloat(checkinSleep) <= 0}
+                          onClick={handleSaveRecovery}
+                          className="flex-1 tap-target primary-btn min-h-[44px] rounded-xl py-3 px-4 text-sm font-bold disabled:opacity-50 active:scale-[0.98] transition-transform"
+                        >
+                          Calcular Recovery
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowRecoveryCheckin(false)}
+                          className="tap-target neuro-raised min-h-[44px] rounded-xl py-3 px-4 text-sm text-zinc-300 font-medium active:scale-[0.98] transition-transform"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex gap-3">
+                    <div className="flex-1 neuro-inset rounded-xl p-3 text-center">
+                      <p className="text-[10px] uppercase tracking-wider text-zinc-400 mb-1">😴 Sueño</p>
+                      <p className="text-lg font-mono font-black text-white tabular-nums">{todayRecoveryLog.sleepHours}h</p>
+                    </div>
+                    {todayRecoveryLog.hrv !== undefined && (
+                      <div className="flex-1 neuro-inset rounded-xl p-3 text-center">
+                        <p className="text-[10px] uppercase tracking-wider text-zinc-400 mb-1">❤️ HRV</p>
+                        <p className="text-lg font-mono font-black text-white tabular-nums">{todayRecoveryLog.hrv} ms</p>
+                      </div>
+                    )}
+                    <div className={`flex-1 neuro-inset rounded-xl p-3 text-center border ${recoveryAdvice.bannerClass}`}>
+                      <p className="text-[10px] uppercase tracking-wider text-zinc-400 mb-1">🎯 Score</p>
+                      <p className={`text-lg font-mono font-black tabular-nums ${
+                        recoveryScore >= 85 ? 'text-[var(--app-accent)]' :
+                        recoveryScore >= 65 ? 'text-emerald-400' :
+                        recoveryScore >= 40 ? 'text-yellow-400' : 'text-blue-400'
+                      }`}>{recoveryScore}/100</p>
+                    </div>
+                  </div>
+                  <p className="text-sm text-zinc-200 leading-normal">{recoveryAdvice.subtitle}</p>
+                  <button
+                    type="button"
+                    onClick={() => setShowRecoveryCheckin(true)}
+                    className="tap-target min-h-[44px] inline-flex items-center text-xs text-[var(--app-accent)] font-semibold underline"
+                  >
+                    Actualizar check-in
+                  </button>
+                </div>
+              )}
+            </AppCard>
+
+            {/* ── BLE Heart Rate Monitor ── */}
+            <AppCard className="p-4 sm:p-6 glass-panel">
+              <div className="flex items-center justify-between mb-4">
+                <SectionHeader title="❤️ Monitor de FC" icon={Heart} subtitle="Sensor Bluetooth (Polar, Garmin…)" />
+                {bleState === 'connected' && <StatPill label="sensor" value="live" />}
+                {bleState === 'disconnected' && <StatPill label="sensor" value="off" />}
+                {bleState === 'connecting' && <StatPill label="sensor" value="…" />}
+                {bleState === 'error' && <StatPill label="sensor" value="err" />}
+              </div>
+
+              {bleState === 'connected' && heartRate !== null && (
+                <motion.div
+                  key={heartRate}
+                  initial={{ opacity: 0.6, scale: 0.96 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="flex items-center gap-4 mb-4 neuro-inset rounded-2xl p-4 border border-red-500/20"
+                >
+                  <Heart className="text-red-400 shrink-0 animate-pulse" size={32} fill="currentColor" />
+                  <div>
+                    <p className="text-3xl sm:text-4xl font-mono font-black text-white tabular-nums leading-none">
+                      {heartRate} <span className="text-sm font-sans font-normal text-zinc-400">bpm</span>
+                    </p>
+                    {bleDeviceName && <p className="text-xs text-zinc-500 mt-1">{bleDeviceName}</p>}
+                  </div>
+                </motion.div>
+              )}
+
+              {!isBLESupported() ? (
+                <p className="text-xs text-zinc-500 mb-4 leading-relaxed">
+                  ⚠️ Web Bluetooth no está disponible en este navegador. Usa Chrome en Android o Desktop.
+                </p>
+              ) : (
+                <p className="text-xs text-zinc-500 mb-4 leading-relaxed">
+                  Conecta un pulsómetro BLE estándar para monitorizar tu frecuencia cardíaca en tiempo real.
+                </p>
+              )}
+
+              <div className="flex gap-3">
+                {bleState !== 'connected' ? (
+                  <button
+                    type="button"
+                    disabled={!isBLESupported() || bleState === 'connecting'}
+                    onClick={() => void connectBLE()}
+                    className="flex items-center gap-2 tap-target primary-btn min-h-[44px] rounded-xl py-3 px-4 text-sm font-bold disabled:opacity-50 w-full justify-center active:scale-[0.98] transition-transform"
+                  >
+                    <Bluetooth size={16} />
+                    {bleState === 'connecting' ? 'Conectando…' : 'Conectar sensor'}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={disconnectBLE}
+                    className="flex items-center gap-2 tap-target neuro-raised min-h-[44px] rounded-xl py-3 px-4 text-sm font-semibold text-zinc-300 w-full justify-center active:scale-[0.98] transition-transform"
+                  >
+                    <BluetoothOff size={16} />
+                    Desconectar
+                  </button>
+                )}
+              </div>
+            </AppCard>
+
+            {/* ── Fatigue Index ── */}
+            {fatigueData.length > 0 && (
+              <AppCard className="p-4 sm:p-6 glass-panel">
+                <SectionHeader title="⚡ Índice de Fatiga" icon={Activity} subtitle="Volumen vs MRV semanal" />
+                <p className="text-xs text-zinc-500 mb-4 leading-relaxed">
+                  Compara series semanales con tu MRV. Reduce intensidad cuando un grupo supere el 75%.
+                </p>
+                <div className="space-y-4">
+                  {fatigueData.map((entry) => (
+                    <div key={entry.muscleGroup}>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-xs sm:text-sm text-white font-medium">{entry.muscleGroup}</span>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-xs font-semibold ${fatigueStatusColor(entry.status)}`}>
+                            {fatigueStatusLabel(entry.status)}
+                          </span>
+                          <span className="text-xs font-mono tabular-nums text-zinc-400">
+                            {entry.weeklyVolume}/{entry.mrv} series
+                          </span>
+                        </div>
+                      </div>
+                      <div className="h-2 rounded-full bg-white/10 overflow-hidden">
+                        <motion.div
+                          className={`h-full rounded-full transition-all ${
+                            entry.status === 'fresh' ? 'bg-emerald-400' :
+                            entry.status === 'moderate' ? 'bg-yellow-400' :
+                            entry.status === 'high' ? 'bg-orange-400' : 'bg-red-400'
+                          }`}
+                          initial={{ width: 0 }}
+                          animate={{ width: `${Math.min(100, entry.percent)}%` }}
+                          transition={{ duration: 0.6, ease: 'easeOut' }}
+                        />
+                      </div>
                     </div>
                   ))}
                 </div>
               </AppCard>
-            </motion.div>
-          )}
+            )}
+          </div>
 
-          {/* ── Bento Grid (Metrics) ── */}
-          <div className="bento-grid">
-            <motion.div {...listStagger(0)} className="bento-primary">
-              <AppCard interactive className="h-full p-5 glass-panel">
-                <SectionHeader title={bentoCards[0].title} icon={bentoCards[0].icon} />
-                <p className="text-4xl font-black tracking-tight headline-gradient mb-2">{bentoCards[0].value}</p>
-                <p className="text-sm text-gray-400 mb-4">{bentoCards[0].subtitle}</p>
-                <div className="h-24 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={chartData}>
-                      <defs>
-                        <linearGradient id="voltGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="var(--app-accent)" stopOpacity={0.28} />
-                          <stop offset="100%" stopColor="var(--app-accent)" stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                      <XAxis dataKey="name" stroke="#6b7280" fontSize={10} tickLine={false} axisLine={false} />
-                      <YAxis hide />
-                      <Tooltip
-                        contentStyle={{ backgroundColor: 'color-mix(in srgb, var(--app-surface) 85%, transparent)', border: '1px solid var(--app-border)', borderRadius: '10px' }}
-                        itemStyle={{ color: 'var(--app-accent)' }}
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="peso"
-                        stroke="var(--app-accent)"
-                        strokeWidth={2.5}
-                        fill="url(#voltGradient)"
-                        dot={false}
-                        activeDot={{ r: 5, fill: 'var(--app-accent)', strokeWidth: 0 }}
-                        isAnimationActive={!chartAnimatedRef.current}
-                        animationDuration={900}
-                        animationEasing="ease-out"
-                        onAnimationEnd={() => { chartAnimatedRef.current = true; }}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
+          {/* ── Right Column (Main Content) ── */}
+          <div className="order-1 lg:order-2 space-y-6 flex flex-col">
+            {/* ── Hoy Conquistas ── */}
+            <motion.div
+              initial={fadeSlideUp.initial}
+              animate={fadeSlideUp.animate}
+              transition={fadeSlideUp.transition}
+            >
+              <AppCard accent interactive className="p-4 sm:p-6 glass-panel dynamic-glow-card">
+                <div className="flex items-start justify-between gap-4 mb-6">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs uppercase tracking-widest text-zinc-400 mb-2 font-medium">🏆 Hoy conquistas</p>
+                    <h2 className="text-2xl sm:text-3xl font-black leading-tight tracking-tight">
+                      <span className="headline-gradient">
+                        {todayRoutine?.focus || 'Recuperación activa'}
+                      </span>
+                      {todayRoutine?.focus && <span> 💀🔥</span>}
+                    </h2>
+                    <p className="text-xs sm:text-sm text-zinc-300 mt-2 font-medium">
+                      {todayRoutine ? (
+                        <>
+                          ⚡ <span className="font-mono tabular-nums">{estimatedMinutes}</span> min · 🔥 <span className="font-mono tabular-nums">{caloriesTarget}</span> kcal · <span className="font-mono tabular-nums">{todayRoutine.exercises.length}</span> ejercicios
+                        </>
+                      ) : (
+                        'Sin rutina cargada. Activa una sesión rápida en menos de 2 min'
+                      )}
+                    </p>
+                  </div>
+                  <CircularProgress value={routineCompletion} size={64} />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 mb-6">
+                  <FlipMetric value={`${currentStreak}🔥`} label="Racha días" />
+                  <FlipMetric value={`Nv. ${level} ⚡`} label={`${xpInLevel}/${xpPerLevel} XP`} />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <motion.button
+                    onClick={() => setTab('workout')}
+                    whileTap={{ scale: 0.97 }}
+                    onTapStart={triggerHaptic}
+                    className="tap-target min-h-[44px] primary-btn rounded-xl py-3 px-4 font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+                  >
+                    <Zap size={18} className="shrink-0" />
+                    Iniciar Sesión
+                  </motion.button>
+                  <motion.button
+                    onClick={() => setTab('diet')}
+                    whileTap={{ scale: 0.97 }}
+                    onTapStart={triggerHaptic}
+                    className="tap-target min-h-[44px] secondary-btn rounded-xl text-white font-semibold py-3 px-4 hover:border-[color:var(--app-accent)]/40 flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+                  >
+                    <Utensils size={18} className="shrink-0 text-zinc-400" />
+                    Plan Nutricional
+                  </motion.button>
                 </div>
               </AppCard>
             </motion.div>
 
-            {bentoCards.slice(1).map((card, index) => (
-              <motion.div key={card.id} {...listStagger(index + 1)}>
-                <AppCard interactive className="h-full p-4 glass-panel">
-                  <div className="flex items-center justify-between mb-3">
-                    <card.icon className="app-accent" size={18} />
-                    <StatPill label="estimado" value="calc" />
+            {/* ── Gamification XP bar ── */}
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.26, delay: 0.12, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <AppCard className="p-4 sm:p-6 glass-panel">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Zap size={16} className="app-accent" />
+                    <span className="text-sm font-black text-white font-mono">Nivel {level}</span>
+                    <span className="text-xs text-zinc-400 font-mono tabular-nums">· {totalXP} XP total</span>
                   </div>
-                  <p className="text-2xl font-black text-white tracking-tight">{card.value}</p>
-                  <p className="text-xs uppercase tracking-wider text-gray-500 mt-1">{card.title}</p>
-                  <p className="text-xs text-gray-400 mt-2">{card.subtitle}</p>
+                  <span className="text-xs font-mono tabular-nums text-zinc-300 font-semibold">{xpInLevel}/{xpPerLevel} XP</span>
+                </div>
+                <div className="h-2.5 w-full neuro-progress-track rounded-full mb-4 overflow-hidden">
+                  <motion.div
+                    className="xp-bar-fill h-full rounded-full"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${xpProgress}%` }}
+                    transition={{ duration: 0.9, ease: [0.34, 1.1, 0.64, 1], delay: 0.4 }}
+                  />
+                </div>
+                <div className="flex gap-4 sm:gap-6 flex-wrap text-xs text-zinc-300 font-medium">
+                  <span>🔥 <strong className="font-mono tabular-nums text-white">{currentStreak}</strong> días racha</span>
+                  <span>💪 <strong className="font-mono tabular-nums text-white">{logs.length}</strong> series totales</span>
+                  <span>📊 <strong className="font-mono tabular-nums text-white">{weeklyConsistency}%</strong> semana</span>
+                </div>
+              </AppCard>
+            </motion.div>
+
+            {/* ── Achievements ── */}
+            {achievements.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.26, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <AppCard className="p-4 sm:p-6 glass-panel">
+                  <SectionHeader title="🏅 Logros desbloqueados" subtitle={`${achievements.length} de ${ACHIEVEMENTS_CATALOG.length}`} />
+                  <div className="flex flex-wrap gap-2 mt-4">
+                    {achievements.map((a) => (
+                      <div
+                        key={a.id}
+                        title={a.description}
+                        className="flex items-center gap-2 px-3 py-1.5 neuro-inset rounded-full text-xs font-semibold text-white border border-white/10"
+                      >
+                        <span className="text-sm">{a.icon}</span>
+                        <span>{a.label}</span>
+                      </div>
+                    ))}
+                  </div>
                 </AppCard>
               </motion.div>
-            ))}
-          </div>
-
-          {/* ── AI Coach Copy ── */}
-          <AppCard className="p-5 glass-panel" accent>
-            <SectionHeader title={aiCoachCopy.title} icon={Sparkles} subtitle="AI Coach en tiempo real" />
-            <p className="text-sm text-gray-200">{aiCoachCopy.subtitle}</p>
-          </AppCard>
-
-          {/* ── AI Progress Report ── */}
-          <AppCard className="p-5 glass-panel">
-            <SectionHeader title="🤖 Informe IA de progreso" icon={Activity} />
-            <p className="text-sm text-gray-400 mb-4">
-              Analiza tus historiales (entrenos, rutina, dieta y fotos) y te dice cómo vas, porcentaje de avance y cuánto te falta para verte mejor.
-            </p>
-            <button
-              type="button"
-              onClick={() => void handleGenerateReport()}
-              disabled={reportLoading}
-              className="tap-target pressable primary-btn w-full rounded-xl py-3 px-4 font-bold disabled:opacity-60"
-            >
-              {reportLoading ? 'Generando informe...' : 'Generar informe con IA'}
-            </button>
-            <AnimatePresence>
-              {reportLoading && (
-                <motion.div
-                  key="report-progress"
-                  initial={{ opacity: 0, y: -4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
-                  className="mt-3 space-y-1"
-                >
-                  <div className="flex justify-between text-[10px] font-mono text-gray-500">
-                    <span>Analizando datos con IA…</span>
-                    <span>{reportProgress}%</span>
-                  </div>
-                  <div className="h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
-                    <motion.div
-                      className="h-full rounded-full"
-                      style={{ background: 'var(--app-accent)' }}
-                      initial={{ width: '0%' }}
-                      animate={{ width: `${reportProgress}%` }}
-                      transition={{ duration: 0.35, ease: 'easeOut' }}
-                    />
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-            {report && (
-              <div className="mt-5 space-y-3">
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  <div className="neuro-inset p-3">
-                    <p className="text-[10px] uppercase tracking-wider text-gray-500">Score total</p>
-                    <p className="text-xl font-black text-white">{report.overallScore}%</p>
-                  </div>
-                  <div className="neuro-inset p-3">
-                    <p className="text-[10px] uppercase tracking-wider text-gray-500">Progreso</p>
-                    <p className="text-xl font-black text-white">{report.progressPercent}%</p>
-                  </div>
-                  <div className="neuro-inset p-3">
-                    <p className="text-[10px] uppercase tracking-wider text-gray-500">Consistencia</p>
-                    <p className="text-xl font-black text-white">{report.consistencyPercent}%</p>
-                  </div>
-                  <div className="neuro-inset p-3">
-                    <p className="text-[10px] uppercase tracking-wider text-gray-500">Te falta</p>
-                    <p className="text-xl font-black text-white">{report.weeksToVisibleChange} sem</p>
-                  </div>
-                </div>
-                <div className="neuro-inset p-3">
-                  <p className="text-sm text-gray-200">{report.summary}</p>
-                </div>
-                <div className="neuro-inset p-3">
-                  <p className="mb-2 text-xs uppercase tracking-wider text-gray-500">Que puedes mejorar</p>
-                  <ul className="space-y-1 text-sm text-gray-300">
-                    {report.improvements?.map((item, index) => (
-                      <li key={`imp-${index}`}>• {item}</li>
-                    ))}
-                  </ul>
-                </div>
-                <div className="neuro-inset p-3">
-                  <p className="mb-2 text-xs uppercase tracking-wider text-gray-500">Siguientes pasos</p>
-                  <ul className="space-y-1 text-sm text-gray-300">
-                    {report.nextActions?.map((item, index) => (
-                      <li key={`next-${index}`}>• {item}</li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
             )}
-          </AppCard>
 
-          {/* ── Timeline del día ── */}
-          <motion.div {...listStagger(2)}>
-            <AppCard className="p-5 glass-panel">
-              <SectionHeader title="📅 Timeline del día" icon={Clock3} />
-              <div className="space-y-3">
-                {timelineItems.map((item, index) => (
-                  <motion.div
-                    key={`${item.time}-${item.title}`}
-                    {...timelineStagger(index)}
-                    className={`flex items-center gap-3 neuro-inset p-3 rounded-xl transition-all ${
-                      item.done ? 'border border-[color:var(--app-accent)]/20' : ''
-                    }`}
-                  >
-                    <AnimatePresence mode="wait" initial={false}>
-                      {item.done ? (
-                        <motion.div key="done-dot" {...checkBounce} className="timeline-dot done" />
-                      ) : (
-                        <motion.div key="pending-dot" initial={{ opacity: 1 }} animate={{ opacity: 1 }} className="timeline-dot" />
-                      )}
-                    </AnimatePresence>
-                    <div className="min-w-[54px] text-xs font-mono text-gray-400">{item.time}</div>
-                    <p className="text-sm text-white flex-1">{item.title}</p>
-                    <AnimatePresence mode="wait" initial={false}>
-                      {item.done ? (
-                        <motion.span
-                          key="done-label"
-                          initial={{ opacity: 0, scale: 0.8 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.8 }}
-                          transition={{ duration: 0.2, ease: [0.34, 1.2, 0.64, 1] }}
-                          className="text-[10px] font-semibold uppercase tracking-wider text-emerald-400"
-                        >
-                          Hecho ✓
-                        </motion.span>
-                      ) : (
-                        <motion.span
-                          key="pending-label"
-                          initial={{ opacity: 1 }}
-                          animate={{ opacity: 1 }}
-                          className="text-[10px] font-semibold uppercase tracking-wider text-gray-500"
-                        >
-                          Pendiente
-                        </motion.span>
-                      )}
-                    </AnimatePresence>
-                  </motion.div>
-                ))}
-              </div>
-            </AppCard>
-          </motion.div>
-
-          {/* ── Acciones Rápidas ── */}
-          <motion.div {...listStagger(3)}>
-            <AppCard className="p-5 glass-panel">
-              <SectionHeader title="⚡ Acciones rápidas" subtitle="Un toque y listo" />
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <motion.button
-                  whileTap={{ scale: 0.97 }}
-                  onTapStart={triggerHaptic}
-                  onClick={() => void quickLogSet()}
-                  className="interactive-tile tap-target pressable pulse-surface neuro-raised ripple-host px-3 py-4 text-xs font-semibold text-white"
-                >
-                  <Dumbbell size={16} className="mx-auto mb-2 app-accent" />
-                  Registrar serie 📝
-                </motion.button>
-                <motion.button
-                  whileTap={{ scale: 0.97 }}
-                  onTapStart={triggerHaptic}
-                  onClick={() => setTab('diet')}
-                  className="interactive-tile tap-target pressable pulse-surface neuro-raised ripple-host px-3 py-4 text-xs font-semibold text-white"
-                >
-                  <Utensils size={16} className="mx-auto mb-2 app-accent" />
-                  Swap meal 🔄
-                </motion.button>
-                <motion.button
-                  whileTap={{ scale: 0.97 }}
-                  onTapStart={triggerHaptic}
-                  onClick={() => setTab('profile')}
-                  className="interactive-tile tap-target pressable pulse-surface neuro-raised ripple-host px-3 py-4 text-xs font-semibold text-white"
-                >
-                  <Camera size={16} className="mx-auto mb-2 app-accent" />
-                  Subir progreso 📸
-                </motion.button>
-              </div>
-              <div className="mt-3 text-xs text-gray-400 flex items-center gap-1.5">
-                <span>Sync:</span>
-                {syncState === 'idle' && <span className="text-gray-500">⏸ sin actividad</span>}
-                {syncState === 'local' && <span className="text-gray-300">💾 guardado local</span>}
-                {syncState === 'syncing' && <span className="text-gray-300">⟳ sincronizando...</span>}
-                {syncState === 'synced' && <span className="text-emerald-400">✓ sincronizado</span>}
-                {syncState === 'error' && <span className="text-amber-300">⚠ error de sincronización</span>}
-              </div>
-            </AppCard>
-          </motion.div>
-
-          {/* ── Modo mental cover photo ── */}
-          <AppCard className="p-0 overflow-hidden glass-panel" accent>
-            <div className="relative min-h-[170px]">
-              {motivationPhoto ? (
-                <img
-                  src={motivationPhoto}
-                  alt="Motivación"
-                  width={600}
-                  height={170}
-                  className="w-full h-[170px] object-cover"
-                  style={{ aspectRatio: '60/17' }}
-                />
-              ) : (
-                <div className="w-full h-[170px] bg-gradient-to-br from-[color:var(--app-accent)]/20 to-black" />
-              )}
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/35 to-transparent p-4 flex items-end">
-                <div>
-                  <p className="text-[10px] uppercase tracking-[0.18em] text-gray-300 mb-1">🧠 Modo mental</p>
-                  <p className="text-base font-bold text-white max-w-[90%]">
-                    {motivationPhrase || 'Hoy toca. Sin excusas.'}
+            {/* ── Bento Grid (Metrics) ── */}
+            <div className="bento-grid">
+              <motion.div {...listStagger(0)} className="bento-primary">
+                <AppCard interactive className="h-full p-4 sm:p-6 glass-panel">
+                  <SectionHeader title={bentoCards[0].title} icon={bentoCards[0].icon} />
+                  <p className="text-3xl sm:text-4xl font-mono font-black tracking-tight headline-gradient mb-1 tabular-nums">
+                    {bentoCards[0].value}
                   </p>
+                  <p className="text-xs sm:text-sm text-zinc-400 mb-4">{bentoCards[0].subtitle}</p>
+                  <div className="h-24 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={chartData}>
+                        <defs>
+                          <linearGradient id="voltGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="var(--app-accent)" stopOpacity={0.28} />
+                            <stop offset="100%" stopColor="var(--app-accent)" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <XAxis dataKey="name" stroke="#71717a" fontSize={11} tickLine={false} axisLine={false} />
+                        <YAxis hide />
+                        <Tooltip
+                          contentStyle={{ backgroundColor: 'color-mix(in srgb, var(--app-surface) 88%, transparent)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', backdropFilter: 'blur(16px)' }}
+                          itemStyle={{ color: 'var(--app-accent)', fontFamily: 'monospace' }}
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="peso"
+                          stroke="var(--app-accent)"
+                          strokeWidth={2.5}
+                          fill="url(#voltGradient)"
+                          dot={false}
+                          activeDot={{ r: 5, fill: 'var(--app-accent)', strokeWidth: 0 }}
+                          isAnimationActive={!chartAnimatedRef.current}
+                          animationDuration={900}
+                          animationEasing="ease-out"
+                          onAnimationEnd={() => { chartAnimatedRef.current = true; }}
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                </AppCard>
+              </motion.div>
+
+              {bentoCards.slice(1).map((card, index) => (
+                <motion.div key={card.id} {...listStagger(index + 1)}>
+                  <AppCard interactive className="h-full p-4 sm:p-5 glass-panel flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <card.icon className="app-accent shrink-0" size={20} />
+                        <StatPill label="estimado" value="calc" />
+                      </div>
+                      <p className="text-2xl sm:text-3xl font-mono font-black text-white tracking-tight tabular-nums">{card.value}</p>
+                      <p className="text-xs uppercase tracking-wider text-zinc-400 mt-1 font-semibold">{card.title}</p>
+                    </div>
+                    <p className="text-xs text-zinc-400 mt-3">{card.subtitle}</p>
+                  </AppCard>
+                </motion.div>
+              ))}
+            </div>
+
+            {/* ── AI Coach Copy ── */}
+            <AppCard className="p-4 sm:p-6 glass-panel" accent>
+              <SectionHeader title={aiCoachCopy.title} icon={Sparkles} subtitle="AI Coach en tiempo real" />
+              <p className="text-sm text-zinc-200 leading-relaxed">{aiCoachCopy.subtitle}</p>
+            </AppCard>
+
+            {/* ── AI Progress Report ── */}
+            <AppCard className="p-4 sm:p-6 glass-panel">
+              <SectionHeader title="🤖 Informe IA de progreso" icon={Activity} />
+              <p className="text-xs sm:text-sm text-zinc-400 mb-4 leading-relaxed">
+                Analiza tus historiales de entrenamiento, nutrición y evolución para calcular tu porcentaje de avance y proyección estética.
+              </p>
+              <button
+                type="button"
+                onClick={() => void handleGenerateReport()}
+                disabled={reportLoading}
+                className="tap-target primary-btn min-h-[44px] w-full rounded-xl py-3 px-4 font-bold text-sm disabled:opacity-60 active:scale-[0.98] transition-transform"
+              >
+                {reportLoading ? 'Generando informe...' : 'Generar informe con IA'}
+              </button>
+              <AnimatePresence>
+                {reportLoading && (
+                  <motion.div
+                    key="report-progress"
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    className="mt-4 space-y-2"
+                  >
+                    <div className="flex justify-between text-xs font-mono text-zinc-400">
+                      <span>Analizando datos biométricos…</span>
+                      <span className="tabular-nums font-bold text-white">{reportProgress}%</span>
+                    </div>
+                    <div className="h-2 w-full rounded-full bg-white/10 overflow-hidden">
+                      <motion.div
+                        className="h-full rounded-full"
+                        style={{ background: 'var(--app-accent)' }}
+                        initial={{ width: '0%' }}
+                        animate={{ width: `${reportProgress}%` }}
+                        transition={{ duration: 0.35, ease: 'easeOut' }}
+                      />
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              {report && (
+                <div className="mt-6 space-y-4">
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    <div className="neuro-inset p-3 sm:p-4 rounded-xl text-center">
+                      <p className="text-[10px] uppercase tracking-wider text-zinc-400 mb-1">Score total</p>
+                      <p className="text-xl sm:text-2xl font-mono font-black text-white tabular-nums">{report.overallScore}%</p>
+                    </div>
+                    <div className="neuro-inset p-3 sm:p-4 rounded-xl text-center">
+                      <p className="text-[10px] uppercase tracking-wider text-zinc-400 mb-1">Progreso</p>
+                      <p className="text-xl sm:text-2xl font-mono font-black text-white tabular-nums">{report.progressPercent}%</p>
+                    </div>
+                    <div className="neuro-inset p-3 sm:p-4 rounded-xl text-center">
+                      <p className="text-[10px] uppercase tracking-wider text-zinc-400 mb-1">Consistencia</p>
+                      <p className="text-xl sm:text-2xl font-mono font-black text-white tabular-nums">{report.consistencyPercent}%</p>
+                    </div>
+                    <div className="neuro-inset p-3 sm:p-4 rounded-xl text-center">
+                      <p className="text-[10px] uppercase tracking-wider text-zinc-400 mb-1">Te falta</p>
+                      <p className="text-xl sm:text-2xl font-mono font-black text-white tabular-nums">{report.weeksToVisibleChange} sem</p>
+                    </div>
+                  </div>
+                  <div className="neuro-inset p-4 rounded-xl">
+                    <p className="text-sm text-zinc-200 leading-relaxed">{report.summary}</p>
+                  </div>
+                  <div className="neuro-inset p-4 rounded-xl">
+                    <p className="mb-2 text-xs uppercase tracking-wider text-zinc-400 font-semibold">Qué puedes mejorar</p>
+                    <ul className="space-y-1.5 text-sm text-zinc-300">
+                      {report.improvements?.map((item, index) => (
+                        <li key={`imp-${index}`} className="flex items-start gap-2">
+                          <span className="text-[var(--app-accent)] shrink-0">•</span>
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="neuro-inset p-4 rounded-xl">
+                    <p className="mb-2 text-xs uppercase tracking-wider text-zinc-400 font-semibold">Siguientes pasos</p>
+                    <ul className="space-y-1.5 text-sm text-zinc-300">
+                      {report.nextActions?.map((item, index) => (
+                        <li key={`next-${index}`} className="flex items-start gap-2">
+                          <span className="text-[var(--app-accent)] shrink-0">•</span>
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
+            </AppCard>
+
+            {/* ── Timeline del día ── */}
+            <motion.div {...listStagger(2)}>
+              <AppCard className="p-4 sm:p-6 glass-panel">
+                <SectionHeader title="📅 Timeline del día" icon={Clock3} />
+                <div className="space-y-3">
+                  {timelineItems.map((item, index) => (
+                    <motion.div
+                      key={`${item.time}-${item.title}`}
+                      {...timelineStagger(index)}
+                      className={`min-h-[48px] flex items-center gap-3 neuro-inset p-3 sm:p-4 rounded-xl transition-all ${
+                        item.done ? 'border border-[color:var(--app-accent)]/20' : ''
+                      }`}
+                    >
+                      <AnimatePresence mode="wait" initial={false}>
+                        {item.done ? (
+                          <motion.div key="done-dot" {...checkBounce} className="timeline-dot done shrink-0" />
+                        ) : (
+                          <motion.div key="pending-dot" initial={{ opacity: 1 }} animate={{ opacity: 1 }} className="timeline-dot shrink-0" />
+                        )}
+                      </AnimatePresence>
+                      <div className="min-w-[56px] text-xs font-mono font-semibold text-zinc-400 tabular-nums">{item.time}</div>
+                      <p className="text-sm font-medium text-white flex-1">{item.title}</p>
+                      <AnimatePresence mode="wait" initial={false}>
+                        {item.done ? (
+                          <motion.span
+                            key="done-label"
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.8 }}
+                            transition={{ duration: 0.2, ease: [0.34, 1.2, 0.64, 1] }}
+                            className="text-[10px] font-semibold uppercase tracking-wider text-emerald-400 shrink-0"
+                          >
+                            Hecho ✓
+                          </motion.span>
+                        ) : (
+                          <motion.span
+                            key="pending-label"
+                            initial={{ opacity: 1 }}
+                            animate={{ opacity: 1 }}
+                            className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 shrink-0"
+                          >
+                            Pendiente
+                          </motion.span>
+                        )}
+                      </AnimatePresence>
+                    </motion.div>
+                  ))}
+                </div>
+              </AppCard>
+            </motion.div>
+
+            {/* ── Acciones Rápidas ── */}
+            <motion.div {...listStagger(3)}>
+              <AppCard className="p-4 sm:p-6 glass-panel">
+                <SectionHeader title="⚡ Acciones rápidas" subtitle="Un toque y listo" />
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <motion.button
+                    whileTap={{ scale: 0.97 }}
+                    onTapStart={triggerHaptic}
+                    onClick={() => void quickLogSet()}
+                    className="min-h-[56px] min-w-[44px] interactive-tile tap-target pressable pulse-surface neuro-raised rounded-xl p-4 text-xs font-semibold text-white flex flex-col items-center justify-center gap-1.5 active:scale-[0.97] transition-transform"
+                  >
+                    <Dumbbell size={20} className="app-accent" />
+                    <span>Registrar serie 📝</span>
+                  </motion.button>
+                  <motion.button
+                    whileTap={{ scale: 0.97 }}
+                    onTapStart={triggerHaptic}
+                    onClick={() => setTab('diet')}
+                    className="min-h-[56px] min-w-[44px] interactive-tile tap-target pressable pulse-surface neuro-raised rounded-xl p-4 text-xs font-semibold text-white flex flex-col items-center justify-center gap-1.5 active:scale-[0.97] transition-transform"
+                  >
+                    <Utensils size={20} className="app-accent" />
+                    <span>Swap meal 🔄</span>
+                  </motion.button>
+                  <motion.button
+                    whileTap={{ scale: 0.97 }}
+                    onTapStart={triggerHaptic}
+                    onClick={() => setTab('profile')}
+                    className="min-h-[56px] min-w-[44px] interactive-tile tap-target pressable pulse-surface neuro-raised rounded-xl p-4 text-xs font-semibold text-white flex flex-col items-center justify-center gap-1.5 active:scale-[0.97] transition-transform"
+                  >
+                    <Camera size={20} className="app-accent" />
+                    <span>Subir progreso 📸</span>
+                  </motion.button>
+                </div>
+                <div className="mt-4 text-xs text-zinc-400 font-mono flex items-center gap-2">
+                  <span>Sync:</span>
+                  {syncState === 'idle' && <span className="text-zinc-500">⏸ sin actividad</span>}
+                  {syncState === 'local' && <span className="text-zinc-300">💾 guardado local</span>}
+                  {syncState === 'syncing' && <span className="text-zinc-300">⟳ sincronizando...</span>}
+                  {syncState === 'synced' && <span className="text-emerald-400">✓ sincronizado</span>}
+                  {syncState === 'error' && <span className="text-amber-300">⚠ error de sincronización</span>}
+                </div>
+              </AppCard>
+            </motion.div>
+
+            {/* ── Modo mental cover photo ── */}
+            <AppCard className="p-0 overflow-hidden glass-panel rounded-2xl" accent>
+              <div className="relative min-h-[176px]">
+                {motivationPhoto ? (
+                  <img
+                    src={motivationPhoto}
+                    alt="Motivación"
+                    width={600}
+                    height={176}
+                    className="w-full h-[176px] object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-[176px] bg-gradient-to-br from-[color:var(--app-accent)]/20 to-black" />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent p-4 sm:p-6 flex items-end">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-widest text-zinc-300 mb-1 font-semibold">🧠 Modo mental</p>
+                    <p className="text-base sm:text-lg font-bold text-white max-w-[90%] leading-snug">
+                      {motivationPhrase || 'Hoy toca. Sin excusas.'}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
-          </AppCard>
+            </AppCard>
+          </div>
         </div>
-      </div>
       </div>
     </div>
   );

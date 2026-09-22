@@ -3,6 +3,7 @@ import { useAppStore } from '../store/useAppStore';
 import { motion } from 'motion/react';
 import clsx from 'clsx';
 import { useMemo } from 'react';
+import { computeSmartStreak } from '../lib/routineWeek';
 
 type TabId = 'home' | 'workout' | 'diet' | 'calendar' | 'profile';
 
@@ -13,7 +14,7 @@ type NavItem = {
 };
 
 export default function SidebarNav() {
-  const { currentTab, setTab, profile, logs, currentStreak } = useAppStore();
+  const { currentTab, setTab, profile, logs, routine } = useAppStore();
 
   const triggerHaptic = () => {
     if (isSecureContext && typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
@@ -33,6 +34,7 @@ export default function SidebarNav() {
   const XP_PER_LOG = 12;
   const XP_PER_STREAK_DAY = 8;
   const XP_PER_LEVEL = 250;
+  const currentStreak = useMemo(() => computeSmartStreak(logs, routine), [logs, routine]);
   const totalXP = useMemo(() => logs.length * XP_PER_LOG + currentStreak * XP_PER_STREAK_DAY, [logs.length, currentStreak]);
   const level = Math.floor(totalXP / XP_PER_LEVEL) + 1;
   const xpInLevel = totalXP % XP_PER_LEVEL;

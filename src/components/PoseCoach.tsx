@@ -9,11 +9,12 @@
  *  - Joint angle computation (knee, hip, spine)
  *  - Exercise-specific rule engine with real-time feedback
  *  - Works 100% in-browser via WebAssembly (no server calls)
+ *  - Apple HIG & mobile-app-ui-design ergonomics (44pt touch targets, iOS spring bottom sheet)
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Camera, CameraOff, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { X, CameraOff, AlertTriangle, CheckCircle2 } from 'lucide-react';
 
 // ── CDN URLs for MediaPipe Pose ───────────────────────────────────────────────
 const MEDIAPIPE_BASE = 'https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404';
@@ -67,11 +68,6 @@ function angleDeg(a: Vec2, b: Vec2, c: Vec2): number {
   return (Math.acos(Math.max(-1, Math.min(1, dot / (magA * magC)))) * 180) / Math.PI;
 }
 
-/** Midpoint of two landmarks */
-function mid(a: Vec2, b: Vec2): Vec2 {
-  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
-}
-
 /** Check if landmark is sufficiently visible */
 function visible(lm: Vec2 | undefined, threshold = 0.5): boolean {
   return !!lm && (lm.visibility ?? 1) >= threshold;
@@ -100,7 +96,7 @@ function rulesSquat(lm: Landmarks): PoseRule[] {
 
   // Knee valgus: knee x should track between hip x and ankle x
   if (visible(lKnee) && visible(lAnkle) && visible(lHip)) {
-    const kneeInward = lKnee.x > lAnkle.x + 0.04; // left knee collapsing right
+    const kneeInward = lKnee.x > lAnkle.x + 0.04;
     if (kneeInward) {
       rules.push({ id: 'valgus-left', message: '⚠️ Rodilla izquierda colapsando hacia dentro', severity: 'error' });
     }
@@ -133,9 +129,8 @@ function rulesPlank(lm: Landmarks): PoseRule[] {
   const lAnkle = lm[LM.LEFT_ANKLE];
 
   if (visible(lShoulder) && visible(lHip) && visible(lAnkle)) {
-    // Hip height relative to shoulder-ankle line
     const lineY = lShoulder.y + (lAnkle.y - lShoulder.y) * ((lHip.x - lShoulder.x) / (lAnkle.x - lShoulder.x + 0.0001));
-    const hipDelta = lHip.y - lineY; // positive = hip dropping
+    const hipDelta = lHip.y - lineY;
 
     if (hipDelta > 0.06) {
       rules.push({ id: 'hip-drop', message: '⚠️ Cadera cayendo — activa el core', severity: 'error' });
@@ -157,7 +152,6 @@ function rulesDeadlift(lm: Landmarks): PoseRule[] {
   const lKnee = lm[LM.LEFT_KNEE];
   const lAnkle = lm[LM.LEFT_ANKLE];
 
-  // Back angle (shoulder over hips when lifting)
   if (visible(lShoulder) && visible(lHip) && visible(lAnkle)) {
     const backAngle = angleDeg(lShoulder, lHip, lAnkle);
     if (backAngle < 150) {
@@ -167,7 +161,6 @@ function rulesDeadlift(lm: Landmarks): PoseRule[] {
     }
   }
 
-  // Hip hinge depth
   if (visible(lHip) && visible(lKnee) && visible(lShoulder)) {
     const hipAngle = angleDeg(lShoulder, lHip, lKnee);
     if (hipAngle > 160) {
@@ -208,7 +201,6 @@ function rulesPushup(lm: Landmarks): PoseRule[] {
   const lHip = lm[LM.LEFT_HIP];
   const lAnkle = lm[LM.LEFT_ANKLE];
 
-  // Elbow angle
   if (visible(lShoulder) && visible(lElbow)) {
     const elbowX = lElbow.x;
     const shoulderX = lShoulder.x;
@@ -219,7 +211,6 @@ function rulesPushup(lm: Landmarks): PoseRule[] {
     }
   }
 
-  // Body alignment
   if (visible(lShoulder) && visible(lHip) && visible(lAnkle)) {
     const bodyAngle = angleDeg(lShoulder, lHip, lAnkle);
     if (bodyAngle < 155) {
@@ -239,12 +230,11 @@ function getRules(exercise: PoseCoachExercise, lm: Landmarks): PoseRule[] {
     case 'deadlift': return rulesDeadlift(lm);
     case 'lunge': return rulesLunge(lm);
     case 'pushup': return rulesPushup(lm);
-    default: return rulesSquat(lm); // best general rules
+    default: return rulesSquat(lm);
   }
 }
 
-// ── MediaPipe API surface types (loaded from CDN) ────────────────────────────
-// These mirror the public API of @mediapipe/pose and @mediapipe/drawing_utils.
+// ── MediaPipe API surface types ──────────────────────────────────────────────
 type MPPoseOptions = {
   locateFile: (file: string) => string;
 };
@@ -316,20 +306,21 @@ export default function PoseCoach({ exercise = 'general', exerciseName, onClose 
 
     async function initPose() {
       try {
-        // 1. Load MediaPipe Pose scripts from CDN
         await loadScript(`${DRAWING_BASE}/drawing_utils.js`);
         await loadScript(`${MEDIAPIPE_BASE}/pose.js`);
 
         if (cancelled) return;
 
-        // 2. Camera access
         let stream: MediaStream;
         try {
           stream = await navigator.mediaDevices.getUserMedia({
             video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
           });
         } catch {
-          if (!cancelled) { setStatus('nocamera'); setErrorMsg('No se pudo acceder a la cámara. Permite el permiso e inténtalo de nuevo.'); }
+          if (!cancelled) {
+            setStatus('nocamera');
+            setErrorMsg('No se pudo acceder a la cámara. Permite el permiso en tu navegador e inténtalo de nuevo.');
+          }
           return;
         }
 
@@ -340,7 +331,6 @@ export default function PoseCoach({ exercise = 'general', exerciseName, onClose 
         video.srcObject = stream;
         await video.play();
 
-        // 3. Init MediaPipe Pose
         const PoseClass = (window as unknown as MPWindow).Pose;
         if (!PoseClass) throw new Error('MediaPipe Pose no se cargó correctamente.');
 
@@ -385,7 +375,6 @@ export default function PoseCoach({ exercise = 'general', exerciseName, onClose 
 
         poseRef.current = pose;
 
-        // 4. Frame loop
         async function frame() {
           if (cancelled || !videoRef.current || videoRef.current.readyState < 2) {
             animFrameRef.current = requestAnimationFrame(frame);
@@ -422,25 +411,27 @@ export default function PoseCoach({ exercise = 'general', exerciseName, onClose 
 
   return (
     <div className="fixed inset-0 z-[80] bg-black flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-black/80 backdrop-blur-md border-b border-white/10 shrink-0">
+      {/* Apple HIG Header with minimum 44pt tap target */}
+      <div className="flex items-center justify-between px-4 py-3 bg-black/80 backdrop-blur-xl border-b border-white/10 shrink-0 safe-top">
         <div>
-          <p className="text-xs uppercase tracking-widest text-gray-500">🎥 PoseCoach</p>
-          <p className="text-sm font-bold text-white">{exerciseName ?? 'Análisis de postura'}</p>
+          <p className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">🎥 POSECOACH IA</p>
+          <p className="text-sm font-bold text-white truncate max-w-[200px]">{exerciseName ?? 'Análisis de postura'}</p>
         </div>
         <div className="flex items-center gap-3">
           {status === 'running' && (
-            <span className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${
-              hasIssues ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+            <span className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border transition-all ${
+              hasIssues
+                ? 'bg-red-500/20 text-red-300 border-red-500/40 shadow-[0_0_12px_rgba(239,68,68,0.2)]'
+                : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-[0_0_12px_rgba(16,185,129,0.2)]'
             }`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${hasIssues ? 'bg-red-400' : 'bg-emerald-400'} animate-pulse`} />
-              {hasIssues ? 'Correcciones' : 'Postura OK'}
+              <span className={`w-2 h-2 rounded-full ${hasIssues ? 'bg-red-400' : 'bg-emerald-400'} animate-ping`} />
+              {hasIssues ? 'Atención' : 'Postura Correcta'}
             </span>
           )}
           <button
             type="button"
             onClick={handleClose}
-            className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white"
+            className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center justify-center transition-all touch-manipulation"
             aria-label="Cerrar PoseCoach"
           >
             <X size={20} />
@@ -464,66 +455,81 @@ export default function PoseCoach({ exercise = 'general', exerciseName, onClose 
 
         {/* Overlay states */}
         {status === 'loading' && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black">
-            <div className="w-12 h-12 border-2 border-[color:var(--app-accent)] border-t-transparent rounded-full animate-spin" />
-            <p className="text-sm text-gray-400">Cargando MediaPipe Pose…</p>
-            <p className="text-xs text-gray-600">Puede tardar unos segundos la primera vez</p>
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black/90 backdrop-blur-md px-6 text-center">
+            <div className="w-12 h-12 border-3 border-[color:var(--app-accent)] border-t-transparent rounded-full animate-spin" />
+            <div>
+              <p className="text-sm font-bold text-white">Iniciando MediaPipe Pose…</p>
+              <p className="text-xs text-gray-400 mt-1">Cargando modelos neuronales en tu dispositivo</p>
+            </div>
           </div>
         )}
         {(status === 'error' || status === 'nocamera') && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black px-8 text-center">
-            {status === 'nocamera' ? <CameraOff size={40} className="text-gray-500" /> : <AlertTriangle size={40} className="text-red-400" />}
-            <p className="text-sm text-gray-300">{errorMsg}</p>
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black/95 px-8 text-center">
+            {status === 'nocamera' ? (
+              <CameraOff size={44} className="text-gray-400" />
+            ) : (
+              <AlertTriangle size={44} className="text-red-400" />
+            )}
+            <p className="text-sm font-semibold text-gray-200 max-w-sm">{errorMsg}</p>
           </div>
         )}
       </div>
 
-      {/* Feedback panel */}
-      <div className="shrink-0 bg-black/90 backdrop-blur-md border-t border-white/10 px-4 py-3 max-h-[35vh] overflow-y-auto">
+      {/* iOS Style Feedback Bottom Sheet */}
+      <div className="shrink-0 bg-black/90 backdrop-blur-2xl border-t border-white/10 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] max-h-[38vh] overflow-y-auto">
+        <div className="w-10 h-1 rounded-full bg-white/25 mx-auto mb-3" />
+
         {status === 'running' && feedback.length === 0 && (
-          <p className="text-xs text-gray-500 text-center py-2">Posiciónate delante de la cámara para ver el análisis…</p>
+          <p className="text-xs text-gray-400 text-center py-3 font-mono">
+            Posiciónate de cuerpo entero frente a la cámara…
+          </p>
         )}
-        <AnimatePresence>
-          {errors.map((r) => (
-            <motion.div
-              key={r.id}
-              initial={{ opacity: 0, x: -8 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0 }}
-              className="flex items-start gap-2 p-2.5 mb-2 rounded-xl bg-red-500/15 border border-red-500/30"
-            >
-              <AlertTriangle size={14} className="text-red-400 shrink-0 mt-0.5" />
-              <span className="text-sm text-red-300">{r.message}</span>
-            </motion.div>
-          ))}
-          {warnings.map((r) => (
-            <motion.div
-              key={r.id}
-              initial={{ opacity: 0, x: -8 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0 }}
-              className="flex items-start gap-2 p-2.5 mb-2 rounded-xl bg-yellow-500/15 border border-yellow-500/30"
-            >
-              <AlertTriangle size={14} className="text-yellow-400 shrink-0 mt-0.5" />
-              <span className="text-sm text-yellow-300">{r.message}</span>
-            </motion.div>
-          ))}
-          {oks.map((r) => (
-            <motion.div
-              key={r.id}
-              initial={{ opacity: 0, x: -8 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0 }}
-              className="flex items-start gap-2 p-2 mb-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20"
-            >
-              <CheckCircle2 size={13} className="text-emerald-400 shrink-0 mt-0.5" />
-              <span className="text-xs text-emerald-300">{r.message}</span>
-            </motion.div>
-          ))}
-        </AnimatePresence>
+
+        <div className="space-y-2">
+          <AnimatePresence>
+            {errors.map((r) => (
+              <motion.div
+                key={r.id}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="flex items-start gap-3 p-3 rounded-2xl bg-red-500/15 border border-red-500/30"
+              >
+                <AlertTriangle size={16} className="text-red-400 shrink-0 mt-0.5" />
+                <span className="text-sm font-medium text-red-200">{r.message}</span>
+              </motion.div>
+            ))}
+            {warnings.map((r) => (
+              <motion.div
+                key={r.id}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="flex items-start gap-3 p-3 rounded-2xl bg-amber-500/15 border border-amber-500/30"
+              >
+                <AlertTriangle size={16} className="text-amber-400 shrink-0 mt-0.5" />
+                <span className="text-sm font-medium text-amber-200">{r.message}</span>
+              </motion.div>
+            ))}
+            {oks.map((r) => (
+              <motion.div
+                key={r.id}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="flex items-start gap-3 p-2.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/25"
+              >
+                <CheckCircle2 size={15} className="text-emerald-400 shrink-0 mt-0.5" />
+                <span className="text-xs font-medium text-emerald-200">{r.message}</span>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
 
         {status === 'running' && frameCount > 0 && (
-          <p className="text-[10px] text-gray-700 text-right mt-1">MediaPipe Pose · frame #{frameCount}</p>
+          <p className="text-[10px] text-gray-500 font-mono text-right mt-2 tabular-nums">
+            MediaPipe Pose · frame #{frameCount}
+          </p>
         )}
       </div>
     </div>
