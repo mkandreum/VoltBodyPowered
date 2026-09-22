@@ -1,0 +1,34 @@
+{
+  "expo": {
+    "name": "VoltBody Powered",
+    "slug": "voltbody-powered",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./public/icon-512.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "backgroundColor": "#09090c",
+      "resizeMode": "contain"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.voltbody.app",
+      "infoPlist": {
+        "CADisableMinimumFrameDurationOnPhone": true,
+        "UIRequiresFullScreen": true,
+        "UIViewControllerBasedStatusBarAppearance": false
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#09090c"
+      },
+      "package": "com.voltbody.app"
+    },
+    "web": {
+      "favicon": "./public/favicon.ico",
+      "bundler": "metro"
+    },
+    "plugins": []
+  }
+}
