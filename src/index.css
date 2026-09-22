@@ -53,6 +53,8 @@ body,
   margin: 0;
   padding: 0;
   background-color: var(--app-bg);
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
 }
 
 body {
@@ -66,6 +68,10 @@ body {
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.012em;
   -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  touch-action: manipulation;
   overflow-x: hidden;
   min-height: 100dvh;
 }
@@ -208,6 +214,8 @@ body[data-theme="ocaso-negro"] {
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   border: 1px solid rgba(255, 255, 255, 0.10);
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
   box-shadow:
     0 10px 30px rgba(0, 0, 0, 0.5),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
@@ -231,9 +239,17 @@ body[data-theme="ocaso-negro"] {
   backdrop-filter: blur(24px) saturate(190%) !important;
   -webkit-backdrop-filter: blur(24px) saturate(190%) !important;
   border: 1px solid rgba(255, 255, 255, 0.11) !important;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
   box-shadow:
-    0 12px 32px rgba(0, 0, 0, 0.55),
-    inset 0 1px 0 rgba(255, 255, 255, 0.09) !important;
+    0 20px 40px -15px rgba(0, 0, 0, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.10) !important;
+}
+
+.gpu-layer {
+  transform: translate3d(0, 0, 0);
+  will-change: transform, opacity;
+  backface-visibility: hidden;
 }
 
 .app-card.interactive-card:hover {

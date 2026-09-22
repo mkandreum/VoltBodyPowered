@@ -21,10 +21,10 @@ const easeElastic = [0.68, -0.55, 0.265, 1.55] as const;
 
 export const easings = { easeOut, easeOvershoot, easeSpring, easeSettle, easeButter, easeElastic };
 
-// ── iOS Spring Physics ────────────────────────────────────────
-export const iosSpring = { type: 'spring' as const, stiffness: 380, damping: 32, mass: 1 };
-export const iosBouncySpring = { type: 'spring' as const, stiffness: 450, damping: 24, mass: 0.8 };
-export const iosSheetSpring = { type: 'spring' as const, stiffness: 340, damping: 34, mass: 1 };
+// ── 120Hz ProMotion & High Refresh Rate Spring Physics ───────
+export const iosSpring = { type: 'spring' as const, stiffness: 400, damping: 32, mass: 0.9, restDelta: 0.001 };
+export const iosBouncySpring = { type: 'spring' as const, stiffness: 480, damping: 26, mass: 0.8, restDelta: 0.001 };
+export const iosSheetSpring = { type: 'spring' as const, stiffness: 360, damping: 36, mass: 0.95, restDelta: 0.001 };
 
 // ── Page & Tab Transitions ───────────────────────────────────
 export const pageTransition = {
