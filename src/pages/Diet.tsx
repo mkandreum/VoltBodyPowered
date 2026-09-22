@@ -285,7 +285,7 @@ function WaterTracker() {
         </div>
 
         {/* Interactive Glass Cups (2 rows of 5) with Ergonomic Touch Targets */}
-        <div className="grid grid-cols-5 gap-2 mb-4">
+        <div className="grid grid-cols-5 gap-1.5 sm:gap-2 mb-4">
           {Array.from({ length: cupsCount }).map((_, idx) => {
             const isFilled = idx < activeCups;
             return (
@@ -295,7 +295,7 @@ function WaterTracker() {
                 aria-label={`Vaso de agua ${idx + 1}, 250 ml`}
                 whileTap={{ scale: 0.88 }}
                 onClick={() => (isFilled ? addWater(-250) : addWater(250))}
-                className="tap-target relative aspect-[3/4] min-h-[48px] rounded-xl border flex flex-col items-center justify-end overflow-hidden transition-all duration-200"
+                className="tap-target relative aspect-[3/4] min-h-[44px] sm:min-h-[48px] rounded-xl border flex flex-col items-center justify-end overflow-hidden transition-all duration-200"
                 style={{
                   borderColor: isFilled ? 'rgba(14, 165, 233, 0.45)' : 'rgba(255, 255, 255, 0.08)',
                   background: isFilled ? 'rgba(14, 165, 233, 0.14)' : 'rgba(255, 255, 255, 0.02)',
@@ -316,7 +316,7 @@ function WaterTracker() {
                     transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
                   />
                 )}
-                <div className="relative z-10 font-mono text-[10px] font-bold select-none pb-1 tabular-nums">
+                <div className="relative z-10 font-mono text-[9px] sm:text-[10px] font-bold select-none pb-1 tabular-nums">
                   {isFilled ? (
                     <span className="text-white drop-shadow-sm">💧</span>
                   ) : (
@@ -329,13 +329,13 @@ function WaterTracker() {
         </div>
 
         {/* Ergonomic Quick Action Buttons (Thumb Zone, 44px+ hit target) */}
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
           <motion.button
             type="button"
             aria-label="Añadir 250 mililitros de agua"
             whileTap={{ scale: 0.94 }}
             onClick={() => addWater(250)}
-            className="tap-target min-h-[44px] py-2.5 px-3 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 active:bg-sky-500/30 border border-sky-500/25 text-sky-300 font-mono font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+            className="tap-target min-h-[44px] py-2.5 px-2 sm:px-3 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 active:bg-sky-500/30 border border-sky-500/25 text-sky-300 font-mono font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1 sm:gap-1.5 transition-colors"
           >
             <Plus size={14} /> 250ml
           </motion.button>
@@ -344,7 +344,7 @@ function WaterTracker() {
             aria-label="Añadir 500 mililitros de agua"
             whileTap={{ scale: 0.94 }}
             onClick={() => addWater(500)}
-            className="tap-target min-h-[44px] py-2.5 px-3 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 active:bg-cyan-500/30 border border-cyan-500/25 text-cyan-300 font-mono font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+            className="tap-target min-h-[44px] py-2.5 px-2 sm:px-3 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 active:bg-cyan-500/30 border border-cyan-500/25 text-cyan-300 font-mono font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1 sm:gap-1.5 transition-colors"
           >
             <Plus size={14} /> 500ml
           </motion.button>
@@ -354,7 +354,7 @@ function WaterTracker() {
             whileTap={{ scale: 0.94 }}
             onClick={() => addWater(-250)}
             disabled={waterMl <= 0}
-            className="tap-target min-h-[44px] py-2.5 px-3 rounded-xl bg-gray-800/40 hover:bg-gray-800/60 active:bg-gray-800/80 border border-gray-700/40 text-gray-400 hover:text-white font-mono font-bold text-xs flex items-center justify-center gap-1 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+            className="tap-target min-h-[44px] py-2.5 px-2 sm:px-3 rounded-xl bg-gray-800/40 hover:bg-gray-800/60 active:bg-gray-800/80 border border-gray-700/40 text-gray-400 hover:text-white font-mono font-bold text-[11px] sm:text-xs flex items-center justify-center gap-1 transition-colors disabled:opacity-30 disabled:pointer-events-none"
           >
             <Minus size={14} /> 250ml
           </motion.button>
@@ -863,15 +863,15 @@ export default function Diet() {
                         </div>
 
                         {/* Bottom Row: Time Badge + Macro Grams + Calorie Pill */}
-                        <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/5 flex-wrap">
+                        <div className="flex items-center justify-between gap-1.5 sm:gap-2 pt-2 border-t border-white/5 flex-wrap">
                           {/* Time Badge */}
-                          <div className="flex items-center gap-1.5 text-xs font-mono bg-black/40 text-gray-300 px-2.5 py-1 rounded-lg border border-white/5 shrink-0">
+                          <div className="flex items-center gap-1.5 text-[11px] sm:text-xs font-mono bg-black/40 text-gray-300 px-2 sm:px-2.5 py-1 rounded-lg border border-white/5 shrink-0">
                             <Clock size={12} className="text-gray-400" />
                             <span>{meal.time}</span>
                           </div>
 
                           {/* Monospace Macro Grams */}
-                          <div className="flex items-center gap-3 text-xs font-mono tabular-nums">
+                          <div className="flex items-center gap-2 sm:gap-3 text-[11px] sm:text-xs font-mono tabular-nums">
                             <span className="text-red-300">
                               <strong className="text-red-400">P:</strong> {meal.protein}g
                             </span>
@@ -884,8 +884,8 @@ export default function Diet() {
                           </div>
 
                           {/* Calorie Indicator */}
-                          <div className="flex items-center gap-1 font-mono font-bold text-sm text-[color:var(--app-accent)] bg-[color:var(--app-accent)]/10 px-2.5 py-1 rounded-lg border border-[color:var(--app-accent)]/20 shrink-0 tabular-nums">
-                            <Flame size={14} className="fill-[color:var(--app-accent)]" />
+                          <div className="flex items-center gap-1 font-mono font-bold text-xs sm:text-sm text-[color:var(--app-accent)] bg-[color:var(--app-accent)]/10 px-2 sm:px-2.5 py-1 rounded-lg border border-[color:var(--app-accent)]/20 shrink-0 tabular-nums">
+                            <Flame size={13} className="fill-[color:var(--app-accent)]" />
                             <span>{meal.calories} kcal</span>
                           </div>
                         </div>

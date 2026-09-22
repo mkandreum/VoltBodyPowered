@@ -372,7 +372,7 @@ export default function Profile() {
                 { icon: Activity, label: 'Estado Físico', value: profile.currentState.split(' ')[0] },
                 { icon: Clock, label: 'Edad', value: `${profile.age} años` },
               ].map((param) => (
-                <div key={param.label} className="flex items-center justify-between p-4 px-5">
+                <div key={param.label} className="flex items-center justify-between p-3.5 sm:p-4 px-4 sm:px-5 min-w-0">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center text-gray-400">
                       <param.icon size={16} className="app-accent" />

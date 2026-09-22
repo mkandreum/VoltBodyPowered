@@ -224,20 +224,20 @@ export default function WeightCalculator({
                     <label className="block text-[11px] text-gray-400 mb-2 font-mono uppercase tracking-wider">
                       Tipo de barra
                     </label>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
                       {BARBELL_OPTIONS.map((opt) => (
                         <button
                           key={opt.value}
                           type="button"
                           onClick={() => setBarbellKg(opt.value)}
-                          className={`min-h-[44px] px-2 py-2 text-xs font-semibold rounded-xl border flex flex-col items-center justify-center transition-all active:scale-95 touch-manipulation ${
+                          className={`min-h-[44px] px-1.5 sm:px-2 py-2 text-xs font-semibold rounded-xl border flex flex-col items-center justify-center transition-all active:scale-95 touch-manipulation min-w-0 ${
                             barbellKg === opt.value
                               ? 'border-[color:var(--app-accent)]/80 bg-[color:var(--app-accent)]/15 text-[var(--app-accent)] font-bold shadow-[0_0_12px_rgba(57,255,20,0.2)]'
                               : 'border-white/10 bg-white/[0.03] text-gray-300 hover:border-white/20'
                           }`}
                         >
-                          <span className="font-mono tabular-nums text-sm font-bold">{opt.value} kg</span>
-                          <span className="text-[10px] text-gray-400 truncate max-w-full">
+                          <span className="font-mono tabular-nums text-xs sm:text-sm font-bold">{opt.value} kg</span>
+                          <span className="text-[9px] sm:text-[10px] text-gray-400 truncate max-w-full">
                             {opt.value === 20 ? 'Olímpica' : opt.value === 15 ? 'Mujer' : 'Pesada'}
                           </span>
                         </button>
@@ -430,8 +430,8 @@ export default function WeightCalculator({
 
               {/* ── Total weight display & Quick Apply ── */}
               {total > 0 && (
-                <div className="flex items-center justify-between pt-3 border-t border-white/10">
-                  <div>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-white/10">
+                  <div className="min-w-0">
                     <p className="text-[10px] text-gray-400 font-mono uppercase tracking-wider mb-0.5">
                       Peso total resultante
                     </p>
@@ -476,7 +476,7 @@ export default function WeightCalculator({
                     type="button"
                     whileTap={{ scale: 0.94 }}
                     onClick={() => onWeightChange(total)}
-                    className="min-h-[44px] px-4 py-2.5 flex items-center gap-2 text-xs font-bold primary-btn rounded-xl shadow-md touch-manipulation"
+                    className="w-full sm:w-auto min-h-[44px] px-4 py-2.5 flex items-center justify-center gap-2 text-xs font-bold primary-btn rounded-xl shadow-md touch-manipulation shrink-0"
                   >
                     Usar
                     <ArrowRight size={14} />

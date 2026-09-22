@@ -760,13 +760,13 @@ export default function Home() {
                 <div className="space-y-4">
                   {fatigueData.map((entry) => (
                     <div key={entry.muscleGroup}>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-xs sm:text-sm text-white font-medium">{entry.muscleGroup}</span>
-                        <div className="flex items-center gap-2">
-                          <span className={`text-xs font-semibold ${fatigueStatusColor(entry.status)}`}>
+                      <div className="flex items-center justify-between mb-1.5 flex-wrap gap-1">
+                        <span className="text-xs sm:text-sm text-white font-medium min-w-0 truncate">{entry.muscleGroup}</span>
+                        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                          <span className={`text-[11px] sm:text-xs font-semibold ${fatigueStatusColor(entry.status)}`}>
                             {fatigueStatusLabel(entry.status)}
                           </span>
-                          <span className="text-xs font-mono tabular-nums text-zinc-400">
+                          <span className="text-[11px] sm:text-xs font-mono tabular-nums text-zinc-400">
                             {entry.weeklyVolume}/{entry.mrv} series
                           </span>
                         </div>

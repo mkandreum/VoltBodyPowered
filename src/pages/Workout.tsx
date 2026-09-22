@@ -1615,9 +1615,9 @@ export default function Workout() {
                           onWeightChange={handleCalculatorWeightChange}
                         />
 
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
                           <div>
-                            <label className="block text-[10px] font-mono text-gray-400 mb-1.5 uppercase tracking-wider text-center">
+                            <label className="block text-[10px] font-mono text-gray-400 mb-1 uppercase tracking-wider text-center">
                               Peso (kg)
                             </label>
                             <input
@@ -1625,12 +1625,12 @@ export default function Workout() {
                               inputMode="decimal"
                               value={weightInput || ''}
                               onChange={(e) => setWeightInput(Number(e.target.value))}
-                              className="w-full h-11 input-field rounded-xl font-mono tabular-nums text-lg font-bold text-center"
+                              className="w-full h-11 input-field rounded-xl font-mono tabular-nums text-base sm:text-lg font-bold text-center"
                               placeholder="0"
                             />
                           </div>
                           <div>
-                            <label className="block text-[10px] font-mono text-gray-400 mb-1.5 uppercase tracking-wider text-center">
+                            <label className="block text-[10px] font-mono text-gray-400 mb-1 uppercase tracking-wider text-center">
                               Reps
                             </label>
                             <input
@@ -1638,12 +1638,12 @@ export default function Workout() {
                               inputMode="numeric"
                               value={repsInput || ''}
                               onChange={(e) => setRepsInput(Number(e.target.value))}
-                              className="w-full h-11 input-field rounded-xl font-mono tabular-nums text-lg font-bold text-center"
+                              className="w-full h-11 input-field rounded-xl font-mono tabular-nums text-base sm:text-lg font-bold text-center"
                               placeholder="0"
                             />
                           </div>
                           <div>
-                            <label className="block text-[10px] font-mono text-gray-400 mb-1.5 uppercase tracking-wider text-center">
+                            <label className="block text-[10px] font-mono text-gray-400 mb-1 uppercase tracking-wider text-center">
                               Series
                             </label>
                             <input
@@ -1653,20 +1653,20 @@ export default function Workout() {
                               max={10}
                               value={setsInput || ''}
                               onChange={(e) => setSetsInput(Math.max(1, Number(e.target.value)))}
-                              className="w-full h-11 input-field rounded-xl font-mono tabular-nums text-lg font-bold text-center"
+                              className="w-full h-11 input-field rounded-xl font-mono tabular-nums text-base sm:text-lg font-bold text-center"
                               placeholder="1"
                             />
                           </div>
                         </div>
 
                         {/* Quick +/- Increment Steppers */}
-                        <div className="grid grid-cols-3 gap-2">
-                          <div className="flex gap-1">
+                        <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
+                          <div className="flex gap-1 min-w-0">
                             <button
                               type="button"
                               aria-label="Restar 2.5 kg"
                               onClick={() => setWeightInput((prev) => Math.max(0, Math.round((prev - 2.5) * 10) / 10))}
-                              className="flex-1 h-9 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/5 flex items-center justify-center text-xs font-mono font-bold text-gray-300 active:scale-95"
+                              className="flex-1 min-w-0 h-9 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/5 flex items-center justify-center text-[11px] sm:text-xs font-mono font-bold text-gray-300 active:scale-95 px-0.5"
                             >
                               -2.5
                             </button>
@@ -1674,17 +1674,17 @@ export default function Workout() {
                               type="button"
                               aria-label="Sumar 2.5 kg"
                               onClick={() => setWeightInput((prev) => Math.round((prev + 2.5) * 10) / 10)}
-                              className="flex-1 h-9 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/5 flex items-center justify-center text-xs font-mono font-bold text-gray-300 active:scale-95"
+                              className="flex-1 min-w-0 h-9 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/5 flex items-center justify-center text-[11px] sm:text-xs font-mono font-bold text-gray-300 active:scale-95 px-0.5"
                             >
                               +2.5
                             </button>
                           </div>
-                          <div className="flex gap-1">
+                          <div className="flex gap-1 min-w-0">
                             <button
                               type="button"
                               aria-label="Restar rep"
                               onClick={() => setRepsInput((prev) => Math.max(0, prev - 1))}
-                              className="flex-1 h-9 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/5 flex items-center justify-center text-xs font-mono font-bold text-gray-300 active:scale-95"
+                              className="flex-1 min-w-0 h-9 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/5 flex items-center justify-center text-[11px] sm:text-xs font-mono font-bold text-gray-300 active:scale-95 px-0.5"
                             >
                               -1
                             </button>
@@ -1692,17 +1692,17 @@ export default function Workout() {
                               type="button"
                               aria-label="Sumar rep"
                               onClick={() => setRepsInput((prev) => prev + 1)}
-                              className="flex-1 h-9 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/5 flex items-center justify-center text-xs font-mono font-bold text-gray-300 active:scale-95"
+                              className="flex-1 min-w-0 h-9 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/5 flex items-center justify-center text-[11px] sm:text-xs font-mono font-bold text-gray-300 active:scale-95 px-0.5"
                             >
                               +1
                             </button>
                           </div>
-                          <div className="flex gap-1">
+                          <div className="flex gap-1 min-w-0">
                             <button
                               type="button"
                               aria-label="Restar serie"
                               onClick={() => setSetsInput((prev) => Math.max(1, prev - 1))}
-                              className="flex-1 h-9 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/5 flex items-center justify-center text-xs font-mono font-bold text-gray-300 active:scale-95"
+                              className="flex-1 min-w-0 h-9 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/5 flex items-center justify-center text-[11px] sm:text-xs font-mono font-bold text-gray-300 active:scale-95 px-0.5"
                             >
                               -1
                             </button>
@@ -1710,7 +1710,7 @@ export default function Workout() {
                               type="button"
                               aria-label="Sumar serie"
                               onClick={() => setSetsInput((prev) => Math.min(10, prev + 1))}
-                              className="flex-1 h-9 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/5 flex items-center justify-center text-xs font-mono font-bold text-gray-300 active:scale-95"
+                              className="flex-1 min-w-0 h-9 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/5 flex items-center justify-center text-[11px] sm:text-xs font-mono font-bold text-gray-300 active:scale-95 px-0.5"
                             >
                               +1
                             </button>
@@ -1734,13 +1734,13 @@ export default function Workout() {
                           <label className="block text-[11px] font-mono text-gray-400 mb-2 uppercase tracking-wider">
                             RIR <span className="normal-case text-gray-500">(reps en reserva)</span>
                           </label>
-                          <div className="grid grid-cols-5 gap-2">
+                          <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
                             {[0, 1, 2, 3, 4].map((r) => (
                               <button
                                 key={r}
                                 type="button"
                                 onClick={() => setRirInput((prev) => (prev === r ? -1 : r))}
-                                className={`min-h-[44px] rounded-xl text-sm font-bold font-mono transition-all active:scale-95 touch-manipulation ${
+                                className={`min-h-[44px] rounded-xl text-sm font-bold font-mono transition-all active:scale-95 touch-manipulation min-w-0 ${
                                   rirInput === r
                                     ? 'bg-[color:var(--app-accent)] text-black shadow-[0_0_10px_rgba(57,255,20,0.4)]'
                                     : 'neuro-inset text-gray-400 hover:text-white'

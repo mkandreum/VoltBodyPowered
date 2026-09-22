@@ -219,11 +219,11 @@ export default function CalendarView() {
           </div>
 
           {/* Weekday column initials */}
-          <div className="grid grid-cols-7 gap-2 mb-2 text-center">
+          <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-2 text-center">
             {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((day) => (
               <div
                 key={day}
-                className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 font-mono"
+                className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-gray-400 font-mono"
               >
                 {day}
               </div>
@@ -231,7 +231,7 @@ export default function CalendarView() {
           </div>
 
           {/* Calendar 7-day grid */}
-          <div className="grid grid-cols-7 gap-2">
+          <div className="grid grid-cols-7 gap-1 sm:gap-2">
             {weekDays.map((date) => {
               const isToday = isSameDay(date, new Date());
               const isSelected = isSameDay(date, selectedDate);
@@ -250,7 +250,7 @@ export default function CalendarView() {
                   aria-label={format(date, "d 'de' MMMM", { locale: es })}
                   onClick={() => setSelectedDate(date)}
                   className={clsx(
-                    'tap-target aspect-square rounded-2xl flex flex-col items-center justify-between p-2 relative cursor-pointer transition-all duration-200 outline-none',
+                    'tap-target aspect-square rounded-2xl flex flex-col items-center justify-between p-1 sm:p-2 relative cursor-pointer transition-all duration-200 outline-none min-w-0',
                     isSelected
                       ? 'bg-[var(--app-accent)] text-black font-bold shadow-[0_0_20px_var(--app-accent-dim)] ring-2 ring-[var(--app-accent)] scale-[1.02]'
                       : isToday
@@ -261,7 +261,7 @@ export default function CalendarView() {
                   {/* Top indicator or label */}
                   <span
                     className={clsx(
-                      'text-[9px] uppercase font-mono tracking-wider transition-colors',
+                      'text-[8px] sm:text-[9px] uppercase font-mono tracking-wider transition-colors',
                       isSelected ? 'text-black/70 font-bold' : isToday ? 'text-[var(--app-accent)] font-semibold' : 'text-gray-400'
                     )}
                   >
@@ -271,7 +271,7 @@ export default function CalendarView() {
                   {/* Day Number */}
                   <span
                     className={clsx(
-                      'text-sm md:text-base font-mono font-bold transition-transform',
+                      'text-xs sm:text-sm md:text-base font-mono font-bold transition-transform',
                       isSelected ? 'text-black' : isToday ? 'text-white' : 'text-gray-200'
                     )}
                   >
