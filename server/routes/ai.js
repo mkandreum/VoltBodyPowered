@@ -130,30 +130,55 @@ const FAST_JSON_CONFIG = {
   thinkingConfig: { thinkingLevel: 'MINIMAL' },
 };
 
-async function generateContentWithRetry({ model, prompt, requestId, eventBase, config = JSON_CONFIG }) {
-  const maxAttempts = 2;
+// Modelos (plan gratuito de Gemini: todos estos son gratis y cada uno tiene su propia cuota).
+// Configurables desde el entorno (Coolify) sin tocar codigo. El ultimo de cada lista es la red de seguridad.
+const LEGACY_MODEL = 'gemini-3-flash-preview';
+const PLAN_MODELS = [...new Set([process.env.GEMINI_MODEL_PLAN || 'gemini-3.8-flash', LEGACY_MODEL])];
+const FAST_MODELS = [...new Set([process.env.GEMINI_MODEL_FAST || 'gemini-3.5-flash-lite', LEGACY_MODEL])];
+
+function errorStatus(error) {
+  const m = String(error?.message || '');
+  return Number(error?.status || error?.code || (m.match(/"code"\s*:\s*(\d{3})/) || [])[1] || 0);
+}
+
+/** 400 por un parametro que ese modelo no admite (p. ej. un thinkingLevel no soportado). */
+function isUnsupportedConfigError(error) {
+  const m = String(error?.message || '').toLowerCase();
+  return errorStatus(error) === 400 && /thinking|not supported|unsupported|invalid argument/.test(m);
+}
+
+/**
+ * Prueba los modelos en orden. Por modelo: si esta saturado (503) reintenta una vez; si no admite la
+ * config de razonamiento, repite sin ella; si agoto la cuota gratuita (429), no existe (404) u otro
+ * fallo, pasa al siguiente modelo. Si todos fallan, lanza el ultimo error (las rutas usan su respaldo).
+ */
+async function generateContentWithRetry({ models = PLAN_MODELS, prompt, requestId, eventBase, config = JSON_CONFIG }) {
   let lastError = null;
-
-  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    try {
-      return await ai.models.generateContent({
-        model,
-        contents: prompt,
-        config,
-      });
-    } catch (error) {
-      lastError = error;
-
-      if (isProviderUnavailableError(error) && attempt < maxAttempts) {
-        logInfo(`${eventBase}.provider_busy_retry`, { requestId, attempt, maxAttempts });
-        await sleep(350);
-        continue;
+  for (const model of models) {
+    let cfg = config;
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      try {
+        const response = await ai.models.generateContent({ model, contents: prompt, config: cfg });
+        if (model !== models[0]) logInfo(`${eventBase}.model_fallback_used`, { requestId, model });
+        return response;
+      } catch (error) {
+        lastError = error;
+        if (cfg?.thinkingConfig && isUnsupportedConfigError(error)) {
+          logInfo(`${eventBase}.thinking_config_unsupported`, { requestId, model });
+          const { thinkingConfig, ...rest } = cfg;
+          cfg = rest;
+          continue;
+        }
+        if (isProviderUnavailableError(error) && attempt === 1) {
+          logInfo(`${eventBase}.provider_busy_retry`, { requestId, model });
+          await sleep(350);
+          continue;
+        }
+        logInfo(`${eventBase}.model_failed`, { requestId, model, status: errorStatus(error) });
+        break; // siguiente modelo
       }
-
-      throw error;
     }
   }
-
   throw lastError;
 }
 
@@ -432,7 +457,6 @@ router.post('/generate-plan', authMiddleware, aiRateLimiter, validateGeneratePla
     const { prompt, targets, days } = buildPlanPrompt(profile);
 
     const response = await generateContentWithRetry({
-      model: 'gemini-3-flash-preview',
       prompt,
       requestId: req.requestId,
       eventBase: 'ai.generate_plan',
@@ -493,10 +517,10 @@ router.post('/generate-alternative-meal', authMiddleware, aiRateLimiter, validat
     const prompt = buildAlternativeMealPrompt({ oldMeal, profile, dayMeals: req.body.dayMeals });
 
     const response = await generateContentWithRetry({
-      model: 'gemini-3-flash-preview',
       prompt,
       requestId: req.requestId,
       eventBase: 'ai.generate_alternative_meal',
+      models: FAST_MODELS,
       config: FAST_JSON_CONFIG,
     });
 
@@ -621,7 +645,6 @@ Reglas:
 - Basate en los datos reales entregados, no inventes metricas externas.`;
 
     const response = await generateContentWithRetry({
-      model: 'gemini-3-flash-preview',
       prompt,
       requestId: req.requestId,
       eventBase: 'ai.generate_progress_report',

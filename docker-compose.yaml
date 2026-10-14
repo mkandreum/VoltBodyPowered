@@ -39,6 +39,8 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-voltbody}:${POSTGRES_PASSWORD:-voltbody123}@db:5432/${POSTGRES_DB:-voltbody}?schema=public&connection_limit=5&pool_timeout=20&connect_timeout=10
       JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-in-production}
       GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GEMINI_MODEL_PLAN: ${GEMINI_MODEL_PLAN:-gemini-3.8-flash}
+      GEMINI_MODEL_FAST: ${GEMINI_MODEL_FAST:-gemini-3.5-flash-lite}
       APP_URL: ${APP_URL:-http://localhost:3000}
     depends_on:
       db:
