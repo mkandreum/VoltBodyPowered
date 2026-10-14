@@ -105,7 +105,7 @@ export default function WeightCalculator({
   const category = detectExerciseCategory(exerciseName);
   const saved = loadConfig(exerciseId);
 
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const [barbellKg, setBarbellKg] = useState<number>(saved.barbellKg ?? 20);
   const [platesPerSide, setPlatesPerSide] = useState<number>(saved.platesPerSide ?? 0);
   const [dumbbellKg, setDumbbellKg] = useState<number>(saved.dumbbellKg ?? 0);
@@ -177,12 +177,12 @@ export default function WeightCalculator({
         <div className="flex items-center gap-2">
           <Wrench size={14} className="text-[var(--app-accent)]" />
           <span className="tracking-tight">Calculadora de carga y discos</span>
-          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono text-gray-400 bg-white/5 border border-white/5">
+          <span className="px-2 py-0.5 rounded-full text-[10px] text-gray-400 bg-white/5 border border-white/5">
             {categoryLabel[category]}
           </span>
         </div>
         <div className="flex items-center gap-1.5 text-gray-400">
-          <span className="text-[11px] font-mono tabular-nums text-white/80">
+          <span className="text-[11px] tabular-nums text-white/80">
             {total > 0 ? `${total} kg` : 'Configurar'}
           </span>
           {open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
@@ -205,7 +205,7 @@ export default function WeightCalculator({
 
               {/* Goal badge */}
               {targetWeight > 0 && (
-                <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/5 text-xs font-mono">
+                <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/5 text-xs">
                   <span className="text-gray-400 font-sans">Meta sugerida por IA:</span>
                   <span className="app-accent font-bold tabular-nums">{targetWeight} kg total</span>
                 </div>
@@ -221,7 +221,7 @@ export default function WeightCalculator({
               {category === 'barbell' && (
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-[11px] text-gray-400 mb-2 font-mono uppercase tracking-wider">
+                    <label className="block text-[11px] text-gray-400 mb-2 uppercase tracking-wider">
                       Tipo de barra
                     </label>
                     <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
@@ -236,7 +236,7 @@ export default function WeightCalculator({
                               : 'border-white/10 bg-white/[0.03] text-gray-300 hover:border-white/20'
                           }`}
                         >
-                          <span className="font-mono tabular-nums text-xs sm:text-sm font-bold">{opt.value} kg</span>
+                          <span className="tabular-nums text-xs sm:text-sm font-bold">{opt.value} kg</span>
                           <span className="text-[9px] sm:text-[10px] text-gray-400 truncate max-w-full">
                             {opt.value === 20 ? 'Olímpica' : opt.value === 15 ? 'Mujer' : 'Pesada'}
                           </span>
@@ -247,7 +247,7 @@ export default function WeightCalculator({
 
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <label className="block text-[11px] text-gray-400 font-mono uppercase tracking-wider">
+                      <label className="block text-[11px] text-gray-400 uppercase tracking-wider">
                         Discos por lado
                       </label>
                       {targetWeight > 0 && (
@@ -282,9 +282,9 @@ export default function WeightCalculator({
                           value={platesPerSide === 0 ? '' : platesPerSide}
                           onChange={(e) => setPlatesPerSide(Math.max(0, Number(e.target.value)))}
                           placeholder="0"
-                          className="w-full h-11 input-field rounded-xl text-xl font-bold font-mono tabular-nums text-center text-white"
+                          className="w-full h-11 input-field rounded-xl text-xl font-bold tabular-nums text-center text-white"
                         />
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-mono pointer-events-none">
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none">
                           kg/lado
                         </span>
                       </div>
@@ -306,7 +306,7 @@ export default function WeightCalculator({
                           key={p}
                           type="button"
                           onClick={() => setPlatesPerSide(p)}
-                          className={`min-h-[32px] px-2.5 py-1 rounded-lg text-xs font-mono font-semibold border transition-all active:scale-95 ${
+                          className={`min-h-[32px] px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all active:scale-95 ${
                             platesPerSide === p
                               ? 'border-[color:var(--app-accent)] bg-[color:var(--app-accent)]/20 text-[var(--app-accent)]'
                               : 'border-white/10 bg-white/[0.03] text-gray-400 hover:text-white'
@@ -318,7 +318,7 @@ export default function WeightCalculator({
                     </div>
 
                     {platesPerSide > 0 && (
-                      <p className="mt-2 text-xs text-gray-400 font-mono tabular-nums">
+                      <p className="mt-2 text-xs text-gray-400 tabular-nums">
                         {barbellKg} kg barra + ({platesPerSide} × 2) kg discos = <strong className="text-white">{total} kg</strong>
                       </p>
                     )}
@@ -329,7 +329,7 @@ export default function WeightCalculator({
               {/* ── Dumbbell mode ── */}
               {category === 'dumbbell' && (
                 <div className="space-y-3">
-                  <label className="block text-[11px] text-gray-400 font-mono uppercase tracking-wider">
+                  <label className="block text-[11px] text-gray-400 uppercase tracking-wider">
                     Peso por mancuerna
                   </label>
                   <div className="flex items-center gap-2">
@@ -350,9 +350,9 @@ export default function WeightCalculator({
                         value={dumbbellKg === 0 ? '' : dumbbellKg}
                         onChange={(e) => setDumbbellKg(Math.max(0, Number(e.target.value)))}
                         placeholder="0"
-                        className="w-full h-11 input-field rounded-xl text-xl font-bold font-mono tabular-nums text-center text-white"
+                        className="w-full h-11 input-field rounded-xl text-xl font-bold tabular-nums text-center text-white"
                       />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-mono pointer-events-none">
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none">
                         kg/mano
                       </span>
                     </div>
@@ -366,7 +366,7 @@ export default function WeightCalculator({
                     </button>
                   </div>
                   {dumbbellKg > 0 && (
-                    <p className="text-xs text-gray-400 font-mono tabular-nums">
+                    <p className="text-xs text-gray-400 tabular-nums">
                       {dumbbellKg} kg × 2 brazos = <strong className="text-white">{total} kg total</strong>
                     </p>
                   )}
@@ -376,7 +376,7 @@ export default function WeightCalculator({
               {/* ── Machine mode ── */}
               {category === 'machine' && (
                 <div className="space-y-3">
-                  <label className="block text-[11px] text-gray-400 font-mono uppercase tracking-wider">
+                  <label className="block text-[11px] text-gray-400 uppercase tracking-wider">
                     Placas o selector de máquina
                   </label>
                   <div className="flex items-center gap-2">
@@ -397,9 +397,9 @@ export default function WeightCalculator({
                         value={machineKg === 0 ? '' : machineKg}
                         onChange={(e) => setMachineKg(Math.max(0, Number(e.target.value)))}
                         placeholder="0"
-                        className="w-full h-11 input-field rounded-xl text-xl font-bold font-mono tabular-nums text-center text-white"
+                        className="w-full h-11 input-field rounded-xl text-xl font-bold tabular-nums text-center text-white"
                       />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-mono pointer-events-none">
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none">
                         kg
                       </span>
                     </div>
@@ -419,7 +419,7 @@ export default function WeightCalculator({
               {category === 'bodyweight' && (
                 <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5 text-sm text-gray-300">
                   {userBodyweight > 0 ? (
-                    <span className="font-mono tabular-nums">
+                    <span className="tabular-nums">
                       Peso corporal de referencia: <strong className="text-white">{userBodyweight} kg</strong>
                     </span>
                   ) : (
@@ -432,7 +432,7 @@ export default function WeightCalculator({
               {total > 0 && (
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-white/10">
                   <div className="min-w-0">
-                    <p className="text-[10px] text-gray-400 font-mono uppercase tracking-wider mb-0.5">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-0.5">
                       Peso total resultante
                     </p>
                     <div className="flex items-baseline gap-1.5 overflow-hidden">
@@ -440,12 +440,12 @@ export default function WeightCalculator({
                         <motion.span
                           key={total}
                           {...numberRoll}
-                          className="text-2xl font-black app-accent font-mono tabular-nums glow-text"
+                          className="text-2xl font-black app-accent tabular-nums glow-text"
                         >
                           {total}
                         </motion.span>
                       </AnimatePresence>
-                      <span className="text-xs text-gray-400 font-mono">kg</span>
+                      <span className="text-xs text-gray-400">kg</span>
                     </div>
 
                     {/* Gap to goal */}
@@ -454,7 +454,7 @@ export default function WeightCalculator({
                         <motion.p
                           key={gap}
                           {...numberRoll}
-                          className={`text-[11px] font-mono tabular-nums mt-0.5 ${
+                          className={`text-[11px] tabular-nums mt-0.5 ${
                             gap === 0
                               ? 'text-emerald-400'
                               : gap > 0

@@ -78,10 +78,14 @@ export type Meal = {
   description: string;
 };
 
+export type DayMenu = { day: string; meals: Meal[] };
+
 export type DietPlan = {
   dailyCalories: number;
   macros: { protein: number; carbs: number; fat: number };
   meals: Meal[];
+  /** Menú distinto por día (7 entradas, lunes primero) cuando el servidor lo genera. */
+  week?: DayMenu[];
 };
 
 export type WorkoutLog = {

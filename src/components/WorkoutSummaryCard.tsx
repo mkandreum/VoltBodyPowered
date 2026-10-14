@@ -19,8 +19,19 @@ interface WorkoutSummaryCardProps {
   data: WorkoutSummaryData;
 }
 
+/** Color de acento del tema actual (html2canvas no entiende variables CSS ni color-mix). */
+function accent(): string {
+  if (typeof document === 'undefined') return '#27F58B';
+  return getComputedStyle(document.body).getPropertyValue('--v-accent').trim() || '#27F58B';
+}
+function alpha(hex: string, a: number): string {
+  const n = parseInt(hex.replace('#', ''), 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
+}
+
 /** Rendered off-screen, captured by html2canvas, then shared as an image */
 const WorkoutSummaryCard = forwardRef<HTMLDivElement, WorkoutSummaryCardProps>(({ data }, ref) => {
+  const A = accent();
   const today = format(new Date(), "d 'de' MMMM, yyyy", { locale: es });
   const completionPct = data.plannedSets > 0 ? Math.round((data.completedSets / data.plannedSets) * 100) : 100;
 
@@ -29,16 +40,16 @@ const WorkoutSummaryCard = forwardRef<HTMLDivElement, WorkoutSummaryCardProps>((
       ref={ref}
       style={{
         width: 380,
-        background: 'radial-gradient(circle at 10% 0%, rgba(57, 255, 20, 0.12) 0%, transparent 40%), linear-gradient(145deg, #0f1015 0%, #0b0c10 60%, #08120a 100%)',
+        background: '#161616',
         borderRadius: 28,
         padding: '32px 24px 24px',
-        fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif",
+        fontFamily: "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
         color: '#ffffff',
         position: 'relative',
         overflow: 'hidden',
         boxSizing: 'border-box',
         border: '1px solid rgba(255, 255, 255, 0.12)',
-        boxShadow: '0 24px 48px rgba(0,0,0,0.8), 0 0 32px rgba(57,255,20,0.15)',
+        boxShadow: 'none',
       }}
     >
       {/* Specular top glass reflection */}
@@ -62,7 +73,7 @@ const WorkoutSummaryCard = forwardRef<HTMLDivElement, WorkoutSummaryCardProps>((
           width: 220,
           height: 220,
           borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(57,255,20,0.22) 0%, transparent 70%)',
+          background: `radial-gradient(circle, ${alpha(A, 0.22)} 0%, transparent 70%)`,
           pointerEvents: 'none',
         }}
       />
@@ -74,7 +85,7 @@ const WorkoutSummaryCard = forwardRef<HTMLDivElement, WorkoutSummaryCardProps>((
           width: 180,
           height: 180,
           borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(57,255,20,0.1) 0%, transparent 70%)',
+          background: `radial-gradient(circle, ${alpha(A, 0.1)} 0%, transparent 70%)`,
           pointerEvents: 'none',
         }}
       />
@@ -82,9 +93,9 @@ const WorkoutSummaryCard = forwardRef<HTMLDivElement, WorkoutSummaryCardProps>((
       {/* Brand Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 16, fontWeight: 900, color: '#39ff14', letterSpacing: '0.12em' }}>⚡ VOLTBODY</span>
+          <span style={{ fontSize: 16, fontWeight: 900, color: A, letterSpacing: '0.12em' }}>⚡ VOLTBODY</span>
         </div>
-        <span style={{ fontSize: 11, color: '#9ca3af', fontFamily: "'JetBrains Mono', SFMono-Regular, monospace", letterSpacing: '-0.02em' }}>
+        <span style={{ fontSize: 11, color: '#9A9A9A', fontFamily: "'Unbounded', 'Plus Jakarta Sans', sans-serif", letterSpacing: '-0.02em' }}>
           {today}
         </span>
       </div>
@@ -97,7 +108,7 @@ const WorkoutSummaryCard = forwardRef<HTMLDivElement, WorkoutSummaryCardProps>((
           gap: 16,
           marginBottom: 16,
           background: 'rgba(255, 255, 255, 0.04)',
-          border: '1px solid rgba(57, 255, 20, 0.25)',
+          border: `1px solid ${alpha(A, 0.3)}`,
           borderRadius: 20,
           padding: '16px',
           backdropFilter: 'blur(16px)',
@@ -106,14 +117,14 @@ const WorkoutSummaryCard = forwardRef<HTMLDivElement, WorkoutSummaryCardProps>((
       >
         <span style={{ fontSize: 40, lineHeight: 1, filter: 'drop-shadow(0 4px 12px rgba(250,204,21,0.3))' }}>🏆</span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontSize: 10, color: '#39ff14', textTransform: 'uppercase', letterSpacing: '0.22em', margin: 0, fontWeight: 800 }}>
+          <p style={{ fontSize: 10, color: A, textTransform: 'uppercase', letterSpacing: '0.22em', margin: 0, fontWeight: 800 }}>
             SESIÓN COMPLETADA
           </p>
           <h2 style={{ fontSize: 22, fontWeight: 900, margin: '4px 0 0', lineHeight: 1.2, color: '#ffffff', wordBreak: 'break-word' }}>
             {data.focus}
           </h2>
           {data.userName && (
-            <p style={{ fontSize: 12, color: '#9ca3af', margin: '4px 0 0', fontWeight: 500 }}>
+            <p style={{ fontSize: 12, color: '#9A9A9A', margin: '4px 0 0', fontWeight: 500 }}>
               por <span style={{ color: '#ffffff', fontWeight: 700 }}>{data.userName}</span>
             </p>
           )}
@@ -138,10 +149,10 @@ const WorkoutSummaryCard = forwardRef<HTMLDivElement, WorkoutSummaryCardProps>((
             }}
           >
             <p style={{ fontSize: 18, margin: 0 }}>{icon}</p>
-            <p style={{ fontSize: 15, fontWeight: 900, color: '#ffffff', margin: '4px 0 0', fontFamily: "'JetBrains Mono', SFMono-Regular, monospace" }}>
+            <p style={{ fontSize: 15, fontWeight: 900, color: '#ffffff', margin: '4px 0 0', fontFamily: "'Unbounded', 'Plus Jakarta Sans', sans-serif" }}>
               {value}
             </p>
-            <p style={{ fontSize: 9, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.12em', margin: '2px 0 0', fontWeight: 700 }}>
+            <p style={{ fontSize: 9, color: '#9A9A9A', textTransform: 'uppercase', letterSpacing: '0.12em', margin: '2px 0 0', fontWeight: 700 }}>
               {label}
             </p>
           </div>
@@ -150,7 +161,7 @@ const WorkoutSummaryCard = forwardRef<HTMLDivElement, WorkoutSummaryCardProps>((
 
       {/* Exercise List */}
       <div style={{ marginBottom: 16 }}>
-        <p style={{ fontSize: 10, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.16em', margin: '0 0 8px', fontWeight: 700 }}>
+        <p style={{ fontSize: 10, color: '#9A9A9A', textTransform: 'uppercase', letterSpacing: '0.16em', margin: '0 0 8px', fontWeight: 700 }}>
           EJERCICIOS REALIZADOS
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -166,20 +177,20 @@ const WorkoutSummaryCard = forwardRef<HTMLDivElement, WorkoutSummaryCardProps>((
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: 1 }}>
-                <span style={{ fontSize: 10, color: '#4b5563', fontWeight: 800, minWidth: 16, fontFamily: "'JetBrains Mono', monospace" }}>
+                <span style={{ fontSize: 10, color: '#4b5563', fontWeight: 800, minWidth: 16, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
                   {i + 1}.
                 </span>
                 <span style={{ fontSize: 12, color: '#f3f4f6', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {ex.name}
                 </span>
               </div>
-              <span style={{ fontSize: 11, color: '#39ff14', fontFamily: "'JetBrains Mono', SFMono-Regular, monospace", fontWeight: 700, marginLeft: 8 }}>
+              <span style={{ fontSize: 11, color: A, fontFamily: "'Unbounded', 'Plus Jakarta Sans', sans-serif", fontWeight: 700, marginLeft: 8 }}>
                 {ex.sets}×{ex.reps}
               </span>
             </div>
           ))}
           {data.exercises.length > 6 && (
-            <p style={{ fontSize: 11, color: '#6b7280', textAlign: 'center', margin: '4px 0 0', fontFamily: "'JetBrains Mono', monospace" }}>
+            <p style={{ fontSize: 11, color: '#9A9A9A', textAlign: 'center', margin: '4px 0 0', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
               +{data.exercises.length - 6} ejercicios más
             </p>
           )}
@@ -191,7 +202,7 @@ const WorkoutSummaryCard = forwardRef<HTMLDivElement, WorkoutSummaryCardProps>((
         <div
           style={{
             background: 'rgba(255, 255, 255, 0.03)',
-            border: '1px solid rgba(249, 115, 22, 0.25)',
+            border: '1px solid rgba(255, 138, 0, 0.3)',
             borderRadius: 16,
             padding: '10px 14px',
             display: 'flex',
@@ -201,10 +212,10 @@ const WorkoutSummaryCard = forwardRef<HTMLDivElement, WorkoutSummaryCardProps>((
         >
           <span style={{ fontSize: 22 }}>🔥</span>
           <div>
-            <p style={{ fontSize: 14, fontWeight: 900, color: '#f97316', margin: 0, fontFamily: "'JetBrains Mono', SFMono-Regular, monospace" }}>
+            <p style={{ fontSize: 14, fontWeight: 900, color: '#FF8A00', margin: 0, fontFamily: "'Unbounded', 'Plus Jakarta Sans', sans-serif" }}>
               {data.streak} {data.streak === 1 ? 'día' : 'días'}
             </p>
-            <p style={{ fontSize: 9, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.12em', margin: '2px 0 0', fontWeight: 700 }}>
+            <p style={{ fontSize: 9, color: '#9A9A9A', textTransform: 'uppercase', letterSpacing: '0.12em', margin: '2px 0 0', fontWeight: 700 }}>
               RACHA ACTIVA
             </p>
           </div>
@@ -212,7 +223,7 @@ const WorkoutSummaryCard = forwardRef<HTMLDivElement, WorkoutSummaryCardProps>((
         <div
           style={{
             background: 'rgba(255, 255, 255, 0.03)',
-            border: '1px solid rgba(57, 255, 20, 0.25)',
+            border: `1px solid ${alpha(A, 0.3)}`,
             borderRadius: 16,
             padding: '10px 14px',
             display: 'flex',
@@ -222,10 +233,10 @@ const WorkoutSummaryCard = forwardRef<HTMLDivElement, WorkoutSummaryCardProps>((
         >
           <span style={{ fontSize: 22 }}>⚡</span>
           <div>
-            <p style={{ fontSize: 14, fontWeight: 900, color: '#39ff14', margin: 0, fontFamily: "'JetBrains Mono', SFMono-Regular, monospace" }}>
+            <p style={{ fontSize: 14, fontWeight: 900, color: A, margin: 0, fontFamily: "'Unbounded', 'Plus Jakarta Sans', sans-serif" }}>
               Nv. {data.level}
             </p>
-            <p style={{ fontSize: 9, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.12em', margin: '2px 0 0', fontWeight: 700 }}>
+            <p style={{ fontSize: 9, color: '#9A9A9A', textTransform: 'uppercase', letterSpacing: '0.12em', margin: '2px 0 0', fontWeight: 700 }}>
               +{data.xpGained} XP
             </p>
           </div>
@@ -235,10 +246,10 @@ const WorkoutSummaryCard = forwardRef<HTMLDivElement, WorkoutSummaryCardProps>((
       {/* Progress Bar with Liquid Glow */}
       <div style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-          <span style={{ fontSize: 9, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.14em', fontWeight: 700 }}>
+          <span style={{ fontSize: 9, color: '#9A9A9A', textTransform: 'uppercase', letterSpacing: '0.14em', fontWeight: 700 }}>
             CUMPLIMIENTO TOTAL
           </span>
-          <span style={{ fontSize: 10, color: '#39ff14', fontFamily: "'JetBrains Mono', SFMono-Regular, monospace", fontWeight: 700 }}>
+          <span style={{ fontSize: 10, color: A, fontFamily: "'Unbounded', 'Plus Jakarta Sans', sans-serif", fontWeight: 700 }}>
             {completionPct}%
           </span>
         </div>
@@ -247,7 +258,7 @@ const WorkoutSummaryCard = forwardRef<HTMLDivElement, WorkoutSummaryCardProps>((
             style={{
               height: '100%',
               width: `${completionPct}%`,
-              background: 'linear-gradient(90deg, #39ff14, #00f0ff)',
+              background: A,
               borderRadius: 999,
               boxShadow: '0 0 10px rgba(57,255,20,0.6)',
             }}
