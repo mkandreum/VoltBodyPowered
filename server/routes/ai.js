@@ -8,6 +8,7 @@ import { incrementAiError } from '../utils/metrics.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { resolveAlias } from '../utils/exerciseAliases.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -375,30 +376,33 @@ function scoreExerciseMatch(resultName, searchTerm) {
  * Only fills/overwrites gifUrl when it is empty or is a mock/placeholder URL.
  * Resolves each exercise locally and accurately, mapping to a high-speed raw GitHub CDN URL.
  */
-async function enrichExercisesWithGifs(exercises = []) {
+async function enrichExercisesWithGifs(exercises = [], { force = false } = {}) {
   await ensureExercisesLoaded();
   if (!localExercises?.length) {
     return exercises;
   }
 
   return exercises.map((ex) => {
-    if (ex.gifUrl && !isMockOrEmptyGifUrl(ex.gifUrl)) return ex;
+    if (!force && ex.gifUrl && !isMockOrEmptyGifUrl(ex.gifUrl)) return ex;
 
-    const englishTerm = ex.nameEn || toEnglishSearchTerm(ex.name);
-    let best = { score: -100, item: null };
+    // 1) Tabla curada (exacta): evita emparejamientos absurdos de la busqueda aproximada.
+    const aliasName = resolveAlias(ex.name, ex.nameEn);
+    let item = aliasName ? localExercises.find((e) => e.name === aliasName) : null;
 
-    for (const item of localExercises) {
-      const score = scoreExerciseMatch(item.name, englishTerm);
-      if (score > best.score) {
-        best = { score, item };
+    // 2) Busqueda aproximada como respaldo.
+    if (!item) {
+      const englishTerm = ex.nameEn || toEnglishSearchTerm(ex.name);
+      let best = { score: -100, item: null };
+      for (const candidate of localExercises) {
+        const score = scoreExerciseMatch(candidate.name, englishTerm);
+        if (score > best.score) best = { score, item: candidate };
       }
+      if (best.item && best.score > 0) item = best.item;
     }
 
-    if (best.item && best.score > 0 && best.item.gif_url) {
-      const fullGifUrl = `https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/${best.item.gif_url}`;
-      return { ...ex, gifUrl: fullGifUrl };
+    if (item?.gif_url) {
+      return { ...ex, gifUrl: `https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/${item.gif_url}` };
     }
-
     return ex;
   });
 }
@@ -406,11 +410,11 @@ async function enrichExercisesWithGifs(exercises = []) {
 /**
  * Enriches all exercises across a full routine (array of WorkoutDays).
  */
-async function enrichRoutine(routine = []) {
+async function enrichRoutine(routine = [], options = {}) {
   return Promise.all(
     routine.map(async (day) => ({
       ...day,
-      exercises: await enrichExercisesWithGifs(day.exercises || []),
+      exercises: await enrichExercisesWithGifs(day.exercises || [], options),
     }))
   );
 }
@@ -732,16 +736,17 @@ Reglas:
 });
 
 // POST /api/ai/enrich-routine
-// Receives a routine with empty gifUrls and returns it enriched.
-// Safe for existing users: only fills empty gifUrl fields.
+// Receives a routine and returns it enriched with GIFs.
+// By default only fills empty/mock gifUrl fields; with { force: true } re-matches every exercise
+// (used by the clients to fix routines saved with wrong GIFs).
 router.post('/enrich-routine', authMiddleware, async (req, res) => {
   try {
-    const { routine } = req.body;
+    const { routine, force = false } = req.body;
     if (!Array.isArray(routine)) {
       return res.status(400).json({ error: 'routine debe ser un array' });
     }
     logInfo('ai.enrich_routine.started', { requestId: req.requestId, days: routine.length });
-    const enriched = await enrichRoutine(routine);
+    const enriched = await enrichRoutine(routine, { force: force === true });
     logInfo('ai.enrich_routine.success', { requestId: req.requestId });
     return res.json({ routine: enriched });
   } catch (error) {
