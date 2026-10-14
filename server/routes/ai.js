@@ -119,7 +119,16 @@ function isProviderUnavailableError(error) {
 }
 
 // JSON forzado y temperatura moderada: menos respuestas rotas y planes mas consistentes.
-const JSON_CONFIG = { responseMimeType: 'application/json', temperature: 0.6 };
+// thinkingLevel: gemini-3-flash razona por defecto antes de responder y eso dispara la latencia.
+// Plan e informe: razonamiento bajo (calidad suficiente con objetivos ya calculados por el servidor).
+// Comida alternativa: minimo, es una sustitucion simple y el usuario espera con la hoja abierta.
+const JSON_CONFIG = { responseMimeType: 'application/json', temperature: 0.6, thinkingConfig: { thinkingLevel: 'LOW' } };
+const FAST_JSON_CONFIG = {
+  responseMimeType: 'application/json',
+  temperature: 0.8,
+  maxOutputTokens: 700,
+  thinkingConfig: { thinkingLevel: 'MINIMAL' },
+};
 
 async function generateContentWithRetry({ model, prompt, requestId, eventBase, config = JSON_CONFIG }) {
   const maxAttempts = 2;
@@ -417,6 +426,7 @@ async function enrichRoutine(routine = [], options = {}) {
 router.post('/generate-plan', authMiddleware, aiRateLimiter, validateGeneratePlanPayload, async (req, res) => {
   try {
     const profile = req.body;
+    const t0 = Date.now();
     logInfo('ai.generate_plan.started', { requestId: req.requestId });
 
     const { prompt, targets, days } = buildPlanPrompt(profile);
@@ -447,7 +457,7 @@ router.post('/generate-plan', authMiddleware, aiRateLimiter, validateGeneratePla
         // Non-fatal: proceed without GIFs
       }
 
-      logInfo('ai.generate_plan.success', { requestId: req.requestId });
+      logInfo('ai.generate_plan.success', { requestId: req.requestId, ms: Date.now() - t0 });
       res.json(plan);
     } catch (parseErr) {
       incrementAiError();
@@ -477,6 +487,7 @@ router.post('/generate-plan', authMiddleware, aiRateLimiter, validateGeneratePla
 router.post('/generate-alternative-meal', authMiddleware, aiRateLimiter, validateAlternativeMealPayload, async (req, res) => {
   try {
     const { oldMeal, profile } = req.body;
+    const t0 = Date.now();
     logInfo('ai.generate_alternative_meal.started', { requestId: req.requestId });
 
     const prompt = buildAlternativeMealPrompt({ oldMeal, profile, dayMeals: req.body.dayMeals });
@@ -486,12 +497,13 @@ router.post('/generate-alternative-meal', authMiddleware, aiRateLimiter, validat
       prompt,
       requestId: req.requestId,
       eventBase: 'ai.generate_alternative_meal',
+      config: FAST_JSON_CONFIG,
     });
 
     try {
       const jsonText = extractJsonBlock(response.text);
       const meal = normalizeAlternativeMeal(JSON.parse(jsonText), oldMeal);
-      logInfo('ai.generate_alternative_meal.success', { requestId: req.requestId });
+      logInfo('ai.generate_alternative_meal.success', { requestId: req.requestId, ms: Date.now() - t0 });
       res.json(meal);
     } catch (parseErr) {
       incrementAiError();
