@@ -9,6 +9,15 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { resolveAlias } from '../utils/exerciseAliases.js';
+import {
+  buildPlanPrompt,
+  buildAlternativeMealPrompt,
+  computeTargets,
+  fallbackWeekDiet,
+  normalizeAlternativeMeal,
+  normalizeDiet,
+  normalizeRoutine,
+} from '../utils/planPrompts.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -52,25 +61,6 @@ function fallbackRoutine(profile) {
   }));
 }
 
-function fallbackDiet(profile) {
-  const target = profile?.goal?.toLowerCase().includes('perder') ? 2100 : 2500;
-  return {
-    dailyCalories: target,
-    macros: {
-      protein: Math.round(target * 0.32 / 4),
-      carbs: Math.round(target * 0.43 / 4),
-      fat: Math.round(target * 0.25 / 9),
-    },
-    meals: [
-      { id: 'meal-1', name: '🥣 Tortilla de avena y platano', time: '08:00', calories: 520, protein: 30, carbs: 62, fat: 16, description: 'Avena, huevo, platano y canela.' },
-      { id: 'meal-2', name: '🍎 Yogur con frutos secos', time: '11:30', calories: 320, protein: 18, carbs: 22, fat: 17, description: 'Yogur griego natural, nueces y fruta.' },
-      { id: 'meal-3', name: '🍽️ Pollo con arroz y verduras', time: '14:00', calories: 690, protein: 48, carbs: 78, fat: 20, description: 'Pechuga de pollo, arroz y verduras salteadas.' },
-      { id: 'meal-4', name: '🥜 Sandwich integral de atun', time: '18:00', calories: 360, protein: 28, carbs: 34, fat: 11, description: 'Pan integral, atun y tomate.' },
-      { id: 'meal-5', name: '🌙 Merluza con patata cocida', time: '21:00', calories: 510, protein: 40, carbs: 44, fat: 16, description: 'Merluza al horno con patata y ensalada.' },
-    ],
-  };
-}
-
 function fallbackInsights(profile) {
   const name = profile?.name || 'Atleta';
   return {
@@ -83,7 +73,7 @@ function fallbackInsights(profile) {
 function fallbackPlan(profile) {
   return {
     routine: fallbackRoutine(profile),
-    diet: fallbackDiet(profile),
+    diet: fallbackWeekDiet(profile, computeTargets(profile)),
     insights: fallbackInsights(profile),
   };
 }
@@ -128,7 +118,10 @@ function isProviderUnavailableError(error) {
   );
 }
 
-async function generateContentWithRetry({ model, prompt, requestId, eventBase }) {
+// JSON forzado y temperatura moderada: menos respuestas rotas y planes mas consistentes.
+const JSON_CONFIG = { responseMimeType: 'application/json', temperature: 0.6 };
+
+async function generateContentWithRetry({ model, prompt, requestId, eventBase, config = JSON_CONFIG }) {
   const maxAttempts = 2;
   let lastError = null;
 
@@ -137,6 +130,7 @@ async function generateContentWithRetry({ model, prompt, requestId, eventBase })
       return await ai.models.generateContent({
         model,
         contents: prompt,
+        config,
       });
     } catch (error) {
       lastError = error;
@@ -425,88 +419,7 @@ router.post('/generate-plan', authMiddleware, aiRateLimiter, validateGeneratePla
     const profile = req.body;
     logInfo('ai.generate_plan.started', { requestId: req.requestId });
 
-    const bmi = profile.weight && profile.height ? (profile.weight / ((profile.height / 100) ** 2)).toFixed(1) : 'N/A';
-    const prompt = `Eres un entrenador personal certificado y nutricionista deportivo experto con más de 15 años de experiencia. Crea un plan COMPLETO, DETALLADO y PERSONALIZADO de entrenamiento y nutrición para:
-
-PERFIL DEL USUARIO:
-- Nombre: ${profile.name}
-- Edad: ${profile.age} años
-- Género: ${profile.gender}
-- Peso: ${profile.weight}kg | Altura: ${profile.height}cm | IMC: ${bmi}
-- Nivel de condición física: ${profile.currentState}
-- Objetivo principal: ${profile.goal}
-- Meta específica: ${profile.goalDirection || 'Perder'} ${profile.goalTargetKg || 0}kg en ${profile.goalTimelineMonths || 0} meses
-- Disponibilidad de entrenamiento: ${profile.schedule}
-- Días por semana: ${profile.trainingDaysPerWeek || 'N/A'} | Minutos por sesión: ${profile.sessionMinutes || 'N/A'}
-- Horario laboral/estudio: ${profile.workHours}
-- Horarios de comida: Desayuno ${profile.mealTimes?.breakfast}, Almuerzo ${profile.mealTimes?.brunch}, Comida ${profile.mealTimes?.lunch}, Merienda ${profile.mealTimes?.snack}, Cena ${profile.mealTimes?.dinner}
-- Preferencias de alimentos: verduras ${Array.isArray(profile.foodPreferences?.vegetables) ? profile.foodPreferences.vegetables.join(', ') : 'N/A'}, carbohidratos ${Array.isArray(profile.foodPreferences?.carbs) ? profile.foodPreferences.carbs.join(', ') : 'N/A'}, proteínas ${Array.isArray(profile.foodPreferences?.proteins) ? profile.foodPreferences.proteins.join(', ') : 'N/A'}
-- Plato especial sugerido por el usuario: ${profile.specialDish?.ingredients || 'N/A'} (${profile.specialDish?.targetCalories || 'N/A'} kcal objetivo)
-- Clase especial semanal: ${profile.weeklySpecialSession?.enabled ? `${profile.weeklySpecialSession.activity} el ${profile.weeklySpecialSession.day} por ${profile.weeklySpecialSession.durationMinutes} minutos` : 'No aplica'}
-
-INSTRUCCIONES PARA LA RUTINA:
-- Genera ÚNICAMENTE los días de entrenamiento según la disponibilidad indicada (no generes días de descanso)
-- Cada día debe tener entre 5 y 8 ejercicios específicos y variados
-- Si hay clase especial semanal activa, inclúyela en la planificación semanal como actividad adicional de cardio/funcional (sin reemplazar fuerza)
-- Incluye siempre: ejercicios compuestos (multi-articulares) + ejercicios de aislamiento
-- Adapta las series, repeticiones y peso al nivel del usuario
-- Asigna grupos musculares correctos y específicos (ej: "Pecho", "Espalda", "Hombros", "Bíceps", "Tríceps", "Piernas", "Glúteos", "Core", "Cardio")
-- Los pesos iniciales deben ser realistas para el nivel indicado
-- Para principiantes: 3 series, 10-15 reps, pesos moderados; intermedios: 4 series, 8-12 reps; avanzados: 4-5 series, 6-10 reps con técnicas avanzadas
-
-INSTRUCCIONES PARA LA DIETA:
-- Calcula las calorías según el objetivo: déficit calórico para perder grasa, superávit para ganar masa, mantenimiento para salud
-- Ajusta el déficit/superávit para acercarse a la meta de kg en meses de forma realista y segura
-- Distribuye los macros correctamente según el objetivo (más proteína para volumen/definición)
-- Las comidas deben ser realistas, variadas y con alimentos accesibles en España/Latinoamérica
-- Cada comida debe tener nombre concreto (ej: "Tortilla de avena con plátano") no genérico
-- Ajusta los horarios de comida al horario laboral del usuario
-- Incluye 5 tiempos si hay horario de almuerzo (desayuno, almuerzo, comida, merienda, cena)
-- Prioriza alimentos de las listas de verduras, carbohidratos y proteínas indicadas por el usuario
-- Incluye una versión del plato especial cercano a las calorías objetivo cuando sea posible
-
-Responde SOLO con JSON válido (sin markdown, sin bloques de código, sin comentarios) con esta estructura exacta:
-{
-  "routine": [
-    {
-      "day": "string (ej: Lunes)",
-      "focus": "string (ej: Pecho y Tríceps)",
-      "exercises": [
-        {
-          "id": "string único",
-          "name": "string (nombre del ejercicio en español)",
-          "nameEn": "string (exercise name in English, used to search exercise GIFs)",
-          "sets": number,
-          "reps": "string (ej: '10-12' o '15' o '30 segundos')",
-          "weight": number (en kg, 0 si es con peso corporal),
-          "gifUrl": "",
-          "muscleGroup": "string (grupo muscular principal)"
-        }
-      ]
-    }
-  ],
-  "diet": {
-    "dailyCalories": number,
-    "macros": {"protein": number, "carbs": number, "fat": number},
-    "meals": [
-      {
-        "id": "string único",
-        "name": "string (nombre específico de la comida)",
-        "time": "string (hora en formato HH:MM)",
-        "calories": number,
-        "protein": number,
-        "carbs": number,
-        "fat": number,
-        "description": "string (descripción detallada con ingredientes y cantidades)"
-      }
-    ]
-  },
-  "insights": {
-    "sleepRecommendation": "string (recomendación de sueño personalizada y detallada)",
-    "estimatedResults": "string (resultados estimados realistas en 4, 8 y 12 semanas, alineados a la meta de kg/meses)",
-    "dailyQuote": "string (frase motivacional personalizada mencionando el nombre ${profile.name})"
-  }
-}`;
+    const { prompt, targets, days } = buildPlanPrompt(profile);
 
     const response = await generateContentWithRetry({
       model: 'gemini-3-flash-preview',
@@ -517,7 +430,14 @@ Responde SOLO con JSON válido (sin markdown, sin bloques de código, sin coment
 
     try {
       const jsonText = extractJsonBlock(response.text);
-      const plan = JSON.parse(jsonText);
+      const raw = JSON.parse(jsonText);
+      const fb = fallbackPlan(profile);
+      // Validacion y correccion: kcal/macros fijados por el servidor, 7 dias de menu, ids unicos.
+      const plan = {
+        routine: normalizeRoutine(raw.routine, days) || fb.routine,
+        diet: normalizeDiet(raw.diet, profile, targets) || fb.diet,
+        insights: { ...fb.insights, ...(raw.insights && typeof raw.insights === 'object' ? raw.insights : {}) },
+      };
 
       // Enrich exercises with GIF URLs from ExerciseDB
       try {
@@ -559,22 +479,7 @@ router.post('/generate-alternative-meal', authMiddleware, aiRateLimiter, validat
     const { oldMeal, profile } = req.body;
     logInfo('ai.generate_alternative_meal.started', { requestId: req.requestId });
 
-    const prompt = `Eres un nutricionista experto. Genera UNA comida alternativa para:
-- Comida actual: ${oldMeal.name} (${oldMeal.description})
-- Calorías: ${oldMeal.calories}, Macros: ${oldMeal.protein}g proteína, ${oldMeal.carbs}g carbos, ${oldMeal.fat}g grasa
-- Objetivo del usuario: ${profile.goal}
-
-Responde SOLO con JSON válido (sin markdown, sin comentarios):
-{
-  "id": "${oldMeal.id}",
-  "name": "string",
-  "time": "${oldMeal.time}",
-  "calories": ${oldMeal.calories},
-  "protein": ${oldMeal.protein},
-  "carbs": ${oldMeal.carbs},
-  "fat": ${oldMeal.fat},
-  "description": "descripción corta y saludable"
-}`;
+    const prompt = buildAlternativeMealPrompt({ oldMeal, profile, dayMeals: req.body.dayMeals });
 
     const response = await generateContentWithRetry({
       model: 'gemini-3-flash-preview',
@@ -585,7 +490,7 @@ Responde SOLO con JSON válido (sin markdown, sin comentarios):
 
     try {
       const jsonText = extractJsonBlock(response.text);
-      const meal = JSON.parse(jsonText);
+      const meal = normalizeAlternativeMeal(JSON.parse(jsonText), oldMeal);
       logInfo('ai.generate_alternative_meal.success', { requestId: req.requestId });
       res.json(meal);
     } catch (parseErr) {
