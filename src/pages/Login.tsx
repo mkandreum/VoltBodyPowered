@@ -2,27 +2,12 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Zap, Mail, Lock, User, LogIn, Eye, EyeOff, AlertCircle, ArrowRight } from 'lucide-react';
 import { authService } from '../services/authService';
-import { workoutService } from '../services/workoutService';
+import { hydrateFromServer } from '../services/hydration';
 import { useAppStore } from '../store/useAppStore';
 import SplashScreen from '../components/SplashScreen';
 
 export default function Login() {
-  const {
-    setAuthToken,
-    setUser,
-    setProfile,
-    setProfilePhoto,
-    setRoutine,
-    setDiet,
-    setInsights,
-    completeOnboarding,
-    setTheme,
-    setMotivationPhrase,
-    setMotivationPhoto,
-    setLogs,
-    setProgressPhotos,
-    setWeightLogs,
-  } = useAppStore();
+  const { setAuthToken, setUser } = useAppStore();
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -54,155 +39,18 @@ export default function Login() {
         });
       }
 
-      // ── Instant State Hydration from Login Response ──────────
-      // The backend /auth/login route already returns user, profile, routine,
-      // diet, and insights in the response payload. We hydrate the store immediately
-      // to achieve sub-100ms instant transitions without waterfall network roundtrips.
+      // Login: the whole user state lives in the DB, load it before showing the app.
       if (isLogin) {
-        const profileData = (response as any).profile;
-        const routineData = (response as any).routine || profileData?.routine;
-        const dietData = (response as any).diet || profileData?.diet;
-
-        if (profileData && routineData && dietData) {
-          const appPreferences = profileData.insights?.appPreferences || {};
-
-          setAuthToken(response.token);
-          setUser(response.user);
-          setProfile({
-            name: response.user.name || '',
-            age: profileData.age,
-            weight: profileData.weight,
-            height: profileData.height,
-            gender: profileData.gender,
-            goal: profileData.goal,
-            currentState: profileData.currentState,
-            schedule: profileData.schedule,
-            workHours: profileData.workHours,
-            trainingDaysPerWeek: profileData.trainingDaysPerWeek || appPreferences.trainingDaysPerWeek || 3,
-            sessionMinutes: profileData.sessionMinutes || appPreferences.sessionMinutes || 45,
-            goalDirection: profileData.goalDirection || appPreferences.goalDirection || 'Perder',
-            goalTargetKg: profileData.goalTargetKg || appPreferences.goalTargetKg || 5,
-            goalTimelineMonths: profileData.goalTimelineMonths || appPreferences.goalTimelineMonths || 3,
-            mealTimes: {
-              breakfast: profileData.mealTimes?.breakfast || '08:00',
-              brunch: profileData.mealTimes?.brunch || '11:30',
-              lunch: profileData.mealTimes?.lunch || '14:00',
-              snack: profileData.mealTimes?.snack || '18:00',
-              dinner: profileData.mealTimes?.dinner || '21:00',
-            },
-            foodPreferences: {
-              vegetables: profileData.foodPreferences?.vegetables || appPreferences.foodPreferences?.vegetables || [],
-              carbs: profileData.foodPreferences?.carbs || appPreferences.foodPreferences?.carbs || [],
-              proteins: profileData.foodPreferences?.proteins || appPreferences.foodPreferences?.proteins || [],
-            },
-            weeklySpecialSession: profileData.weeklySpecialSession || appPreferences.weeklySpecialSession || {
-              enabled: false,
-              activity: 'Zumba',
-              day: 'Sábado',
-              durationMinutes: 60,
-            },
-            avatarConfig: profileData.avatarConfig ?? { muscleMass: 0.5, bodyFat: 0.5 },
-          });
-          setRoutine(routineData);
-          setDiet(dietData);
-          if (profileData.insights || (response as any).insights) {
-            setInsights(profileData.insights || (response as any).insights);
-          }
-          if (profileData.theme || appPreferences.theme) {
-            setTheme(profileData.theme || appPreferences.theme);
-          }
-          if (profileData.motivationPhrase || appPreferences.motivationPhrase || (response as any).motivationPhrase) {
-            setMotivationPhrase(profileData.motivationPhrase || appPreferences.motivationPhrase || (response as any).motivationPhrase);
-          }
-          if (profileData.motivationPhoto || (response as any).motivationPhoto) {
-            setMotivationPhoto(profileData.motivationPhoto || (response as any).motivationPhoto);
-          }
-          if (profileData.profilePhoto || (response as any).profilePhoto) {
-            setProfilePhoto(profileData.profilePhoto || (response as any).profilePhoto);
-          }
-          completeOnboarding();
-
-          // Non-blocking background sync for workout logs, photos, and weight logs
-          Promise.allSettled([
-            workoutService.getLogs(response.token),
-            workoutService.getPhotos(response.token),
-            workoutService.getWeightLogs(response.token),
-          ]).then(([logsRes, photosRes, weightsRes]) => {
-            if (logsRes.status === 'fulfilled' && Array.isArray(logsRes.value)) setLogs(logsRes.value);
-            if (photosRes.status === 'fulfilled' && Array.isArray(photosRes.value)) setProgressPhotos(photosRes.value);
-            if (weightsRes.status === 'fulfilled' && Array.isArray(weightsRes.value)) setWeightLogs(weightsRes.value);
-          });
-
-          return;
-        }
-
-        // Fallback: If backend payload didn't include full profile, fetch concurrently
+        setAuthToken(response.token);
+        setUser(response.user);
         try {
-          const profile = await authService.getProfile(response.token);
-          if (profile && profile.routine && profile.diet) {
-            const appPreferences = profile.insights?.appPreferences || {};
-
-            setAuthToken(response.token);
-            setUser(response.user);
-            setProfile({
-              name: response.user.name || '',
-              age: profile.age,
-              weight: profile.weight,
-              height: profile.height,
-              gender: profile.gender,
-              goal: profile.goal,
-              currentState: profile.currentState,
-              schedule: profile.schedule,
-              workHours: profile.workHours,
-              trainingDaysPerWeek: profile.trainingDaysPerWeek || appPreferences.trainingDaysPerWeek || 3,
-              sessionMinutes: profile.sessionMinutes || appPreferences.sessionMinutes || 45,
-              goalDirection: profile.goalDirection || appPreferences.goalDirection || 'Perder',
-              goalTargetKg: profile.goalTargetKg || appPreferences.goalTargetKg || 5,
-              goalTimelineMonths: profile.goalTimelineMonths || appPreferences.goalTimelineMonths || 3,
-              mealTimes: {
-                breakfast: profile.mealTimes?.breakfast || '08:00',
-                brunch: profile.mealTimes?.brunch || '11:30',
-                lunch: profile.mealTimes?.lunch || '14:00',
-                snack: profile.mealTimes?.snack || '18:00',
-                dinner: profile.mealTimes?.dinner || '21:00',
-              },
-              foodPreferences: {
-                vegetables: profile.foodPreferences?.vegetables || appPreferences.foodPreferences?.vegetables || [],
-                carbs: profile.foodPreferences?.carbs || appPreferences.foodPreferences?.carbs || [],
-                proteins: profile.foodPreferences?.proteins || appPreferences.foodPreferences?.proteins || [],
-              },
-              weeklySpecialSession: profile.weeklySpecialSession || appPreferences.weeklySpecialSession || {
-                enabled: false,
-                activity: 'Zumba',
-                day: 'Sábado',
-                durationMinutes: 60,
-              },
-              avatarConfig: profile.avatarConfig ?? { muscleMass: 0.5, bodyFat: 0.5 },
-            });
-            setRoutine(profile.routine);
-            setDiet(profile.diet);
-            if (profile.insights) setInsights(profile.insights);
-            if (profile.theme || appPreferences.theme) setTheme(profile.theme || appPreferences.theme);
-            if (profile.motivationPhrase || appPreferences.motivationPhrase) setMotivationPhrase(profile.motivationPhrase || appPreferences.motivationPhrase);
-            if (profile.motivationPhoto) setMotivationPhoto(profile.motivationPhoto);
-            if (profile.profilePhoto) setProfilePhoto(profile.profilePhoto);
-            completeOnboarding();
-
-            Promise.allSettled([
-              workoutService.getLogs(response.token),
-              workoutService.getPhotos(response.token),
-              workoutService.getWeightLogs(response.token),
-            ]).then(([logsRes, photosRes, weightsRes]) => {
-              if (logsRes.status === 'fulfilled' && Array.isArray(logsRes.value)) setLogs(logsRes.value);
-              if (photosRes.status === 'fulfilled' && Array.isArray(photosRes.value)) setProgressPhotos(photosRes.value);
-              if (weightsRes.status === 'fulfilled' && Array.isArray(weightsRes.value)) setWeightLogs(weightsRes.value);
-            });
-
-            return;
-          }
+          await hydrateFromServer(response.token);
         } catch (err) {
-          console.error('Could not restore saved plan, proceeding to onboarding:', err);
+          console.error('Could not load saved data:', err);
+          setError('No se pudieron cargar tus datos. Inténtalo de nuevo.');
+          useAppStore.getState().logout();
         }
+        return;
       }
 
       // New registration or no saved profile: set auth and proceed to onboarding

@@ -1,4 +1,4 @@
-import { useEffect, useRef, lazy, Suspense } from 'react';
+import { useEffect, useRef, useState, lazy, Suspense } from 'react';
 import { useAppStore } from './store/useAppStore';
 import Login from './pages/Login';
 import Onboarding from './pages/Onboarding';
@@ -9,6 +9,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { pageTransition, fadeSlideUp } from './lib/motion';
 import { CheckCircle2, AlertCircle, Info } from 'lucide-react';
 import { notificationService } from './services/notificationService';
+import { hydrateFromServer } from './services/hydration';
 
 const Home = lazy(() => import('./pages/Home'));
 const Workout = lazy(() => import('./pages/Workout'));
@@ -38,7 +39,9 @@ function PageSkeleton() {
 }
 
 export default function App() {
-  const { isAuthenticated, isOnboarded, currentTab, theme, toasts, dismissToast, _hasHydrated, notificationsEnabled, profile, logs, weightLogs } = useAppStore();
+  const { isAuthenticated, isOnboarded, currentTab, theme, toasts, dismissToast, _hasHydrated, notificationsEnabled, profile, logs, weightLogs, authToken, _dataReady } = useAppStore();
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const scrollPositions = useRef<Record<string, number>>({});
 
   // Schedule notification reminders when notifications are enabled and user is onboarded
@@ -50,6 +53,18 @@ export default function App() {
     notificationService.scheduleAll(profile, logs, weightLogs);
     return () => notificationService.clearAll();
   }, [notificationsEnabled, isOnboarded, profile, logs, weightLogs]);
+
+  // After the persisted token is restored, load all user data from the DB
+  useEffect(() => {
+    if (!_hasHydrated || !authToken || _dataReady) return;
+    let cancelled = false;
+    setLoadError(false);
+    hydrateFromServer(authToken).catch((err) => {
+      console.error('Could not load user data:', err);
+      if (!cancelled) setLoadError(true);
+    });
+    return () => { cancelled = true; };
+  }, [_hasHydrated, authToken, _dataReady, reloadKey]);
 
   // Disable overscroll on mobile
   useEffect(() => {
@@ -103,6 +118,19 @@ export default function App() {
 
   // While Zustand is rehydrating from localStorage, show a splash instead of the login form
   if (!_hasHydrated) {
+    return <SplashScreen />;
+  }
+
+  if (isAuthenticated && !_dataReady) {
+    if (loadError) {
+      return (
+        <div className="min-h-[100dvh] flex flex-col items-center justify-center gap-4 text-white px-6 text-center">
+          <p className="text-sm text-gray-300">No se pudieron cargar tus datos del servidor.</p>
+          <button type="button" className="primary-btn px-5 py-2.5 rounded-xl font-bold" onClick={() => setReloadKey((k) => k + 1)}>Reintentar</button>
+          <button type="button" className="text-xs text-gray-400 underline" onClick={() => useAppStore.getState().logout()}>Cerrar sesión</button>
+        </div>
+      );
+    }
     return <SplashScreen />;
   }
 

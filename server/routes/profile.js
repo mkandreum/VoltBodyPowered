@@ -33,25 +33,8 @@ router.put('/', authMiddleware, validateProfileUpdatePayload, async (req, res) =
       routine, diet, insights, profilePhoto, motivationPhoto,
       theme, motivationPhrase, goalDirection, goalTargetKg,
       goalTimelineMonths, trainingDaysPerWeek, sessionMinutes,
-      weeklySpecialSession, foodPreferences, specialDish
+      weeklySpecialSession, foodPreferences, specialDish, notificationsEnabled
     } = req.body;
-
-    const mergedInsights = insights !== undefined ? {
-      ...(insights || {}),
-      appPreferences: {
-        ...(insights?.appPreferences || {}),
-        theme,
-        motivationPhrase,
-        goalDirection,
-        goalTargetKg,
-        goalTimelineMonths,
-        trainingDaysPerWeek,
-        sessionMinutes,
-        weeklySpecialSession,
-        foodPreferences,
-        specialDish,
-      }
-    } : undefined;
 
     const profile = await prisma.userProfile.update({
       where: { userId: req.userId },
@@ -79,7 +62,9 @@ router.put('/', authMiddleware, validateProfileUpdatePayload, async (req, res) =
         ...(avatarConfig !== undefined && { avatarConfig }),
         ...(routine !== undefined && { routine }),
         ...(diet !== undefined && { diet }),
-        ...(mergedInsights !== undefined && { insights: mergedInsights }),
+        // insights stored as sent; preferences live in their own columns (no insights.appPreferences / appExtras)
+        ...(insights !== undefined && { insights }),
+        ...(notificationsEnabled !== undefined && { notificationsEnabled }),
         ...(profilePhoto !== undefined && { profilePhoto }),
       }
     });

@@ -1,5 +1,9 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { workoutService } from '../services/workoutService';
+import { dataService } from '../services/dataService';
+import type { DailyMetricDTO, MetricsPatch } from '../services/dataService';
+import { authService } from '../services/authService';
 
 export type UserProfile = {
   name: string;
@@ -81,6 +85,10 @@ export type DietPlan = {
 };
 
 export type WorkoutLog = {
+  /** Server id (set once the log is stored in the DB) */
+  id?: string;
+  /** Client-only key used to match an optimistic log with the server response */
+  localId?: string;
   date: string;
   exerciseId: string;
   weight: number;
@@ -143,6 +151,27 @@ export type AppToast = {
   message?: string;
 };
 
+const DEFAULT_WEEKLY_GOALS: WeeklyGoal[] = [
+  { id: 'habit-1', label: 'Completar 3 sesiones de fuerza', done: false },
+  { id: 'habit-2', label: 'Dormir 7h al menos 5 dias', done: false },
+  { id: 'habit-3', label: 'Cumplir proteina diaria 5 dias', done: false },
+];
+
+const pad2 = (n: number) => String(n).padStart(2, '0');
+
+/** Local date as YYYY-MM-DD */
+export function toDateKey(d: Date = new Date()): string {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+/** Monday of the current week (local) as YYYY-MM-DD */
+export function currentWeekStart(d: Date = new Date()): string {
+  const copy = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const diff = (copy.getDay() + 6) % 7;
+  copy.setDate(copy.getDate() - diff);
+  return toDateKey(copy);
+}
+
 export type RecoveryLog = {
   date: string;        // YYYY-MM-DD
   sleepHours: number;
@@ -154,6 +183,9 @@ interface AppState {
   // Hydration guard — true once Zustand has rehydrated from localStorage
   _hasHydrated: boolean;
   _setHasHydrated: (v: boolean) => void;
+  // True once the user's data has been loaded from the server (GET /api/data/all etc.)
+  _dataReady: boolean;
+  _setDataReady: (v: boolean) => void;
 
   // Auth
   authToken: string | null;
@@ -184,6 +216,14 @@ interface AppState {
   notificationsEnabled: boolean;
   // Recovery Score logs (morning check-in data)
   recoveryLogs: RecoveryLog[];
+  // Daily health metrics / water by date (YYYY-MM-DD)
+  dailyMetrics: Record<string, DailyMetricDTO>;
+
+  // Server sync
+  loadUserData: () => Promise<void>;
+  saveMetrics: (date: string, patch: MetricsPatch) => void;
+  setNotificationsEnabledLocal: (v: boolean) => void;
+  removeLog: (index: number) => void;
 
   // Auth actions
   setAuthToken: (token: string | null) => void;
@@ -199,7 +239,7 @@ interface AppState {
   setDiet: (diet: DietPlan) => void;
   setInsights: (insights: Insights) => void;
   swapMeal: (mealId: string, newMeal: Meal) => void;
-  addLog: (log: WorkoutLog) => void;
+  addLog: (log: WorkoutLog) => Promise<void>;
   updateLog: (index: number, updates: Partial<WorkoutLog>) => void;
   setLogs: (logs: WorkoutLog[]) => void;
   setProgressPhotos: (photos: ProgressPhoto[]) => void;
@@ -329,12 +369,27 @@ const defaultExerciseLibrary: ExerciseLibraryEntry[] = [
   },
 ];
 
+function syncFailed(title: string) {
+  const st = useAppStore.getState();
+  st.showToast({ type: 'error', title, message: 'Se restaurarán los datos desde el servidor.' });
+  st.loadUserData();
+}
+
+function syncCustomWorkout(exercises: Exercise[]) {
+  const token = useAppStore.getState().authToken;
+  if (!token) return;
+  dataService.putCustomWorkout(token, exercises).catch(() => syncFailed('No se pudo guardar tu rutina'));
+}
+
 export const useAppStore = create<AppState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       // Hydration guard
       _hasHydrated: false,
       _setHasHydrated: (v) => set({ _hasHydrated: v }),
+      _dataReady: false,
+      _setDataReady: (v) => set({ _dataReady: v }),
+
 
       // Auth state
       authToken: null,
@@ -359,14 +414,105 @@ export const useAppStore = create<AppState>()(
       toasts: [],
       weightLogs: [],
       mealEatenRecord: {},
-      weeklyGoals: [
-        { id: 'habit-1', label: 'Completar 3 sesiones de fuerza', done: false },
-        { id: 'habit-2', label: 'Dormir 7h al menos 5 dias', done: false },
-        { id: 'habit-3', label: 'Cumplir proteina diaria 5 dias', done: false },
-      ],
+      weeklyGoals: DEFAULT_WEEKLY_GOALS.map((g) => ({ ...g })),
       achievements: [],
       notificationsEnabled: false,
       recoveryLogs: [],
+      dailyMetrics: {},
+
+      loadUserData: async () => {
+        const token = get().authToken;
+        if (!token) return;
+        const [logsRes, photosRes, weightsRes, allRes] = await Promise.allSettled([
+          workoutService.getLogs(token),
+          workoutService.getPhotos(token),
+          workoutService.getWeightLogs(token),
+          dataService.getAll(token),
+        ]);
+        if (logsRes.status === 'fulfilled' && Array.isArray(logsRes.value)) {
+          set({
+            logs: logsRes.value.map((l: any) => ({
+              id: l.id,
+              date: l.date,
+              exerciseId: l.exerciseId,
+              weight: l.weight,
+              reps: l.reps,
+              ...(l.duration != null ? { duration: l.duration } : {}),
+              ...(l.rpe != null ? { rpe: l.rpe } : {}),
+              ...(l.rir != null ? { rir: l.rir } : {}),
+            })),
+          });
+        }
+        if (photosRes.status === 'fulfilled' && Array.isArray(photosRes.value)) set({ progressPhotos: photosRes.value });
+        if (weightsRes.status === 'fulfilled' && Array.isArray(weightsRes.value)) get().setWeightLogs(weightsRes.value);
+
+        if (allRes.status === 'fulfilled') {
+          const all = allRes.value;
+          const mealRecord: Record<string, string[]> = {};
+          for (const m of all.mealLogs ?? []) (mealRecord[m.date] ||= []).push(m.mealId);
+
+          const metrics: Record<string, DailyMetricDTO> = {};
+          for (const m of all.metrics ?? []) metrics[m.date] = m;
+
+          const weekStart = currentWeekStart();
+          const thisWeek = (all.goals ?? []).filter((g) => g.weekStart === weekStart);
+          const goals: WeeklyGoal[] = thisWeek.length
+            ? thisWeek.map((g) => ({ id: g.goalId, label: g.label, done: g.done }))
+            : DEFAULT_WEEKLY_GOALS.map((g) => ({ ...g }));
+
+          const catalog = (await import('../lib/achievements')).ACHIEVEMENTS_CATALOG;
+          const achievements: Achievement[] = (all.achievements ?? []).map((a) => {
+            const meta = catalog.find((c) => c.id === a.id);
+            return { id: a.id, label: meta?.label ?? a.id, icon: meta?.icon ?? '🏅', description: meta?.description ?? '', unlockedAt: a.unlockedAt };
+          });
+
+          set({
+            mealEatenRecord: mealRecord,
+            dailyMetrics: metrics,
+            weeklyGoals: goals,
+            achievements,
+            customWorkout: (all.customWorkout ?? []) as Exercise[],
+            recoveryLogs: (all.recovery ?? []).map((r) => ({
+              date: r.date,
+              sleepHours: r.sleepHours,
+              ...(r.hrv != null ? { hrv: r.hrv } : {}),
+              score: r.score,
+            })),
+          });
+
+          // First time this week: persist the default goals so they live in the DB
+          if (!thisWeek.length) {
+            dataService.putGoals(token, weekStart, goals).catch(() => { /* retried on next toggle */ });
+          }
+        }
+      },
+
+      saveMetrics: (date, patch) => {
+        set((state) => ({
+          dailyMetrics: { ...state.dailyMetrics, [date]: { ...(state.dailyMetrics[date] ?? { date }), ...patch, date } },
+        }));
+        const token = get().authToken;
+        if (!token) return;
+        dataService.putMetrics(token, date, patch).catch(() => {
+          get().showToast({ type: 'error', title: 'No se pudo guardar', message: 'Los datos se restaurarán desde el servidor.' });
+          get().loadUserData();
+        });
+      },
+
+      setNotificationsEnabledLocal: (v) => set({ notificationsEnabled: v }),
+
+      removeLog: (index) => {
+        const log = get().logs[index];
+        if (!log) return;
+        set((state) => ({ logs: state.logs.filter((_, i) => i !== index) }));
+        const token = get().authToken;
+        if (token && log.id) {
+          dataService.deleteLog(token, log.id).catch(() => {
+            get().showToast({ type: 'error', title: 'No se pudo eliminar la serie' });
+            get().loadUserData();
+          });
+        }
+      },
 
       // Auth actions
       setAuthToken: (token) => set({ authToken: token, isAuthenticated: !!token }),
@@ -391,11 +537,10 @@ export const useAppStore = create<AppState>()(
         mealEatenRecord: {},
         achievements: [],
         recoveryLogs: [],
-        weeklyGoals: [
-          { id: 'habit-1', label: 'Completar 3 sesiones de fuerza', done: false },
-          { id: 'habit-2', label: 'Dormir 7h al menos 5 dias', done: false },
-          { id: 'habit-3', label: 'Cumplir proteina diaria 5 dias', done: false },
-        ],
+        weeklyGoals: DEFAULT_WEEKLY_GOALS.map((g) => ({ ...g })),
+        dailyMetrics: {},
+        notificationsEnabled: false,
+        _dataReady: false,
       }),
 
       // Profile actions
@@ -415,40 +560,68 @@ export const useAppStore = create<AppState>()(
           }
         };
       }),
-      addLog: (log) => set((state) => ({ logs: [...state.logs, log] })),
-      updateLog: (index, updates) =>
+      addLog: async (log) => {
+        const localId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        set((state) => ({ logs: [...state.logs, { ...log, localId }] }));
+        const token = get().authToken;
+        if (!token) return;
+        try {
+          const saved = await workoutService.addLog(token, log);
+          set((state) => ({
+            logs: state.logs.map((l) => (l.localId === localId ? { ...l, id: saved?.id } : l)),
+          }));
+        } catch (error) {
+          // Drop the optimistic row; the DB is the source of truth
+          set((state) => ({ logs: state.logs.filter((l) => l.localId !== localId) }));
+          throw error;
+        }
+      },
+      updateLog: (index, updates) => {
+        const target = get().logs[index];
         set((state) => ({
           logs: state.logs.map((log, i) => (i === index ? { ...log, ...updates } : log)),
-        })),
+        }));
+        const token = get().authToken;
+        if (!token || !target?.id) return;
+        const { weight, reps, duration, rpe, rir } = updates;
+        const body: Record<string, number> = {};
+        if (weight !== undefined) body.weight = weight;
+        if (reps !== undefined) body.reps = reps;
+        if (duration !== undefined) body.duration = duration;
+        if (rpe !== undefined) body.rpe = rpe;
+        if (rir !== undefined) body.rir = rir;
+        dataService.updateLog(token, target.id, body).catch(() => {
+          get().showToast({ type: 'error', title: 'No se pudo actualizar la serie' });
+          get().loadUserData();
+        });
+      },
       setLogs: (logs) => set({ logs }),
       setProgressPhotos: (progressPhotos) => set({ progressPhotos }),
       setTab: (tab) => set({ currentTab: tab }),
       setTheme: (theme) => set({ theme }),
-      addToCustomWorkout: (exercise) => set((state) => {
-        if (state.customWorkout.some((item) => item.id === exercise.id)) {
-          return state;
-        }
-
-        return {
-          customWorkout: [
-            ...state.customWorkout,
-            {
-              id: exercise.id,
-              name: exercise.name,
-              sets: exercise.defaultSets,
-              reps: exercise.defaultReps,
-              weight: 0,
-              gifUrl: '',
-              muscleGroup: exercise.muscleGroup,
-              exerciseType: exercise.exerciseType,
-            },
-          ],
-        };
-      }),
-      removeFromCustomWorkout: (exerciseId) =>
-        set((state) => ({
-          customWorkout: state.customWorkout.filter((item) => item.id !== exerciseId),
-        })),
+      addToCustomWorkout: (exercise) => {
+        if (get().customWorkout.some((item) => item.id === exercise.id)) return;
+        const next: Exercise[] = [
+          ...get().customWorkout,
+          {
+            id: exercise.id,
+            name: exercise.name,
+            sets: exercise.defaultSets,
+            reps: exercise.defaultReps,
+            weight: 0,
+            gifUrl: '',
+            muscleGroup: exercise.muscleGroup,
+            exerciseType: exercise.exerciseType,
+          },
+        ];
+        set({ customWorkout: next });
+        syncCustomWorkout(next);
+      },
+      removeFromCustomWorkout: (exerciseId) => {
+        const next = get().customWorkout.filter((item) => item.id !== exerciseId);
+        set({ customWorkout: next });
+        syncCustomWorkout(next);
+      },
       setMotivationPhrase: (phrase) => set({ motivationPhrase: phrase }),
       setMotivationPhoto: (photo) => set({ motivationPhoto: photo }),
       showToast: (toast) =>
@@ -477,24 +650,31 @@ export const useAppStore = create<AppState>()(
             .map((l) => ({ date: typeof l.date === 'string' ? l.date.slice(0, 10) : String(l.date), weight: l.weight }))
             .sort((a, b) => a.date.localeCompare(b.date)),
         }),
-      toggleMealEaten: (mealId, date) =>
-        set((state) => {
-          const existing = state.mealEatenRecord[date] ?? [];
-          const updated = existing.includes(mealId)
-            ? existing.filter((id) => id !== mealId)
-            : [...existing, mealId];
-          return { mealEatenRecord: { ...state.mealEatenRecord, [date]: updated } };
-        }),
-      toggleWeeklyGoal: (id) =>
-        set((state) => ({
-          weeklyGoals: state.weeklyGoals.map((g) => (g.id === id ? { ...g, done: !g.done } : g)),
-        })),
+      toggleMealEaten: (mealId, date) => {
+        const existing = get().mealEatenRecord[date] ?? [];
+        const eaten = !existing.includes(mealId);
+        const updated = eaten ? [...existing, mealId] : existing.filter((id) => id !== mealId);
+        set((state) => ({ mealEatenRecord: { ...state.mealEatenRecord, [date]: updated } }));
+        const token = get().authToken;
+        if (!token) return;
+        dataService.putMeal(token, date, mealId, eaten).catch(() => syncFailed('No se pudo guardar la comida'));
+      },
+      toggleWeeklyGoal: (id) => {
+        const goals = get().weeklyGoals.map((g) => (g.id === id ? { ...g, done: !g.done } : g));
+        set({ weeklyGoals: goals });
+        const token = get().authToken;
+        if (!token) return;
+        dataService.putGoals(token, currentWeekStart(), goals).catch(() => syncFailed('No se pudo guardar el objetivo'));
+      },
       completeOnboarding: () => set({ isOnboarded: true }),
-      addAchievement: (achievement) =>
-        set((state) => {
-          if (state.achievements.some((a) => a.id === achievement.id)) return state;
-          return { achievements: [...state.achievements, { ...achievement, unlockedAt: new Date().toISOString() }] };
-        }),
+      addAchievement: (achievement) => {
+        if (get().achievements.some((a) => a.id === achievement.id)) return;
+        const unlockedAt = new Date().toISOString();
+        set((state) => ({ achievements: [...state.achievements, { ...achievement, unlockedAt }] }));
+        const token = get().authToken;
+        if (!token) return;
+        dataService.postAchievement(token, achievement.id, unlockedAt).catch(() => syncFailed('No se pudo guardar el logro'));
+      },
       resetApp: () => set({
         isOnboarded: false,
         profile: null,
@@ -512,30 +692,53 @@ export const useAppStore = create<AppState>()(
         mealEatenRecord: {},
         achievements: [],
         recoveryLogs: [],
-        weeklyGoals: [
-          { id: 'habit-1', label: 'Completar 3 sesiones de fuerza', done: false },
-          { id: 'habit-2', label: 'Dormir 7h al menos 5 dias', done: false },
-          { id: 'habit-3', label: 'Cumplir proteina diaria 5 dias', done: false },
-        ],
+        weeklyGoals: DEFAULT_WEEKLY_GOALS.map((g) => ({ ...g })),
+        dailyMetrics: {},
+        notificationsEnabled: false,
+        _dataReady: false,
       }),
-      setNotificationsEnabled: (v) => set({ notificationsEnabled: v }),
-      addRecoveryLog: (log) =>
+      setNotificationsEnabled: (v) => {
+        set({ notificationsEnabled: v });
+        const token = get().authToken;
+        if (!token) return;
+        authService.updateProfile(token, { notificationsEnabled: v }).catch(() => {
+          set({ notificationsEnabled: !v });
+          get().showToast({ type: 'error', title: 'No se pudo guardar la preferencia' });
+        });
+      },
+      addRecoveryLog: (log) => {
         set((state) => {
           const existingIndex = state.recoveryLogs.findIndex((l) => l.date === log.date);
           if (existingIndex >= 0) {
-            // Update existing entry for this date in-place (no re-sort needed)
             const updated = [...state.recoveryLogs];
             updated[existingIndex] = log;
             return { recoveryLogs: updated };
           }
-          // New date — append and sort once
           return {
             recoveryLogs: [...state.recoveryLogs, log].sort((a, b) => a.date.localeCompare(b.date)),
           };
-        }),
+        });
+        const token = get().authToken;
+        if (!token) return;
+        dataService
+          .putRecovery(token, log.date, { sleepHours: log.sleepHours, ...(log.hrv !== undefined ? { hrv: log.hrv } : {}), score: log.score })
+          .catch(() => syncFailed('No se pudo guardar la recuperación'));
+      },
     }),
     {
       name: 'voltbody-storage',
+      // Only auth + theme live on the device. Everything else comes from the DB.
+      partialize: (state) => ({ authToken: state.authToken, user: state.user, theme: state.theme }),
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as Partial<AppState>;
+        return {
+          ...current,
+          authToken: p.authToken ?? null,
+          user: p.user ?? null,
+          theme: p.theme ?? current.theme,
+          isAuthenticated: !!p.authToken,
+        };
+      },
       onRehydrateStorage: () => (state) => {
         state?._setHasHydrated(true);
       },

@@ -215,26 +215,11 @@ function NutriRings({
    ═══════════════════════════════════════════════════════════ */
 function WaterTracker() {
   const todayDateKey = format(new Date(), 'yyyy-MM-dd');
-  const storageKey = `water_tracker_${todayDateKey}`;
-  const [waterMl, setWaterMl] = useState(() => {
-    try {
-      const saved = localStorage.getItem(storageKey);
-      return saved ? parseInt(saved, 10) : 0;
-    } catch {
-      return 0;
-    }
-  });
+  const waterMl = useAppStore((st) => st.dailyMetrics[todayDateKey]?.waterMl ?? 0);
+  const saveMetrics = useAppStore((st) => st.saveMetrics);
 
   const addWater = (amount: number) => {
-    setWaterMl((prev) => {
-      const next = Math.max(0, prev + amount);
-      try {
-        localStorage.setItem(storageKey, String(next));
-      } catch {
-        /* silent */
-      }
-      return next;
-    });
+    saveMetrics(todayDateKey, { waterMl: Math.max(0, waterMl + amount) });
   };
 
   const targetMl = 2500;

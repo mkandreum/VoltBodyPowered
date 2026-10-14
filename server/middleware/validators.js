@@ -118,28 +118,143 @@ export function validateProgressReportPayload(req, res, next) {
   next();
 }
 
-export function validateWorkoutLogPayload(req, res, next) {
-  const { date, exerciseId, weight, reps } = req.body || {};
+function checkOptionalInt(value, min, max, name) {
+  if (value === undefined || value === null) return null;
+  const n = asNumber(value);
+  if (typeof value === 'boolean' || n === null || !Number.isInteger(n) || n < min || n > max) {
+    return `${name} must be an integer between ${min} and ${max}`;
+  }
+  return null;
+}
 
-  if (!isValidDate(date)) {
+function checkSetFields({ weight, reps, duration, rpe, rir }, requireCore) {
+  if (requireCore || weight !== undefined) {
+    const w = asNumber(weight);
+    if (weight === null || weight === undefined || weight === '' || w === null || w < 0 || w > 1000) {
+      return 'Weight must be between 0 and 1000';
+    }
+  }
+  if (requireCore || reps !== undefined) {
+    const r = asNumber(reps);
+    if (reps === null || reps === undefined || reps === '' || r === null || !Number.isInteger(r) || r < 1 || r > 200) {
+      return 'Reps must be an integer between 1 and 200';
+    }
+  }
+  return (
+    checkOptionalInt(duration, 0, 86400, 'duration') ||
+    checkOptionalInt(rpe, 1, 10, 'rpe') ||
+    checkOptionalInt(rir, 0, 10, 'rir')
+  );
+}
+
+export function validateWorkoutLogPayload(req, res, next) {
+  const body = req.body || {};
+
+  if (!isValidDate(body.date)) {
     return badRequest(res, 'Invalid date');
   }
 
-  if (!isNonEmptyString(exerciseId)) {
+  if (!isNonEmptyString(body.exerciseId)) {
     return badRequest(res, 'exerciseId is required');
   }
 
-  const parsedWeight = asNumber(weight);
-  const parsedReps = asNumber(reps);
+  const err = checkSetFields(body, true);
+  if (err) return badRequest(res, err);
 
-  if (parsedWeight === null || parsedWeight <= 0 || parsedWeight > 1000) {
-    return badRequest(res, 'Weight must be greater than 0 and less than 1000');
+  next();
+}
+
+export function validateWorkoutLogUpdatePayload(req, res, next) {
+  const err = checkSetFields(req.body || {}, false);
+  if (err) return badRequest(res, err);
+  next();
+}
+
+const DATE_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+export function isDateKey(value) {
+  return typeof value === 'string' && DATE_KEY_RE.test(value) && !Number.isNaN(new Date(`${value}T00:00:00Z`).getTime());
+}
+
+function optNum(value, min, max, name, int = false) {
+  if (value === undefined || value === null) return null;
+  const n = asNumber(value);
+  if (typeof value === 'boolean' || n === null || n < min || n > max || (int && !Number.isInteger(n))) {
+    return `${name} must be ${int ? 'an integer' : 'a number'} between ${min} and ${max}`;
   }
+  return null;
+}
 
-  if (parsedReps === null || parsedReps <= 0 || parsedReps > 200) {
-    return badRequest(res, 'Reps must be greater than 0 and less than 200');
+export function validateMetricsPayload(req, res, next) {
+  if (!isDateKey(req.params.date)) return badRequest(res, 'Invalid date (YYYY-MM-DD)');
+  const b = req.body || {};
+  const err =
+    optNum(b.steps, 0, 200000, 'steps', true) ||
+    optNum(b.distanceKm, 0, 1000, 'distanceKm') ||
+    optNum(b.activeKcal, 0, 20000, 'activeKcal') ||
+    optNum(b.totalKcal, 0, 30000, 'totalKcal') ||
+    optNum(b.sleepHours, 0, 24, 'sleepHours') ||
+    optNum(b.hrv, 0, 500, 'hrv') ||
+    optNum(b.restingHr, 20, 250, 'restingHr', true) ||
+    optNum(b.avgHr, 20, 250, 'avgHr', true) ||
+    optNum(b.waterMl, 0, 20000, 'waterMl', true);
+  if (err) return badRequest(res, err);
+  next();
+}
+
+export function validateMealTogglePayload(req, res, next) {
+  const { date, mealId, eaten } = req.body || {};
+  if (!isDateKey(date)) return badRequest(res, 'Invalid date (YYYY-MM-DD)');
+  if (!isNonEmptyString(mealId) || !hasMaxLength(mealId, 120)) return badRequest(res, 'mealId is required');
+  if (typeof eaten !== 'boolean') return badRequest(res, 'eaten must be boolean');
+  next();
+}
+
+export function validateGoalsPayload(req, res, next) {
+  const { weekStart, goals } = req.body || {};
+  if (!isDateKey(weekStart)) return badRequest(res, 'Invalid weekStart (YYYY-MM-DD)');
+  if (!Array.isArray(goals) || goals.length > 50) return badRequest(res, 'goals must be an array (max 50)');
+  const seen = new Set();
+  for (const g of goals) {
+    if (!g || !isNonEmptyString(g.id) || !hasMaxLength(g.id, 120) || seen.has(g.id)) return badRequest(res, 'Invalid goal id');
+    seen.add(g.id);
+    if (typeof g.label !== 'string' || !hasMaxLength(g.label, 300)) return badRequest(res, 'Invalid goal label');
+    if (typeof g.done !== 'boolean') return badRequest(res, 'goal.done must be boolean');
   }
+  next();
+}
 
+export function validateAchievementPayload(req, res, next) {
+  const { id, unlockedAt } = req.body || {};
+  if (!isNonEmptyString(id) || !hasMaxLength(id, 120)) return badRequest(res, 'id is required');
+  if (unlockedAt !== undefined && !isValidDate(unlockedAt)) return badRequest(res, 'Invalid unlockedAt');
+  next();
+}
+
+export function validateCustomWorkoutPayload(req, res, next) {
+  const { exercises } = req.body || {};
+  if (!Array.isArray(exercises) || exercises.length > 100) return badRequest(res, 'exercises must be an array (max 100)');
+  const seen = new Set();
+  for (const e of exercises) {
+    if (!e || typeof e !== 'object' || !isNonEmptyString(e.id) || !hasMaxLength(e.id, 120) || seen.has(e.id)) {
+      return badRequest(res, 'Each exercise needs a unique id');
+    }
+    seen.add(e.id);
+    if (JSON.stringify(e).length > 20000) return badRequest(res, 'Exercise too large');
+  }
+  next();
+}
+
+export function validateRecoveryPayload(req, res, next) {
+  if (!isDateKey(req.params.date)) return badRequest(res, 'Invalid date (YYYY-MM-DD)');
+  const { sleepHours, hrv, score } = req.body || {};
+  if (sleepHours === undefined || sleepHours === null) return badRequest(res, 'sleepHours is required');
+  if (score === undefined || score === null) return badRequest(res, 'score is required');
+  const err =
+    optNum(sleepHours, 0, 24, 'sleepHours') ||
+    optNum(hrv, 0, 500, 'hrv') ||
+    optNum(score, 0, 100, 'score', true);
+  if (err) return badRequest(res, err);
   next();
 }
 
@@ -173,7 +288,11 @@ export function validateWeightLogPayload(req, res, next) {
 }
 
 export function validateProfileUpdatePayload(req, res, next) {
-  const { age, weight, height, workHours, goal, currentState, schedule, theme, motivationPhrase } = req.body || {};
+  const { age, weight, height, workHours, goal, currentState, schedule, theme, motivationPhrase, notificationsEnabled } = req.body || {};
+
+  if (notificationsEnabled !== undefined && typeof notificationsEnabled !== 'boolean') {
+    return badRequest(res, 'notificationsEnabled must be boolean');
+  }
 
   if (age !== undefined) {
     const parsedAge = asNumber(age);

@@ -1,6 +1,6 @@
 import express from 'express';
 import { authMiddleware } from '../middleware/auth.js';
-import { validateWorkoutLogPayload, validateProgressPhotoPayload, validateWeightLogPayload } from '../middleware/validators.js';
+import { validateWorkoutLogPayload, validateWorkoutLogUpdatePayload, validateProgressPhotoPayload, validateWeightLogPayload } from '../middleware/validators.js';
 import { createRateLimiter } from '../middleware/rateLimit.js';
 import { logError } from '../utils/logger.js';
 import prisma from '../utils/prisma.js';
@@ -26,15 +26,18 @@ router.get('/logs', authMiddleware, async (req, res) => {
 // Add workout log
 router.post('/logs', authMiddleware, validateWorkoutLogPayload, async (req, res) => {
   try {
-    const { date, exerciseId, weight, reps } = req.body;
+    const { date, exerciseId, weight, reps, duration, rpe, rir } = req.body;
 
     const log = await prisma.workoutLog.create({
       data: {
         userId: req.userId,
         date: new Date(date),
         exerciseId,
-        weight,
-        reps
+        weight: Number(weight),
+        reps: Number(reps),
+        ...(duration != null && { duration: Number(duration) }),
+        ...(rpe != null && { rpe: Number(rpe) }),
+        ...(rir != null && { rir: Number(rir) })
       }
     });
 
@@ -42,6 +45,42 @@ router.post('/logs', authMiddleware, validateWorkoutLogPayload, async (req, res)
   } catch (error) {
     logError('workout.add_log.error', { requestId: req.requestId, message: error.message, stack: error.stack });
     res.status(500).json({ error: 'Failed to add log' });
+  }
+});
+
+// Edit a workout log (own only)
+router.put('/logs/:id', authMiddleware, validateWorkoutLogUpdatePayload, async (req, res) => {
+  try {
+    const { weight, reps, duration, rpe, rir } = req.body;
+    const existing = await prisma.workoutLog.findFirst({ where: { id: req.params.id, userId: req.userId } });
+    if (!existing) return res.status(404).json({ error: 'Log not found' });
+
+    const log = await prisma.workoutLog.update({
+      where: { id: existing.id },
+      data: {
+        ...(weight !== undefined && { weight: Number(weight) }),
+        ...(reps !== undefined && { reps: Number(reps) }),
+        ...(duration !== undefined && { duration: duration === null ? null : Number(duration) }),
+        ...(rpe !== undefined && { rpe: rpe === null ? null : Number(rpe) }),
+        ...(rir !== undefined && { rir: rir === null ? null : Number(rir) }),
+      }
+    });
+    res.json(log);
+  } catch (error) {
+    logError('workout.update_log.error', { requestId: req.requestId, message: error.message, stack: error.stack });
+    res.status(500).json({ error: 'Failed to update log' });
+  }
+});
+
+// Delete a workout log (own only)
+router.delete('/logs/:id', authMiddleware, async (req, res) => {
+  try {
+    const result = await prisma.workoutLog.deleteMany({ where: { id: req.params.id, userId: req.userId } });
+    if (result.count === 0) return res.status(404).json({ error: 'Log not found' });
+    res.json({ ok: true });
+  } catch (error) {
+    logError('workout.delete_log.error', { requestId: req.requestId, message: error.message, stack: error.stack });
+    res.status(500).json({ error: 'Failed to delete log' });
   }
 });
 

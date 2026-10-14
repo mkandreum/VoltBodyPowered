@@ -5,6 +5,7 @@ import userRoutes from './routes/user.js';
 import profileRoutes from './routes/profile.js';
 import workoutRoutes from './routes/workout.js';
 import aiRoutes from './routes/ai.js';
+import dataRoutes from './routes/data.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
@@ -53,6 +54,7 @@ app.use('/api/user', userRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/workout', workoutRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/data', dataRoutes);
 
 // Health check — verifies DB connectivity
 app.get('/api/health', async (req, res) => {

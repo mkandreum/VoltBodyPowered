@@ -501,14 +501,13 @@ export default function Workout() {
         duration: durationInput,
         ...(rpeInput >= 1 ? { rpe: rpeInput } : {}),
       }));
-      newLogs.forEach((log) => addLog(log));
       setSyncStatus('local');
       startRestTimer(60);
 
       if (authToken) {
         try {
           setSyncStatus('syncing');
-          await Promise.all(newLogs.map((log) => workoutService.addLog(authToken, log)));
+          await Promise.all(newLogs.map((log) => addLog(log)));
           setSyncStatus('synced');
         } catch {
           setSyncStatus('error');
@@ -558,14 +557,13 @@ export default function Workout() {
         reps: repsInput,
         ...(rirInput >= 0 ? { rir: rirInput } : {}),
       }));
-      newLogs.forEach((log) => addLog(log));
       setSyncStatus('local');
       startRestTimer(90);
 
       if (authToken) {
         try {
           setSyncStatus('syncing');
-          await Promise.all(newLogs.map((log) => workoutService.addLog(authToken, log)));
+          await Promise.all(newLogs.map((log) => addLog(log)));
           setSyncStatus('synced');
         } catch {
           setSyncStatus('error');
@@ -600,14 +598,13 @@ export default function Workout() {
         ...(rirInput >= 0 ? { rir: rirInput } : {}),
       }));
 
-      newLogs.forEach((log) => addLog(log));
       setSyncStatus('local');
       startRestTimer(90);
 
       if (authToken) {
         try {
           setSyncStatus('syncing');
-          await Promise.all(newLogs.map((log) => workoutService.addLog(authToken, log)));
+          await Promise.all(newLogs.map((log) => addLog(log)));
           setSyncStatus('synced');
         } catch (error) {
           console.error('Error persisting workout log:', error);

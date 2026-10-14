@@ -5,6 +5,9 @@ export interface WorkoutLogDTO {
   exerciseId: string;
   weight: number;
   reps: number;
+  duration?: number;
+  rpe?: number;
+  rir?: number;
 }
 
 export interface ProgressPhotoDTO {

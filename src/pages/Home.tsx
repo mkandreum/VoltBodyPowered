@@ -291,13 +291,13 @@ export default function Home() {
       reps: parseTargetReps(pending.reps),
     };
 
-    addLog(newLog);
     setSyncState('local');
 
     if (!authToken) {
+      await addLog(newLog);
       showToast({
         type: 'success',
-        title: 'Serie guardada localmente',
+        title: 'Serie guardada',
         message: `${pending.name}: ${newLog.weight}kg x ${newLog.reps}`,
       });
       return;
@@ -305,7 +305,7 @@ export default function Home() {
 
     setSyncState('syncing');
     try {
-      await workoutService.addLog(authToken, newLog);
+      await addLog(newLog);
       setSyncState('synced');
       showToast({
         type: 'success',
