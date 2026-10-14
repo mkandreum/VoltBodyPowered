@@ -1,48 +1,16 @@
-import { useEffect, useRef, useState, lazy, Suspense } from 'react';
+import { useEffect, useState } from 'react';
 import { useAppStore } from './store/useAppStore';
-import Login from './pages/Login';
-import Onboarding from './pages/Onboarding';
-import BottomNav from './components/BottomNav';
-import SidebarNav from './components/SidebarNav';
-import SplashScreen from './components/SplashScreen';
-import { AnimatePresence, motion } from 'motion/react';
-import { pageTransition, fadeSlideUp } from './lib/motion';
-import { CheckCircle2, AlertCircle, Info } from 'lucide-react';
+import Login from './v3/screens/Login';
+import Onboarding from './v3/screens/Onboarding';
+import AppShell, { LoadingProfile, ToastHost } from './v3/shell';
 import { notificationService } from './services/notificationService';
 import { hydrateFromServer } from './services/hydration';
 
-const Home = lazy(() => import('./pages/Home'));
-const Workout = lazy(() => import('./pages/Workout'));
-const Diet = lazy(() => import('./pages/Diet'));
-const CalendarView = lazy(() => import('./pages/CalendarView'));
-const Profile = lazy(() => import('./pages/Profile'));
-
-function PageSkeleton() {
-  return (
-    <div className="min-h-screen app-shell px-4 safe-top safe-bottom">
-      <div className="page-wrap space-y-4 pt-6">
-        {/* Matches hero card (~h-44) */}
-        <div className="anim-shimmer rounded-2xl h-44" />
-        {/* Matches XP bar card (~h-20) */}
-        <div className="anim-shimmer rounded-2xl h-20" />
-        {/* Matches bento grid (2 rows of 2 cards) */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="anim-shimmer rounded-2xl h-40 col-span-2" />
-          <div className="anim-shimmer rounded-2xl h-28" />
-          <div className="anim-shimmer rounded-2xl h-28" />
-        </div>
-        {/* Matches timeline card (~h-44) */}
-        <div className="anim-shimmer rounded-2xl h-44" />
-      </div>
-    </div>
-  );
-}
 
 export default function App() {
-  const { isAuthenticated, isOnboarded, currentTab, theme, toasts, dismissToast, _hasHydrated, notificationsEnabled, profile, logs, weightLogs, authToken, _dataReady } = useAppStore();
+  const { isAuthenticated, isOnboarded, theme, _hasHydrated, notificationsEnabled, profile, logs, weightLogs, authToken, _dataReady } = useAppStore();
   const [loadError, setLoadError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
-  const scrollPositions = useRef<Record<string, number>>({});
 
   // Schedule notification reminders when notifications are enabled and user is onboarded
   useEffect(() => {
@@ -75,12 +43,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const bgColors: Record<string, string> = {
-      'verde-negro': '#050505',
-      'aguamarina-negro': '#03110e',
-      'ocaso-negro': '#120905',
-    };
-    const bg = bgColors[theme] ?? '#050505';
+    const bg = '#0A0A0A';
     document.body.setAttribute('data-theme', theme);
     document.documentElement.style.backgroundColor = bg;
     // Update PWA status-bar / address-bar theme color
@@ -92,135 +55,23 @@ export default function App() {
     };
   }, [theme]);
 
-  useEffect(() => {
-    if (toasts.length === 0) return;
-    const id = toasts[0].id;
-    const timer = setTimeout(() => {
-      dismissToast(id);
-    }, 2800);
-    return () => clearTimeout(timer);
-  // `toasts[0]?.id` — only restart timer when the leading toast changes.
-  // `dismissToast` is a stable Zustand action; including it avoids the lint warning without any cost.
-  }, [toasts[0]?.id, dismissToast]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    const savedY = scrollPositions.current[currentTab] ?? 0;
-    // Use a short timeout to allow the lazy-loaded page to render before scrolling.
-    const timer = setTimeout(() => {
-      window.scrollTo({ top: savedY, behavior: 'instant' });
-    }, 50);
-    return () => {
-      // Save current position when tab changes
-      scrollPositions.current[currentTab] = window.scrollY;
-      clearTimeout(timer);
-    };
-  }, [currentTab]);
-
-  // While Zustand is rehydrating from localStorage, show a splash instead of the login form
-  if (!_hasHydrated) {
-    return <SplashScreen />;
-  }
+  // Mientras Zustand se rehidrata o llegan los datos del servidor: pantalla de carga de la app.
+  if (!_hasHydrated) return <LoadingProfile />;
 
   if (isAuthenticated && !_dataReady) {
-    if (loadError) {
-      return (
-        <div className="min-h-[100dvh] flex flex-col items-center justify-center gap-4 text-white px-6 text-center">
-          <p className="text-sm text-gray-300">No se pudieron cargar tus datos del servidor.</p>
-          <button type="button" className="primary-btn px-5 py-2.5 rounded-xl font-bold" onClick={() => setReloadKey((k) => k + 1)}>Reintentar</button>
-          <button type="button" className="text-xs text-gray-400 underline" onClick={() => useAppStore.getState().logout()}>Cerrar sesión</button>
-        </div>
-      );
-    }
-    return <SplashScreen />;
+    return (
+      <LoadingProfile
+        error={loadError ? 'No se pudieron cargar tus datos del servidor.' : null}
+        onRetry={() => setReloadKey((k) => k + 1)}
+        onLogout={() => useAppStore.getState().logout()}
+      />
+    );
   }
-
-  // Show login if not authenticated
-  if (!isAuthenticated) {
-    return <Login />;
-  }
-
-  // Show onboarding if authenticated but not onboarded
-  if (!isOnboarded) {
-    return <Onboarding />;
-  }
-
-  const renderTab = () => {
-    switch (currentTab) {
-      case 'home':
-        return <Home />;
-      case 'workout':
-        return <Workout />;
-      case 'diet':
-        return <Diet />;
-      case 'calendar':
-        return <CalendarView />;
-      case 'profile':
-        return <Profile />;
-      default:
-        return <Home />;
-    }
-  };
 
   return (
-    <div className="app-shell min-h-[100dvh] text-white overflow-x-hidden safe-bottom lg:pl-72">
-      <SidebarNav />
-      <AnimatePresence>
-        <motion.div
-          key={currentTab}
-          initial={pageTransition.initial}
-          animate={pageTransition.animate}
-          exit={pageTransition.exit}
-          transition={pageTransition.transition}
-          style={{ willChange: 'opacity, transform' }}
-          className="h-full"
-        >
-          <Suspense fallback={<PageSkeleton />}>
-            {renderTab()}
-          </Suspense>
-        </motion.div>
-      </AnimatePresence>
-
-      <div className="fixed top-[max(1rem,env(safe-area-inset-top))] left-1/2 -translate-x-1/2 z-[60] w-[min(94vw,400px)] space-y-2 pointer-events-none px-2">
-        <AnimatePresence>
-          {toasts.map((toast) => {
-            const isSuccess = toast.type === 'success';
-            const isError = toast.type === 'error';
-
-            return (
-              <motion.div
-                key={toast.id}
-                initial={{ opacity: 0, y: -20, scale: 0.94 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -16, scale: 0.94 }}
-                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                className="pointer-events-auto rounded-2xl glass-panel border border-white/12 p-3.5 shadow-2xl backdrop-blur-2xl"
-              >
-                <div className="flex items-center gap-3">
-                  {isSuccess && <CheckCircle2 className="text-emerald-400 shrink-0" size={20} />}
-                  {isError && <AlertCircle className="text-rose-400 shrink-0" size={20} />}
-                  {!isSuccess && !isError && <Info className="text-[var(--app-accent)] shrink-0" size={20} />}
-
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-white truncate">{toast.title}</p>
-                    {toast.message && <p className="text-xs text-gray-300 mt-0.5 line-clamp-2">{toast.message}</p>}
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => dismissToast(toast.id)}
-                    aria-label="Cerrar notificación"
-                    className="tap-target w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-white transition-colors"
-                  >
-                    ✕
-                  </button>
-                </div>
-              </motion.div>
-            );
-          })}
-        </AnimatePresence>
-      </div>
-
-      <BottomNav />
-    </div>
+    <>
+      {!isAuthenticated ? <Login /> : !isOnboarded ? <Onboarding /> : <AppShell />}
+      <ToastHost />
+    </>
   );
 }
