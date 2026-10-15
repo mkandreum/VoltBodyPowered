@@ -2,7 +2,7 @@ import express from 'express';
 import { GoogleGenAI } from '@google/genai';
 import { authMiddleware } from '../middleware/auth.js';
 import { createRateLimiter } from '../middleware/rateLimit.js';
-import { validateGeneratePlanPayload, validateAlternativeMealPayload, validateProgressReportPayload } from '../middleware/validators.js';
+import { validateGeneratePlanPayload, validateAlternativeMealPayload, validateDayMealsPayload, validateProgressReportPayload } from '../middleware/validators.js';
 import { logError, logInfo } from '../utils/logger.js';
 import { incrementAiError } from '../utils/metrics.js';
 import fs from 'fs';
@@ -12,9 +12,11 @@ import { resolveAlias } from '../utils/exerciseAliases.js';
 import {
   buildPlanPrompt,
   buildAlternativeMealPrompt,
+  buildDayMealsPrompt,
   computeTargets,
   fallbackWeekDiet,
   normalizeAlternativeMeal,
+  normalizeDayMeals,
   normalizeDiet,
   normalizeRoutine,
 } from '../utils/planPrompts.js';
@@ -551,6 +553,44 @@ router.post('/generate-alternative-meal', authMiddleware, aiRateLimiter, validat
     return res.json({
       ...req.body.oldMeal,
       description: `${req.body.oldMeal.description} (fallback rapido generado por error IA)`,
+    });
+  }
+});
+
+// POST /api/ai/generate-day-meals
+// Menú del día completamente nuevo: mismos ids, horas y objetivos por toma. Sin respaldo: si falla, error.
+router.post('/generate-day-meals', authMiddleware, aiRateLimiter, validateDayMealsPayload, async (req, res) => {
+  try {
+    const { diet, profile } = req.body;
+    const t0 = Date.now();
+    logInfo('ai.generate_day_meals.started', { requestId: req.requestId, meals: diet.meals.length });
+
+    const prompt = buildDayMealsPrompt({ meals: diet.meals, profile, dailyCalories: diet.dailyCalories, macros: diet.macros });
+    const response = await generateContentWithRetry({
+      prompt,
+      requestId: req.requestId,
+      eventBase: 'ai.generate_day_meals',
+      models: FAST_MODELS,
+      config: { ...FAST_JSON_CONFIG, maxOutputTokens: 2500 },
+    });
+
+    try {
+      const meals = normalizeDayMeals(JSON.parse(extractJsonBlock(response.text)), diet.meals);
+      if (!meals) throw new Error('Respuesta sin comidas');
+      logInfo('ai.generate_day_meals.success', { requestId: req.requestId, ms: Date.now() - t0 });
+      res.json({ meals });
+    } catch (parseErr) {
+      incrementAiError();
+      logError('ai.generate_day_meals.parse_error', { requestId: req.requestId, message: parseErr.message });
+      res.status(502).json({ error: 'JSON invalido de Gemini', details: 'La IA no devolvió un menú válido, prueba de nuevo.' });
+    }
+  } catch (error) {
+    incrementAiError();
+    logError('ai.generate_day_meals.error', { requestId: req.requestId, message: error.message, stack: error.stack });
+    const busy = isProviderUnavailableError(error);
+    res.status(503).json({
+      error: busy ? 'Proveedor IA saturado' : 'Error generando menu',
+      details: busy ? 'La IA está saturada, prueba en un momento.' : 'No se pudo generar el menú, prueba en un momento.',
     });
   }
 });

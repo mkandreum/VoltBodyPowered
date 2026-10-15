@@ -22,6 +22,15 @@ const round = (v, step = 1) => Math.round(v / step) * step;
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 const list = (v) => (Array.isArray(v) ? v.filter(Boolean).map(String).join(', ') : '');
 
+// Desayuno, media mañana y merienda siempre dulces (el usuario no quiere lentejas a media tarde).
+const SWEET_RULE = 'Desayuno, media mañana y merienda SIEMPRE DULCES (avena con fruta, tortitas de avena y plátano, yogur griego con miel y frutos rojos, tostadas con crema de cacahuete y plátano, batido de proteína con fruta, requesón con fruta, porridge de cacao...). NUNCA platos salados en esas tomas: nada de legumbres, guisos, carne, embutido, pescado, huevos revueltos ni verdura. La proteína de esas tomas sale de lácteos, claras en tortitas o proteína en polvo';
+
+/** true si la hora corresponde a desayuno, media mañana o merienda. */
+function isSweetSlot(time = '') {
+  const h = Number(String(time).slice(0, 2));
+  return Number.isFinite(h) && (h < 13 || (h >= 16 && h < 20));
+}
+
 function normalizeText(v = '') {
   return String(v).normalize('NFD').replace(/\p{M}+/gu, '').toLowerCase().trim();
 }
@@ -190,6 +199,7 @@ Reglas del menú:
 - Cada día debe sumar ${targets.dailyCalories} kcal ±5 % y al menos ${round(targets.macros.protein * 0.95)} g de proteína. Revisa las sumas antes de responder.
 - Coherencia: calorías ≈ proteína×4 + hidratos×4 + grasa×9 (±8 %) en cada comida.
 - Variedad real: el plato principal de comida y cena no se repite más de 2 veces en la semana; alterna fuentes de proteína (pollo, pavo, huevo, pescado blanco, pescado azul, legumbre, ternera magra, lácteos).
+- ${SWEET_RULE}. Sus gustos de proteínas y verduras se aplican a comida y cena.
 - Prioriza los alimentos que le gustan; ingredientes de supermercado español, recetas de ≤20 min entre semana y algo más elaborado el fin de semana. Puedes reutilizar sobras de la cena en la comida siguiente.
 - En días de entreno (${days.join(', ')}) sube algo los hidratos de la comida previa o posterior al entreno y baja la grasa; en días de descanso al revés, manteniendo el total diario.
 ${profile.specialDish?.ingredients ? `- Incluye su plato especial ("${profile.specialDish.ingredients}") 1-2 veces en la semana como comida o cena, ajustado a ese hueco.\n` : ''}- "name": nombre concreto y apetecible empezando por un emoji (ej. "🍳 Tortilla de claras con espinacas y pan de centeno").
@@ -299,7 +309,7 @@ Objetivo del usuario: ${profile.goal || 'N/A'}.
 Le gustan — verduras: ${list(profile.foodPreferences?.vegetables) || 'sin preferencia'}; hidratos: ${list(profile.foodPreferences?.carbs) || 'sin preferencia'}; proteínas: ${list(profile.foodPreferences?.proteins) || 'sin preferencia'}.
 ${others.length ? `Ese día ya come: ${others.join(' | ')}. No repitas su proteína principal ni el mismo plato.\n` : ''}
 Reglas:
-- Debe ser claramente distinta (otra proteína principal u otra preparación), adecuada para esa hora del día y hecha con ingredientes de supermercado español en ≤20 min.
+${isSweetSlot(oldMeal.time) ? `- Es una toma dulce: ${SWEET_RULE}.\n` : ''}- Debe ser claramente distinta (otra proteína principal u otra preparación), adecuada para esa hora del día y hecha con ingredientes de supermercado español en ≤20 min.
 - "name" empieza con un emoji y es concreto (ej. "🐟 Salmón al horno con boniato y espárragos").
 - "description": ingredientes con gramos en crudo + preparación en una frase.
 - calorías ≈ proteína×4 + hidratos×4 + grasa×9.
@@ -319,12 +329,12 @@ export function fallbackWeekDiet(profile, targets) {
   const pool = [
     [
       ['🥣 Avena con yogur y plátano', 'Avena, yogur griego, plátano y canela.', [30, 62, 14]],
-      ['🍳 Tostadas de centeno con huevos revueltos', 'Pan de centeno, 2 huevos + claras, tomate.', [32, 45, 18]],
+      ['🍓 Tostadas de centeno con requesón y fresas', 'Pan de centeno, requesón, fresas y miel.', [28, 52, 10]],
       ['🥞 Tortitas de avena y claras', 'Avena, claras, arándanos.', [34, 58, 9]],
     ],
     [
       ['🍎 Yogur con nueces y fruta', 'Yogur natural, nueces y manzana.', [16, 24, 14]],
-      ['🥪 Bocadillo integral de pavo', 'Pan integral, pavo y tomate.', [22, 30, 6]],
+      ['🥛 Batido de proteína con plátano', 'Proteína whey, leche y plátano.', [28, 30, 5]],
     ],
     [
       ['🍗 Pollo con arroz y verduras', 'Pechuga de pollo, arroz y verduras salteadas.', [48, 78, 18]],
@@ -334,7 +344,7 @@ export function fallbackWeekDiet(profile, targets) {
     ],
     [
       ['🥜 Tostada con crema de cacahuete', 'Pan integral, crema de cacahuete y plátano.', [14, 38, 14]],
-      ['🥛 Batido de proteína con fruta', 'Proteína whey, leche y fresas.', [30, 28, 6]],
+      ['🫐 Yogur griego con miel y frutos rojos', 'Yogur griego 0 %, miel y arándanos.', [22, 26, 4]],
     ],
     [
       ['🐟 Merluza con patata cocida', 'Merluza al horno, patata y ensalada.', [40, 44, 14]],
@@ -353,4 +363,37 @@ export function fallbackWeekDiet(profile, targets) {
     }),
   }));
   return { dailyCalories: targets.dailyCalories, macros: targets.macros, meals: week[0].meals, week };
+}
+
+/** Prompt de generate-day-meals: menú del día completamente nuevo con los mismos huecos y macros. */
+export function buildDayMealsPrompt({ meals, profile = {}, dailyCalories, macros }) {
+  const slots = meals
+    .map((m) => `- id "${m.id}" · ${m.time}${isSweetSlot(m.time) ? ' (toma DULCE)' : ''}: ~${m.calories} kcal (P${m.protein} C${m.carbs} G${m.fat}). Actual: ${m.name}`)
+    .join('\n');
+  return `Eres dietista-nutricionista deportivo. El usuario quiere cambiar TODO el menú de un día por platos nuevos.
+
+TOMAS DEL DÍA (respeta id, hora y objetivo de cada una):
+${slots}
+${dailyCalories ? `Total del día: ${dailyCalories} kcal${macros ? ` · proteína ${macros.protein} g · hidratos ${macros.carbs} g · grasa ${macros.fat} g` : ''}.\n` : ''}Objetivo del usuario: ${profile.goal || 'N/A'}.
+Le gustan — verduras: ${list(profile.foodPreferences?.vegetables) || 'sin preferencia'}; hidratos: ${list(profile.foodPreferences?.carbs) || 'sin preferencia'}; proteínas: ${list(profile.foodPreferences?.proteins) || 'sin preferencia'}.
+
+Reglas:
+- Todos los platos deben ser distintos de los actuales y entre sí (no repitas proteína principal en comida y cena).
+- ${SWEET_RULE}.
+- Comida y cena: platos completos con sus gustos; ingredientes de supermercado español, ≤20 min.
+- Cada toma: calorías ±8 % y proteína mínima del 90 % de su objetivo; calorías ≈ proteína×4 + hidratos×4 + grasa×9.
+- "name" empieza con un emoji y es concreto; "description": ingredientes con gramos en crudo + preparación en una frase.
+
+Responde SOLO con JSON válido:
+{ "meals": [ { "id": "string", "name": "string", "calories": 0, "protein": 0, "carbs": 0, "fat": 0, "description": "string" } ] }`;
+}
+
+/** Empareja la respuesta con las tomas originales (por id o por orden) conservando id y hora. */
+export function normalizeDayMeals(raw, oldMeals) {
+  const generated = Array.isArray(raw) ? raw : raw?.meals;
+  if (!Array.isArray(generated) || !generated.length) return null;
+  return oldMeals.map((old, i) => {
+    const m = generated.find((g) => g?.id === old.id) || generated[i];
+    return m ? normalizeAlternativeMeal(m, old) : old;
+  });
 }

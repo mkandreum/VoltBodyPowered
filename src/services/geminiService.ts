@@ -89,6 +89,21 @@ export async function generateAlternativeMeal(oldMeal: Meal, profile: any, token
   return response.json();
 }
 
+export async function generateDayMeals(diet: DietPlan, profile: any, token?: string | null): Promise<Meal[]> {
+  const response = await apiFetch(`${API_URL}/ai/generate-day-meals`, {
+    method: 'POST',
+    headers: getAuthHeaders(token),
+    body: JSON.stringify({ diet, profile }),
+  });
+
+  if (!response.ok) {
+    throw new Error(await extractErrorMessage(response));
+  }
+
+  const data = await response.json();
+  return data.meals;
+}
+
 export async function generateProgressReport(payload: {
   profile: unknown;
   logs: unknown[];

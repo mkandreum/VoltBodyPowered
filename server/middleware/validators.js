@@ -100,6 +100,27 @@ export function validateAlternativeMealPayload(req, res, next) {
   next();
 }
 
+export function validateDayMealsPayload(req, res, next) {
+  const { diet, profile } = req.body || {};
+
+  if (!diet || typeof diet !== 'object' || !Array.isArray(diet.meals) || diet.meals.length === 0 || diet.meals.length > 10) {
+    return badRequest(res, 'diet with 1-10 meals is required');
+  }
+
+  const invalidMeal = diet.meals.some((m) => !m || typeof m !== 'object'
+    || !isNonEmptyString(m.id) || !isNonEmptyString(m.name) || !isNonEmptyString(m.time)
+    || !hasMaxLength(m.name, 120) || (m.description && !hasMaxLength(m.description, 1200)));
+  if (invalidMeal) {
+    return badRequest(res, 'each meal must include id, name and time with valid lengths');
+  }
+
+  if (!profile || typeof profile !== 'object' || !isNonEmptyString(profile.goal)) {
+    return badRequest(res, 'profile goal is required');
+  }
+
+  next();
+}
+
 export function validateProgressReportPayload(req, res, next) {
   const { profile, logs } = req.body || {};
 

@@ -3,7 +3,7 @@ import { useMemo, useState, type CSSProperties } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useAppStore, type Meal } from '../../store/useAppStore';
 import { Haptics } from '../../lib/haptics';
-import { generateAlternativeMeal } from '../../services/geminiService';
+import { generateAlternativeMeal, generateDayMeals } from '../../services/geminiService';
 import { authService } from '../../services/authService';
 import {
   BigDonut, Card, ConfettiBurst, DayStrip, FitText, GlassSheet, Icon, IconCircle, LimeButton, MixTitle, ON_ACCENT, Screen,
@@ -76,6 +76,28 @@ export default function Nutrition() {
       s.setDiet(diet);
       s.showToast({ type: 'error', title: 'No se pudo cambiar la comida', message: (e as Error)?.message });
       setSwap((w) => w && { ...w, applying: false });
+    }
+  };
+
+  // Cambia de golpe todas las comidas del día seleccionado; las ya marcadas como hechas se conservan.
+  const [regenerating, setRegenerating] = useState(false);
+  const regenerateDay = async () => {
+    if (!diet || regenerating) return;
+    const dayMeals = mealsFor(diet, selected);
+    const pending = dayMeals.filter((m) => !eaten.includes(m.id));
+    if (!pending.length) return;
+    setRegenerating(true);
+    try {
+      const fresh = await generateDayMeals({ ...diet, meals: pending, week: undefined }, s.profile, s.authToken);
+      const updated = fresh.reduce((d, m) => (pending.some((p) => p.id === m.id) ? replaceMeal(d, selected, m.id, m) : d), diet);
+      s.setDiet(updated);
+      if (s.authToken) await authService.updateProfile(s.authToken, { diet: updated });
+      Haptics.success();
+      s.showToast({ type: 'success', title: 'Menú del día renovado 🔄', message: `${pending.length} comidas nuevas para ${isToday ? 'hoy' : `el ${weekday}`}.` });
+    } catch (e) {
+      s.showToast({ type: 'error', title: 'No se pudo cambiar el menú', message: (e as Error)?.message || 'Prueba de nuevo en un momento.' });
+    } finally {
+      setRegenerating(false);
     }
   };
 
@@ -196,8 +218,10 @@ export default function Nutrition() {
 
           <div className="flex flex-col gap-3">
             <SectionLabel {...enter(3)} text={isToday ? `Tu día · ${done.length}/${meals.length} comidas`
-              : isFuture ? `Menú del ${dateText.charAt(0).toLowerCase()}${dateText.slice(1)}` : `${dateText} · ${done.length}/${meals.length}`} />
-            <div key={selKey}>
+              : isFuture ? `Menú del ${dateText.charAt(0).toLowerCase()}${dateText.slice(1)}` : `${dateText} · ${done.length}/${meals.length}`}
+              action={regenerating ? 'Generando…' : (isToday || isFuture) && done.length < meals.length ? '🔄 Cambiar menú' : undefined}
+              onAction={regenerateDay} />
+            <div key={selKey} className={regenerating ? 'animate-pulse pointer-events-none' : undefined}>
               {meals.map((m, i) => (
                 <MealRow key={m.id} m={m} eaten={eaten.includes(m.id)} next={m.id === nextId} last={i === meals.length - 1} index={4 + i}
                   canToggle={!isFuture} onToggle={() => toggle(m)} onSwap={() => loadAlternative(m)} />
